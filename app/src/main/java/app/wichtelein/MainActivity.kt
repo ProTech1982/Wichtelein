@@ -1,5 +1,7 @@
 package app.wichtelein
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -27,7 +29,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-enum class Screen { HOME, CAMERA, PLAY }
+enum class Screen { HOME, CAMERA, EDITOR, VIDEOS, ACTIONS, SETTINGS }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,6 +42,7 @@ class MainActivity : ComponentActivity() {
                     secondary = Color(0xFFD93A3A),
                     background = Color(0xFFFFF8EC),
                     surface = Color(0xFFFFF8EC),
+                    surfaceVariant = Color(0xFFF1E6CF),
                 ),
             ) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -59,6 +62,7 @@ fun WichtelApp() {
     var screen by remember { mutableStateOf(Screen.HOME) }
     var settings by remember { mutableStateOf(SettingsStore.load(context)) }
     var roomVersion by remember { mutableIntStateOf(if (roomFile.exists()) 1 else 0) }
+    var videoCount by remember { mutableIntStateOf(listExports(context).size) }
 
     fun update(s: Settings) {
         settings = s
@@ -70,7 +74,7 @@ fun WichtelApp() {
             src.copyTo(roomFile, overwrite = true)
             src.delete()
             roomVersion++
-            screen = Screen.PLAY
+            screen = Screen.EDITOR
         } catch (e: Exception) {
             Toast.makeText(context, "Video konnte nicht gespeichert werden: ${e.message}", Toast.LENGTH_LONG).show()
         }
@@ -107,10 +111,7 @@ fun WichtelApp() {
             }
             if (r.available && r.downloadUrl != null) {
                 try {
-                    context.startActivity(
-                        android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(r.downloadUrl))
-                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
-                    )
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(r.downloadUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 } catch (e: Exception) {
                     updateText = "Kein Browser zum Öffnen des Downloads gefunden."
                 }
@@ -118,28 +119,46 @@ fun WichtelApp() {
         }
     }
 
-    BackHandler(enabled = screen != Screen.HOME) { screen = Screen.HOME }
+    BackHandler(enabled = screen != Screen.HOME) {
+        if (screen == Screen.VIDEOS) videoCount = listExports(context).size
+        screen = Screen.HOME
+    }
 
     when (screen) {
         Screen.HOME -> HomeScreen(
             settings = settings,
             hasRoom = roomVersion > 0,
-            onChange = ::update,
+            videoCount = videoCount,
             onFilm = { screen = Screen.CAMERA },
             onPick = { picker.launch("video/*") },
-            onUseLast = { screen = Screen.PLAY },
-            updateText = updateText,
-            onCheckUpdate = ::checkUpdate,
+            onVideos = { videoCount = listExports(context).size; screen = Screen.VIDEOS },
+            onActions = { screen = Screen.ACTIONS },
+            onSettings = { screen = Screen.SETTINGS },
+            onUseLast = { screen = Screen.EDITOR },
+            onFirstProfile = { name ->
+                val base = settings.copy(onboarded = true)
+                update(if (name != null) base.withProfile(name) else base)
+            },
         )
         Screen.CAMERA -> CameraScreen(
             onRecorded = { adoptRoom(it) },
             onBack = { screen = Screen.HOME },
         )
-        Screen.PLAY -> PlayScreen(
+        Screen.EDITOR -> EditorScreen(
             file = roomFile,
             settings = settings,
             onSettings = ::update,
+            onBack = { videoCount = listExports(context).size; screen = Screen.HOME },
+            onOpenVideos = { videoCount = listExports(context).size; screen = Screen.VIDEOS },
+        )
+        Screen.VIDEOS -> MyVideosScreen(onBack = { videoCount = listExports(context).size; screen = Screen.HOME })
+        Screen.ACTIONS -> ActionsScreen(settings, ::update, onBack = { screen = Screen.HOME })
+        Screen.SETTINGS -> SettingsScreen(
+            settings = settings,
+            onChange = ::update,
             onBack = { screen = Screen.HOME },
+            updateText = updateText,
+            onCheckUpdate = ::checkUpdate,
         )
     }
 }

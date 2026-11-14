@@ -78,6 +78,12 @@ class Speaker(context: Context) {
         speakSystem(text)
     }
 
+    /** Spielt einen fertig erzeugten Sprachclip ab (Vorschau). */
+    fun playClip(audio: VoiceAudio) {
+        generation.incrementAndGet()
+        playExec.execute { play(audio) }
+    }
+
     private fun speakElf(text: String, moodId: Int) {
         val id = generation.incrementAndGet()
         stopPlayback()

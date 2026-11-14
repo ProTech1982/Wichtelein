@@ -66,6 +66,91 @@ object Lines {
         "Buh! Hier bin ich!",
         "Hast du mich gesehen, {kind}?",
     )
+    val sit = listOf(
+        "Puh, kurz hinsetzen.",
+        "So, jetzt gemütlich.",
+        "Ein Wichtel braucht auch mal eine Pause.",
+    )
+    val trip = listOf(
+        "Huch! Wer hat das da hingelegt?",
+        "Hoppla, ich bin gestolpert!",
+        "Aua, mein Wichtelzeh!",
+    )
+    val tripEmbarrassed = listOf(
+        "Das hat keiner gesehen, oder?",
+        "Ich wollte das so machen.",
+        "Alles gut, {name}, ich bin ein Profi.",
+    )
+    val gift = listOf(
+        "Ich habe etwas für dich, {name}!",
+        "Psst, ein Geschenk ist unterwegs.",
+    )
+    val giftPlaced = listOf(
+        "Das ist für dich, {name}. Nicht schütteln!",
+        "Überraschung! Mach es später auf.",
+    )
+    val giftPop = listOf(
+        "Simsalabim! Ein Geschenk!",
+        "Schau mal, {name}, was da plötzlich liegt!",
+    )
+    val magic = listOf(
+        "Hokuspokus Wichtelzipfel!",
+        "Abrakadabra, Spielzeug komm herbei!",
+    )
+    val surprised = listOf(
+        "Ups, das war ich!",
+        "Huch, das hat ja geklappt!",
+        "Ich wusste gar nicht, dass ich das kann!",
+    )
+    val bow = listOf(
+        "Vielen Dank, vielen Dank!",
+        "Applaus, Applaus, {name}!",
+    )
+    val sneaky = listOf(
+        "Pssst, ich nasche nur ganz heimlich.",
+        "Der Keks ist doch gar nicht für dich, {name}... oder?",
+    )
+
+    /** Allgemeine Wichtelsprüche für zwischendurch. {name} = Name des Kindes, {wichtel} = Name des Wichtels. */
+    val general = listOf(
+        "Hallo {name}! Heute habe ich wieder etwas angestellt!",
+        "Psst, {name}! Nicht verraten, dass ich hier war.",
+        "{name}, du bist der beste Freund, den ein Wichtel haben kann!",
+        "Wichtel müssen nie ins Bett, aber ich bin trotzdem müde.",
+        "Weißt du, {name}, ich sehe alles, was du Gutes tust!",
+        "Im Wichtelwald schmecken Kekse nach Wolken.",
+        "Ich habe heute Nacht im Zimmer aufgeräumt. Fast alles.",
+        "Hihi, {name}, kannst du mich noch sehen?",
+        "Mein Name ist {wichtel} und ich liebe Plätzchen!",
+        "Wichtel können sich ganz klein machen. Wusstest du das, {name}?",
+        "Heute war ich ein bisschen frech. Nur ein ganz kleines bisschen.",
+        "{name}, hast du schon deine Zähne geputzt? Ich habe nachgeschaut!",
+        "Ein Wichtel hilft gern, aber manchmal stolpert er auch.",
+        "Ich habe einen Schatz im Zimmer versteckt. Rate mal, wo!",
+        "Du bist mutig, {name}. Das mag ich an dir.",
+        "Brrr, der Boden ist kalt an meinen Wichtelfüßen.",
+        "Jeden Abend schaue ich, ob du gut schläfst.",
+        "Ich kann pfeifen, tanzen und purzeln. Nur nicht gleichzeitig!",
+        "{name}, ich wollte die Sterne zählen, aber dann bin ich eingeschlafen.",
+        "Wenn du lachst, wird mein Wichtelherz ganz warm.",
+        "Oh, ein Krümel! Der gehört mir.",
+        "Ich habe ein Geheimnis, {name}. Es ist ein Keks.",
+        "Hast du heute etwas Nettes gemacht? Dann bekommt der Wichtel einen Stern.",
+        "Alle Wichtel der Welt winken dir zu, {name}!",
+        "Manchmal verstecke ich mich hinter der Gardine und lache leise.",
+        "Meine Mütze ist die schönste weit und breit, findest du nicht?",
+        "Heute Nacht hat es im Wichtelwald geschneit.",
+        "Ich bin klein, aber ich habe große Ideen!",
+        "{name}, du darfst mir gern einen Wunsch verraten. Aber leise!",
+        "Aufräumen macht mit Musik am meisten Spaß.",
+        "Ich glaube, die Socke da gehört nicht mir.",
+        "Gute Nacht, {name}. Träum was Schönes!",
+        "Der Besen und ich sind beste Freunde.",
+        "Ein bisschen Chaos gehört zum Wichteln dazu.",
+        "{name}, ich habe dich lieb. Ganz doll.",
+        "Morgen überrasche ich dich wieder. Aber verrate nichts!",
+    )
+
     val chat = listOf(
         "Weißt du was, {kind}? Du bist toll!",
         "{wichtel} hat dich lieb.",

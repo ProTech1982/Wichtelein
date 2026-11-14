@@ -2,6 +2,8 @@ package app.wichtelein
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.view.OrientationEventListener
+import android.view.Surface
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
@@ -115,6 +117,23 @@ fun CameraScreen(onRecorded: (File) -> Unit, onBack: () -> Unit) {
                 } catch (_: Exception) {
                 }
             }
+        }
+
+        DisposableEffect(videoCapture) {
+            val listener = object : OrientationEventListener(context) {
+                override fun onOrientationChanged(orientation: Int) {
+                    if (orientation == ORIENTATION_UNKNOWN) return
+                    val rot = when (orientation) {
+                        in 45..134 -> Surface.ROTATION_270
+                        in 135..224 -> Surface.ROTATION_180
+                        in 225..314 -> Surface.ROTATION_90
+                        else -> Surface.ROTATION_0
+                    }
+                    videoCapture?.targetRotation = rot
+                }
+            }
+            listener.enable()
+            onDispose { listener.disable() }
         }
 
         LaunchedEffect(recording != null) {

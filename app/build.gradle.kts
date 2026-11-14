@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "app.wichtelein"
-        minSdk = 26
+        minSdk = 29
         targetSdk = 35
         // Build-Nummer aus GitHub Actions: nötig, damit Updates über die bestehende Installation passen.
         versionCode = (System.getenv("APP_VERSION_CODE") ?: "1").toInt()
@@ -61,6 +61,10 @@ dependencies {
     implementation(files("libs/sherpa-onnx-1.13.8.aar"))
 
     implementation("org.apache.commons:commons-compress:1.27.1")
+    val media3 = "1.4.1"
+    implementation("androidx.media3:media3-common:$media3")
+    implementation("androidx.media3:media3-effect:$media3")
+    implementation("androidx.media3:media3-transformer:$media3")
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
@@ -78,6 +82,7 @@ dependencies {
     implementation("androidx.camera:camera-view:$camerax")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
 
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.10.01"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")

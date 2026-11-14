@@ -180,6 +180,13 @@ private fun DrawScope.drawProp(prop: Prop) {
             drawCircle(Color(0xFF5B3A24), 8f, Offset(514f, 530f))
             drawCircle(Color(0xFF5B3A24), 7f, Offset(496f, 540f))
         }
+        Prop.GIFT -> {
+            drawRoundRect(Color(0xFFD93A3A), Offset(455f, 480f), Size(100f, 85f), CornerRadius(8f))
+            drawRect(Color(0xFFF2C94C), Offset(497f, 480f), Size(16f, 85f))
+            drawRect(Color(0xFFF2C94C), Offset(455f, 513f), Size(100f, 14f))
+            drawCircle(Color(0xFFF2C94C), 14f, Offset(488f, 474f))
+            drawCircle(Color(0xFFF2C94C), 14f, Offset(522f, 474f))
+        }
         Prop.NONE -> Unit
     }
 }
@@ -203,6 +210,14 @@ fun DrawScope.drawItem(kind: Int, c: Offset, s: Float, rot: Float) {
             2 -> { // Ball
                 drawCircle(Color(0xFFD93A3A), s * 0.45f, Offset.Zero)
                 drawCircle(Color.White.copy(alpha = 0.7f), s * 0.12f, Offset(-s * 0.15f, -s * 0.15f))
+            }
+            MessItem.GIFT -> { // Geschenk
+                val g = s * 1.7f
+                drawRoundRect(Color(0xFFD93A3A), Offset(-g * 0.5f, -g * 0.45f), Size(g, g * 0.9f), CornerRadius(g * 0.08f))
+                drawRect(Color(0xFFF2C94C), Offset(-g * 0.07f, -g * 0.45f), Size(g * 0.14f, g * 0.9f))
+                drawRect(Color(0xFFF2C94C), Offset(-g * 0.5f, -g * 0.07f), Size(g, g * 0.14f))
+                drawCircle(Color(0xFFF2C94C), g * 0.13f, Offset(-g * 0.12f, -g * 0.52f))
+                drawCircle(Color(0xFFF2C94C), g * 0.13f, Offset(g * 0.12f, -g * 0.52f))
             }
             else -> { // Papierknäuel
                 drawCircle(Color(0xFFF1EFE8), s * 0.42f, Offset.Zero)

@@ -1,130 +1,115 @@
 package app.wichtelein
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     settings: Settings,
     hasRoom: Boolean,
-    onChange: (Settings) -> Unit,
+    videoCount: Int,
     onFilm: () -> Unit,
     onPick: () -> Unit,
+    onVideos: () -> Unit,
+    onActions: () -> Unit,
+    onSettings: () -> Unit,
     onUseLast: () -> Unit,
-    updateText: String? = null,
-    onCheckUpdate: () -> Unit = {},
+    onFirstProfile: (String?) -> Unit,
 ) {
     Column(
         Modifier
             .safeDrawingPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text("Wichtelein", fontSize = 34.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-        Text("Film dein Zimmer – dann kommt ${settings.elfName.ifBlank { "der Wichtel" }} und macht Unsinn oder räumt auf!")
+        val kid = settings.kidList().firstOrNull()
+        Text(
+            "Film dein Zimmer – dann kommt ${settings.elfName.ifBlank { "der Wichtel" }}" +
+                (if (kid != null) " zu $kid" else "") + " und macht Unsinn oder räumt auf!",
+        )
 
         val sprites = rememberElfSprites(settings.colorIndex)
-        val pose = androidx.compose.runtime.remember { Pose().apply { armR = 150f } }
-        Canvas(Modifier.fillMaxWidth().height(190.dp)) {
+        val pose = remember { Pose().apply { armR = 150f } }
+        Canvas(Modifier.fillMaxWidth().height(170.dp)) {
             val eh = size.height * 0.92f
             drawElf(pose, sprites, Offset(size.width / 2f, size.height * 0.97f), eh, 1)
         }
 
-        Button(onClick = onFilm, Modifier.fillMaxWidth().height(56.dp)) {
-            Text("🎥  Raum filmen", fontSize = 18.sp)
-        }
-        OutlinedButton(onClick = onPick, Modifier.fillMaxWidth()) { Text("Video aus der Galerie wählen") }
-        if (hasRoom) {
-            OutlinedButton(onClick = onUseLast, Modifier.fillMaxWidth()) { Text("Letzten Raum nochmal verwenden") }
-        }
+        BigButton("🎥", "Video aufnehmen", "Den Raum filmen, 5 bis 10 Sekunden", onFilm)
+        BigButton("🖼", "Video auswählen", "Ein vorhandenes Video aus der Galerie", onPick)
+        if (hasRoom) BigButton("✏️", "Letztes Video weiter bearbeiten", "Das zuletzt benutzte Video noch einmal öffnen", onUseLast)
+        BigButton("🎞", "Meine Wichtelvideos", if (videoCount == 0) "Noch keine fertigen Videos" else "$videoCount fertige Videos", onVideos)
+        BigButton("🎭", "Wichtelaktionen", "Brav, frech oder Überraschung – was darf er tun?", onActions)
+        BigButton("⚙️", "Einstellungen", "Namen, Stimme, Farbe, Profile", onSettings)
+    }
 
-        Text("Einstellungen", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
+    if (!settings.onboarded) FirstStartDialog(onFirstProfile)
+}
 
-        OutlinedTextField(
-            value = settings.elfName,
-            onValueChange = { onChange(settings.copy(elfName = it)) },
-            label = { Text("Name des Wichtels") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = settings.kidNames,
-            onValueChange = { onChange(settings.copy(kidNames = it)) },
-            label = { Text("Name(n) des Kindes – mehrere mit Komma trennen") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        Text("Farbe der Mütze")
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ElfPalettes.forEachIndexed { i, p ->
-                Box(
-                    Modifier
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .background(p.hat)
-                        .border(
-                            width = if (i == settings.colorIndex) 4.dp else 1.dp,
-                            color = if (i == settings.colorIndex) Color(0xFF222222) else Color(0xFFBBBBBB),
-                            shape = CircleShape,
-                        )
-                        .clickable { onChange(settings.copy(colorIndex = i)) },
-                )
+@Composable
+private fun BigButton(emoji: String, title: String, subtitle: String, onClick: () -> Unit) {
+    Card(
+        Modifier.fillMaxWidth().clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text(emoji, fontSize = 30.sp)
+            Column {
+                Text(title, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text(subtitle, fontSize = 13.sp)
             }
         }
-
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text("Wichtel spricht (Sprachausgabe)")
-            Switch(checked = settings.speak, onCheckedChange = { onChange(settings.copy(speak = it)) })
-        }
-        VoiceSettings(settings, onChange)
-
-        OutlinedTextField(
-            value = settings.customLines,
-            onValueChange = { onChange(settings.copy(customLines = it)) },
-            label = { Text("Eigene Sätze (einer pro Zeile)") },
-            supportingText = { Text("Platzhalter: {kind} = Name des Kindes, {wichtel} = Name des Wichtels") },
-            minLines = 3,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        Text("Build ${Updater.installedVersion(androidx.compose.ui.platform.LocalContext.current)}", fontSize = 13.sp)
-        OutlinedButton(onClick = onCheckUpdate, Modifier.fillMaxWidth()) { Text("Nach Update suchen") }
-        if (updateText != null) Text(updateText)
     }
+}
+
+/** Beim ersten Start gibt ein Erwachsener den Namen des Kindes ein. */
+@Composable
+private fun FirstStartDialog(onDone: (String?) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = {},
+        title = { Text("Willkommen bei Wichtelein!") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Für Eltern: Wie heißt das Kind? Der Wichtel spricht es damit an. Weitere Kinder lassen sich später in den Einstellungen hinzufügen.")
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name des Kindes") },
+                    singleLine = true,
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = { onDone(name.trim().ifEmpty { null }) }, enabled = name.isNotBlank()) { Text("Weiter") } },
+        dismissButton = { TextButton(onClick = { onDone(null) }) { Text("Später") } },
+    )
 }

@@ -1,120 +1,201 @@
 package app.wichtelein
 
 import android.graphics.Bitmap
+import android.graphics.Color as AColor
+import android.media.MediaExtractor
+import android.media.MediaMetadataRetriever
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
+import kotlin.math.abs
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-private fun shot(node: SemanticsNodeInteraction, name: String) {
+private fun shotsDir() = File(InstrumentationRegistry.getInstrumentation().targetContext.filesDir, "shots").apply { mkdirs() }
+
+private fun shot(node: SemanticsNodeInteraction, name: String): Bitmap {
     val bmp = node.captureToImage().asAndroidBitmap()
-    val dir = File(InstrumentationRegistry.getInstrumentation().targetContext.filesDir, "shots").apply { mkdirs() }
-    File(dir, name).outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    File(shotsDir(), name).outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    return bmp
 }
 
-/** Rendert den Wichtel mit seinen zufälligen Aktionen und speichert Bilder zur Sichtprüfung. */
+private fun savePng(bmp: Bitmap, name: String) {
+    File(shotsDir(), name).outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+}
+
+private val testSettings = Settings(elfName = "Pippo", onboarded = true).withProfile("Max")
+
+/** Rendert Szenen des Wichtels und die Startseite (Bilder zur Sichtprüfung). */
 @RunWith(AndroidJUnit4::class)
-class ElfRenderTest {
+class RenderTest {
     @get:Rule val rule = createComposeRule()
 
-    @Test fun elfAppearsAnimatesAndSpeaks() {
-        val spoken = mutableListOf<String>()
-        val engine = ElfEngine({ Settings(kidNames = "Max", elfName = "Pippo") }, { text, _ -> spoken += text })
-        rule.mainClock.autoAdvance = false
+    @Test fun scenesRenderVisibly() {
+        val bg = Color(0xFFCDB89A)
+        val frame = mutableStateOf<FrameState?>(null)
         rule.setContent {
             val sprites = rememberElfSprites(0)
-            LaunchedEffect(Unit) {
-                engine.loop {
-                    engine.appear(0.5f, 0.75f)
-                    engine.greet()
+            Box(Modifier.size(360.dp, 640.dp).background(bg)) {
+                ElfOverlay(frame.value, sprites, 0.3f, Modifier.size(360.dp, 640.dp))
+            }
+        }
+        val scenes = listOf("brav_fegen", "frech_chaos", "ueb_geschenk", "brav_gutenacht", "ueb_tanzparty", "frech_stolpern")
+        for (id in scenes) {
+            val perf = Recorder.record(
+                PerfRequest(Pt(0.4f, 0.78f), listOf(Pt(0.7f, 0.7f), Pt(0.3f, 0.85f)), 0.3f, null, id, 5L, 22_000, null, testSettings),
+            )
+            var visiblePixelsMax = 0
+            var n = 0
+            var ms = 0L
+            while (ms < perf.durationMs) {
+                rule.runOnIdle { frame.value = perf.frameAt(ms) }
+                rule.waitForIdle()
+                val bmp = shot(rule.onRoot(), "scene_${id}_%02d.png".format(n++))
+                var diff = 0
+                val bgInt = AColor.rgb((bg.red * 255).toInt(), (bg.green * 255).toInt(), (bg.blue * 255).toInt())
+                for (y in 0 until bmp.height step 4) for (x in 0 until bmp.width step 4) {
+                    val c = bmp.getPixel(x, y)
+                    if (abs(AColor.red(c) - AColor.red(bgInt)) > 25 || abs(AColor.green(c) - AColor.green(bgInt)) > 25) diff++
                 }
+                visiblePixelsMax = maxOf(visiblePixelsMax, diff)
+                ms += 2200
             }
-            Box(Modifier.size(360.dp, 640.dp).background(Color(0xFFCDB89A))) {
-                ElfOverlay(engine, sprites, 0.3f, { _, _ -> }, Modifier.size(360.dp, 640.dp))
-            }
+            assertTrue("$id: nichts zu sehen ($visiblePixelsMax)", visiblePixelsMax > 300)
         }
-        var sawBubble = false
-        repeat(40) { i ->
-            rule.mainClock.advanceTimeBy(700)
-            if (engine.bubble != null) sawBubble = true
-            shot(rule.onRoot(), "frame_%02d.png".format(i))
-        }
-        assertTrue("Wichtel nicht sichtbar", engine.visible)
-        assertTrue("Keine Sprechblase", sawBubble)
-        assertTrue("Nichts gesprochen", spoken.isNotEmpty())
-        assertTrue("Begrüßung fehlt", spoken.first().contains("Max") || spoken.first().contains("Pippo"))
-    }
-
-    @Test fun chaosThrowsItemsAndTidyCollectsThem() {
-        val engine = ElfEngine({ Settings() }, { _, _ -> })
-        rule.mainClock.autoAdvance = false
-        var phase = 0
-        rule.setContent {
-            val sprites = rememberElfSprites(1)
-            LaunchedEffect(Unit) {
-                engine.appear(0.5f, 0.7f)
-                engine.doChaos()
-                phase = 1
-                engine.doTidy()
-                phase = 2
-            }
-            Box(Modifier.size(360.dp, 640.dp).background(Color(0xFFCDB89A))) {
-                ElfOverlay(engine, sprites, 0.3f, { _, _ -> }, Modifier.size(360.dp, 640.dp))
-            }
-        }
-        var maxMess = 0
-        var i = 0
-        while (phase < 2 && i < 200) {
-            rule.mainClock.advanceTimeBy(400)
-            maxMess = maxOf(maxMess, engine.mess.size)
-            if (i % 4 == 0) shot(rule.onRoot(), "chaos_%02d.png".format(i / 4))
-            i++
-        }
-        assertTrue("Chaos hat nichts verstreut", maxMess >= 3)
-        assertTrue("Aufräumen wurde nicht fertig", phase == 2)
-        assertTrue("Nach dem Aufräumen liegt noch etwas herum", engine.mess.isEmpty())
     }
 
     @Test fun homeScreenRenders() {
         rule.setContent {
             MaterialTheme {
                 Surface(Modifier.size(360.dp, 900.dp)) {
-                    HomeScreen(Settings(kidNames = "Max, Lena"), true, {}, {}, {}, {})
+                    HomeScreen(testSettings, true, 2, {}, {}, {}, {}, {}, {}, {})
                 }
             }
         }
         rule.onNodeWithText("Wichtelein").assertExists()
+        rule.onNodeWithText("Video aufnehmen").assertExists()
+        rule.onNodeWithText("Video auswählen").assertExists()
+        rule.onNodeWithText("Meine Wichtelvideos").assertExists()
+        rule.onNodeWithText("Wichtelaktionen").assertExists()
+        rule.onNodeWithText("Einstellungen").assertExists()
         shot(rule.onRoot(), "home.png")
+    }
+
+    @Test fun firstStartAsksForChildName() {
+        rule.setContent { MaterialTheme { HomeScreen(Settings(), false, 0, {}, {}, {}, {}, {}, {}, {}) } }
+        rule.onNodeWithText("Willkommen bei Wichtelein!").assertExists()
+        rule.onNodeWithText("Name des Kindes").assertExists()
+        shot(rule.onRoot(), "onboarding.png")
     }
 }
 
-/** Startet die echte Activity: die App darf nicht abstürzen und zeigt die Startseite. */
+/** Startet die echte Activity: sie darf nicht abstürzen und zeigt die Startseite. */
 @RunWith(AndroidJUnit4::class)
 class LaunchTest {
     @get:Rule val rule = createAndroidComposeRule<MainActivity>()
 
     @Test fun startsAndShowsHome() {
+        if (rule.onAllNodesWithText("Willkommen bei Wichtelein!").fetchSemanticsNodes().isNotEmpty()) {
+            rule.onNodeWithText("Später").performClick()
+        }
         rule.onNodeWithText("Wichtelein").assertExists()
-        rule.onNodeWithText("🎥  Raum filmen").assertExists()
+        rule.onNodeWithText("Video aufnehmen").assertExists()
         shot(rule.onRoot(), "launch.png")
+    }
+}
+
+/** Vom Editor bis zum fertigen MP4: Overlay im Bild, Tonspur mit Sprache, in „Meine Wichtelvideos“ abgelegt. */
+@RunWith(AndroidJUnit4::class)
+class EditorExportTest {
+    @get:Rule val rule = createComposeRule()
+
+    @Test fun editorExportsVideoWithOverlayAndSpeech() {
+        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
+        val video = File(ctx.cacheDir, "test_room.mp4")
+        InstrumentationRegistry.getInstrumentation().context.assets.open("test_room.mp4").use { i -> video.outputStream().use { i.copyTo(it) } }
+        ExportManager.exportsDir(ctx).listFiles()?.forEach { it.delete() }
+
+        rule.mainClock.autoAdvance = false
+        rule.setContent {
+            MaterialTheme {
+                Surface { EditorScreen(video, testSettings.copy(speak = true, elfVoice = true), {}, {}, {}) }
+            }
+        }
+        val save = "💾 Als Video speichern"
+        fun pump(timeoutMs: Long, what: String, cond: () -> Boolean) {
+            val t0 = System.currentTimeMillis()
+            while (!cond()) {
+                rule.mainClock.advanceTimeBy(100)
+                Thread.sleep(40)
+                if (System.currentTimeMillis() - t0 > timeoutMs) throw AssertionError("Zeitüberschreitung: $what")
+            }
+        }
+        fun exists(t: String) = rule.onAllNodesWithText(t).fetchSemanticsNodes().isNotEmpty()
+        fun enabled(t: String) = exists(t) && runCatching { rule.onNodeWithText(t).assertIsEnabled() }.isSuccess
+
+        pump(420_000, "Editor bereit (Aufführung + Stimme)") { enabled(save) }
+        shot(rule.onRoot(), "editor.png")
+        rule.onNodeWithText(save).performClick()
+        pump(420_000, "Export fertig") { exists("Fertig! 🎉") || exists("Export fehlgeschlagen") }
+        shot(rule.onRoot(), "export_done.png")
+        assertTrue("Export fehlgeschlagen", exists("Fertig! 🎉"))
+
+        // Ergebnis prüfen
+        val files = listExports(ctx)
+        assertEquals(1, files.size)
+        val out = files[0]
+        assertTrue("Datei zu klein: ${out.length()}", out.length() > 20_000)
+        val ex = MediaExtractor()
+        ex.setDataSource(out.absolutePath)
+        val mimes = (0 until ex.trackCount).map { ex.getTrackFormat(it).getString(android.media.MediaFormat.KEY_MIME) ?: "" }
+        ex.release()
+        assertTrue("keine Videospur: $mimes", mimes.any { it.startsWith("video/") })
+        assertTrue("keine Tonspur: $mimes", mimes.any { it.startsWith("audio/") })
+        val inInfo = readVideoInfo(video)
+        val outInfo = readVideoInfo(out)
+        assertTrue("Dauer: ${outInfo.durationMs} statt ${inInfo.durationMs}", abs(outInfo.durationMs - inInfo.durationMs) < 800)
+
+        // Ist der Wichtel im Bild? Bild nach 2 s des Ergebnisses mit dem Original vergleichen.
+        fun frameAt(f: File, us: Long): Bitmap {
+            val r = MediaMetadataRetriever()
+            r.setDataSource(f.absolutePath)
+            val b = r.getFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST)!!
+            r.release()
+            return Bitmap.createScaledBitmap(b, 90, 160, true)
+        }
+        val a = frameAt(video, 2_000_000)
+        val b = frameAt(out, 2_000_000)
+        savePng(a, "export_source_frame.png")
+        savePng(b, "export_result_frame.png")
+        var diff = 0
+        for (y in 0 until 160) for (x in 0 until 90) {
+            val p = a.getPixel(x, y)
+            val q = b.getPixel(x, y)
+            if (abs(AColor.red(p) - AColor.red(q)) + abs(AColor.green(p) - AColor.green(q)) + abs(AColor.blue(p) - AColor.blue(q)) > 120) diff++
+        }
+        assertTrue("Wichtel nicht im Bild (nur $diff Pixel verändert)", diff > 60)
+        assertNotNull(out)
     }
 }
