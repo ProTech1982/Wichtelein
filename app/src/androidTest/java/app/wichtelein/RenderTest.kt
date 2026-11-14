@@ -20,7 +20,10 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isRoot
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
@@ -127,10 +130,13 @@ class RenderTest {
         rule.waitForIdle()
         rule.onNodeWithText("Wichtelaktionen").assertExists()
         rule.onNodeWithText("😇 Braver Wichtel").assertExists()
-        rule.onNodeWithText("😜 Frecher Wichtel").assertExists()
-        rule.onNodeWithText("🎁 Überraschung").assertExists()
         rule.onNodeWithText("Zimmer fegen").assertExists()
         shot(rule.onAllNodes(isRoot()).onFirst(), "actions.png")
+        rule.onNode(hasScrollAction()).performScrollToNode(hasText("😜 Frecher Wichtel"))
+        rule.onNodeWithText("😜 Frecher Wichtel").assertExists()
+        rule.onNode(hasScrollAction()).performScrollToNode(hasText("🎁 Überraschung"))
+        rule.onNodeWithText("🎁 Überraschung").assertExists()
+        shot(rule.onAllNodes(isRoot()).onFirst(), "actions_end.png")
         rule.runOnIdle { screen.intValue = 2 }
         rule.waitForIdle()
         rule.onNodeWithText("Meine Wichtelvideos").assertExists()
