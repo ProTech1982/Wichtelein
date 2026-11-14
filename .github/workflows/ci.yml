@@ -15,7 +15,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - name: Wichtelstimme laden
         run: bash tools/fetch-voice.sh
       - name: Unit-Tests und Debug-APK
@@ -33,7 +33,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - name: Wichtelstimme laden
         run: bash tools/fetch-voice.sh
       - name: KVM aktivieren
