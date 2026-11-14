@@ -109,7 +109,7 @@ class PerformanceTest {
         assertTrue(Lines.general.count { it.contains("{name}") } >= 10)
         val allowed = setOf("{name}", "{wichtel}", "{kind}")
         Lines.general.forEach { l ->
-            Regex("\{[^}]*\}").findAll(l).forEach { assertTrue("$l: ${it.value}", it.value in allowed) }
+            Regex("[{][^}]*[}]").findAll(l).forEach { assertTrue("$l: ${it.value}", it.value in allowed) }
         }
     }
 
