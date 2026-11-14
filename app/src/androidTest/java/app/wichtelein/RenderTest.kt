@@ -34,6 +34,7 @@ import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.printToString
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -197,7 +198,16 @@ class EditorExportTest {
             while (!cond()) {
                 rule.mainClock.advanceTimeBy(100)
                 Thread.sleep(40)
-                if (System.currentTimeMillis() - t0 > timeoutMs) throw AssertionError("Zeitüberschreitung: $what")
+                if (System.currentTimeMillis() - t0 > timeoutMs) {
+                    val state = rule.onAllNodes(isRoot()).fetchSemanticsNodes().indices.joinToString("
+---
+") { i ->
+                        runCatching { rule.onAllNodes(isRoot())[i].printToString(maxDepth = 6) }.getOrDefault("?")
+                    }
+                    throw AssertionError("Zeitüberschreitung: $what
+Zustand:
+${state.take(1800)}")
+                }
             }
         }
         fun exists(t: String) = rule.onAllNodesWithText(t).fetchSemanticsNodes().isNotEmpty()
