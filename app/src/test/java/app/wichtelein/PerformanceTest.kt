@@ -129,4 +129,47 @@ class PerformanceTest {
         }
         assertTrue(seen)
     }
+
+    private val doorScenes = listOf("brav_heim", "brav_tuer_fegen", "frech_tuer", "ueb_haus_geschenk")
+    private fun doorReq(id: String?, seed: Long = 4, ms: Long = 40_000, category: Category? = null) =
+        PerfRequest(Pt(0.3f, 0.8f), emptyList(), 0.3f, category, id, seed, ms, null, settings, door = Pt(0.8f, 0.6f), doorScale = 0.2f)
+
+    @Test fun doorScenesOpenAndCloseTheDoor() {
+        for (id in doorScenes) {
+            val p = Recorder.record(doorReq(id))
+            assertTrue("$id: Tür öffnet sich nie", p.frames.any { it.doorOpen > 0.95f })
+            val lastOpen = p.frames.indexOfLast { it.doorOpen > 0.95f }
+            assertTrue("$id: Tür schließt sich nie wieder", p.frames.drop(lastOpen).any { it.doorOpen < 0.05f })
+            assertTrue("$id: Tür nicht in den Bildern", p.frames.all { it.doorPos == Pt(0.8f, 0.6f) && it.doorScale == 0.2f })
+        }
+    }
+
+    @Test fun elfGoesInsideAndComesBackOut() {
+        val p = Recorder.record(doorReq("brav_heim"))
+        val inside = p.frames.indexOfFirst { it.visible && it.pose.scale < 0.05f && it.frameAfterAppear(p) }
+        assertTrue("nie im Haus", inside > 0)
+        assertTrue("kommt nicht wieder heraus", p.frames.drop(inside).any { it.pose.scale > 0.95f })
+        // beim Betreten steht er an der Tür
+        val f = p.frames[inside]
+        assertEquals(0.8f, f.x, 0.03f)
+    }
+
+    private fun FrameState.frameAfterAppear(p: Performance) = p.frames.indexOf(this) > 40
+
+    @Test fun doorScenesAreOnlyChosenWhenADoorExists() {
+        val doorNames = Scenes.all.filter { it.needsDoor }.map { it.name }.toSet()
+        assertEquals(4, doorNames.size)
+        for (seed in 1L..15L) {
+            val without = Recorder.record(req(seed = seed, ms = 40_000))
+            assertTrue("ohne Tür: ${without.sceneNames}", without.sceneNames.none { it in doorNames })
+        }
+        val seen = (1L..40L).any { seed -> Recorder.record(doorReq(null, seed)).sceneNames.any { it in doorNames } }
+        assertTrue("mit Tür wurde nie eine Türszene gewählt", seen)
+    }
+
+    @Test fun doorSceneWithoutDoorStillWorksWithDefaultPlace() {
+        val p = Recorder.record(req(sceneId = "brav_heim", ms = 40_000))
+        assertTrue(p.frames.any { it.pose.scale < 0.05f && it.visible })
+        assertTrue(p.frames.all { it.doorPos == null })
+    }
 }

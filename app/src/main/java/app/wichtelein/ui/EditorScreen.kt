@@ -37,6 +37,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,7 +64,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-enum class EditMode { START, PATH }
+enum class EditMode { START, PATH, DOOR }
 
 private const val MAX_WAYPOINTS = 8
 
@@ -80,7 +81,7 @@ fun EditorScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val info = remember(file.path, file.lastModified()) { readVideoInfo(file) }
-    val sprites = rememberElfSprites(settings.colorIndex)
+    val sprites = rememberElfSprites(settings.colors())
     val speaker = remember { Speaker(context) }
     DisposableEffect(Unit) { onDispose { speaker.shutdown() } }
     SideEffect {
@@ -96,6 +97,8 @@ fun EditorScreen(
     var start by remember { mutableStateOf<Pt?>(null) }
     var path by remember { mutableStateOf(emptyList<Pt>()) }
     var mode by remember { mutableStateOf(EditMode.START) }
+    var door by remember { mutableStateOf<Pt?>(null) }
+    var doorScale by remember { mutableFloatStateOf(0.2f) }
     var category by remember { mutableStateOf<Category?>(null) }
     var sceneId by remember { mutableStateOf<String?>(null) }
     var seed by remember { mutableLongStateOf(System.nanoTime() and 0xFFFFFFL) }
@@ -108,10 +111,12 @@ fun EditorScreen(
     val duration = min(info.durationMs, 90_000L).coerceAtLeast(3_000L)
 
     // 1) Aufführung aufnehmen, sobald sich etwas ändert
-    LaunchedEffect(settings, start, path, category, sceneId, seed, duration) {
+    LaunchedEffect(settings, start, path, category, sceneId, seed, duration, door, doorScale) {
         val req = PerfRequest(
             start = start ?: Pt(0.5f, 0.78f),
             path = path,
+            door = door,
+            doorScale = doorScale,
             sizeScale = settings.sizeScale,
             category = category,
             sceneId = sceneId,
@@ -201,11 +206,14 @@ fun EditorScreen(
                     modifier = Modifier.fillMaxSize(),
                     onTap = { px, py ->
                         val p = Pt(px.coerceIn(0.03f, 0.97f), py.coerceIn(0.4f, 0.96f))
-                        if (mode == EditMode.START) start = p
-                        else if (path.size < MAX_WAYPOINTS) path = path + p
+                        when (mode) {
+                            EditMode.START -> start = p
+                            EditMode.PATH -> if (path.size < MAX_WAYPOINTS) path = path + p
+                            EditMode.DOOR -> door = p
+                        }
                     },
                 )
-                EditMarkers(start, path, Modifier.fillMaxSize())
+                EditMarkers(start, path, door, doorScale, Modifier.fillMaxSize())
             }
             voiceStatus?.let {
                 Text(
@@ -232,15 +240,26 @@ fun EditorScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 FilterChip(selected = mode == EditMode.START, onClick = { mode = EditMode.START }, label = { Text("📍 Start") })
                 FilterChip(selected = mode == EditMode.PATH, onClick = { mode = EditMode.PATH }, label = { Text("🛤 Weg (${path.size})") })
+                FilterChip(selected = mode == EditMode.DOOR, onClick = { mode = EditMode.DOOR }, label = { Text(if (door == null) "🚪 Tür" else "🚪 Tür ✓") })
                 TextButton(onClick = { path = emptyList() }, enabled = path.isNotEmpty()) { Text("Weg löschen") }
             }
             Text(
-                if (mode == EditMode.START) "Tippe ins Video: Dort erscheint der Wichtel."
-                else "Tippe nacheinander Stellen, die der Wichtel ablaufen soll (höchstens $MAX_WAYPOINTS).",
+                when (mode) {
+                    EditMode.START -> "Tippe ins Video: Dort erscheint der Wichtel."
+                    EditMode.PATH -> "Tippe nacheinander Stellen, die der Wichtel ablaufen soll (höchstens $MAX_WAYPOINTS)."
+                    EditMode.DOOR -> "Wichtelhaus: Tippe auf die Stelle am Boden direkt unter der Tür. Dort öffnet, betritt und schließt der Wichtel die Tür."
+                },
                 color = Color(0xFFCCCCCC),
                 fontSize = 12.sp,
             )
 
+            if (door != null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Türgröße", color = Color.White, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { door = null }) { Text("Tür entfernen") }
+                }
+                Slider(value = doorScale, onValueChange = { doorScale = it }, valueRange = 0.06f..0.5f)
+            }
             Text("Größe", color = Color.White, fontSize = 13.sp)
             Slider(
                 value = settings.sizeScale,
@@ -265,12 +284,15 @@ fun EditorScreen(
                     FilterChip(
                         selected = sceneId == s.id,
                         onClick = { sceneId = s.id; category = s.category },
-                        label = { Text(s.name) },
+                        label = { Text(if (s.needsDoor) "🚪 ${s.name}" else s.name) },
                     )
                 }
             }
             val chosen = sceneId?.let { Scenes.find(it) }
             if (chosen != null) Text(chosen.description, color = Color(0xFFCCCCCC), fontSize = 12.sp)
+            if (chosen?.needsDoor == true && door == null) {
+                Text("Diese Szene braucht die Tür deines Wichtelhauses: markiere sie mit „🚪 Tür“. Bis dahin nimmt der Wichtel eine Standardstelle.", color = Color(0xFFFFE08A), fontSize = 12.sp)
+            }
 
             if (settings.profiles.size > 1) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -323,11 +345,22 @@ fun EditorScreen(
 
 /** Start- und Wegmarkierungen im Editor (nicht im exportierten Video). */
 @Composable
-private fun EditMarkers(start: Pt?, path: List<Pt>, modifier: Modifier) {
+private fun EditMarkers(start: Pt?, path: List<Pt>, door: Pt?, doorScale: Float, modifier: Modifier) {
     val measurer = rememberTextMeasurer()
     Canvas(modifier) {
         val w = size.width
         val h = size.height
+        door?.let {
+            val dh = h * doorScale
+            val dw = dh * 0.56f
+            drawRoundRect(
+                Color(0xCCFF7043),
+                Offset(it.x * w - dw / 2f, it.y * h - dh),
+                androidx.compose.ui.geometry.Size(dw, dh),
+                androidx.compose.ui.geometry.CornerRadius(dw / 2f, dw / 2f),
+                style = Stroke(5f),
+            )
+        }
         val pts = listOfNotNull(start) + path
         for (i in 0 until pts.size - 1) {
             drawLine(

@@ -21,6 +21,8 @@ class SceneDef(
     val name: String,
     val category: Category,
     val description: String,
+    /** braucht die Tür des Wichtelhauses (im Editor markiert) */
+    val needsDoor: Boolean = false,
     val run: suspend ElfEngine.(Stops) -> Unit,
 )
 
@@ -51,7 +53,23 @@ object Scenes {
             doSit(1200)
             doSnack()
         },
+        SceneDef("brav_heim", "Nach Hause gehen", Category.BRAV, "Er geht in sein Wichtelhaus, die Tür fällt zu – und er kommt wieder heraus.", needsDoor = true) { _ ->
+            doEnterHouse()
+            idle(2200)
+            doExitHouse()
+            doWave()
+        },
+        SceneDef("brav_tuer_fegen", "Vor der Tür fegen", Category.BRAV, "Er fegt vor seinem Haus und öffnet die Tür zur Begrüßung.", needsDoor = true) { _ ->
+            doDoorSweep()
+        },
         // ---- Frecher Wichtel
+        SceneDef("frech_tuer", "Tür-Streich", Category.FRECH, "Klopf, klopf – er verschwindet im Haus, knallt die Tür zu und lacht.", needsDoor = true) { _ ->
+            walkTo(Pt(0.5f, 0.8f))
+            doEnterHouse(fast = true)
+            idle(1300)
+            doExitHouse(fast = true)
+            sayFrom(Lines.chaos)
+        },
         SceneDef("frech_chaos", "Chaos-Wichtel", Category.FRECH, "Er wirft Spielzeug durch das Zimmer.") { s ->
             walkTo(s.next())
             doChaos()
@@ -76,6 +94,12 @@ object Scenes {
             doChaos()
         },
         // ---- Überraschung
+        SceneDef("ueb_haus_geschenk", "Geschenk aus dem Haus", Category.UEBERRASCHUNG, "Die Tür geht auf, und er bringt ein Geschenk heraus.", needsDoor = true) { s ->
+            doEnterHouse()
+            idle(1500)
+            doExitHouse(carryGift = true)
+            doGiftCarry(s.next())
+        },
         SceneDef("ueb_geschenk", "Geschenk-Zauber", Category.UEBERRASCHUNG, "Plötzlich liegt ein Geschenk da – mit Konfetti.") { s ->
             walkTo(s.next())
             doGiftPop()
@@ -108,9 +132,9 @@ object Scenes {
      * Wählt eine Szene. [category] = null mischt alle Kategorien. Nur erlaubte Szenen ([enabled] = null: alle);
      * die zuletzt gespielte wird vermieden.
      */
-    fun pick(category: Category?, enabled: Set<String>?, last: SceneDef?, rng: Random): SceneDef {
+    fun pick(category: Category?, enabled: Set<String>?, last: SceneDef?, rng: Random, hasDoor: Boolean = false): SceneDef {
         val cat = category ?: Category.values().random(rng)
-        val allowed = all.filter { enabled == null || it.id in enabled }
+        val allowed = all.filter { (enabled == null || it.id in enabled) && (hasDoor || !it.needsDoor) }
         var pool = allowed.filter { it.category == cat && it != last }
         if (pool.isEmpty()) pool = allowed.filter { it != last }
         if (pool.isEmpty()) pool = allowed // nur eine erlaubte Szene: sie darf sich wiederholen

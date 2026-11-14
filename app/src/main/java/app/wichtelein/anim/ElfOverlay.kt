@@ -15,6 +15,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -69,6 +71,8 @@ fun DrawScope.drawWichtelFrame(f: FrameState, sprites: ElfFigure, sizeScale: Flo
     val w = size.width
     val h = size.height
 
+    drawDoorBack(f, w, h)
+
     for (item in f.mess.sortedBy { it.y }) {
         drawItem(item.kind, Offset(item.x * w, item.y * h), h * sizeScale * depth(item.y) * 0.14f, item.rot)
     }
@@ -81,6 +85,8 @@ fun DrawScope.drawWichtelFrame(f: FrameState, sprites: ElfFigure, sizeScale: Flo
     f.flying?.let { fl ->
         drawItem(fl.kind, Offset(fl.x * w, fl.y * h), h * sizeScale * depth(fl.y) * 0.14f, fl.rot)
     }
+
+    drawDoorLeaf(f, w, h)
 
     for (p in f.particles) drawParticle(p, w, h, measurer)
 
@@ -139,5 +145,60 @@ private fun DrawScope.drawParticle(p: Particle, w: Float, h: Float, measurer: Te
                 color = Color(0xFF3A5BD9).copy(alpha = f),
             ),
         )
+    }
+}
+
+// ---------------------------------------------------------------- Tür des Wichtelhauses
+
+/** Rundbogen-Tür: Fußpunkt (cx, by), Breite dw, Höhe dh. */
+private fun archPath(cx: Float, by: Float, dw: Float, dh: Float): Path {
+    val left = cx - dw / 2f
+    val top = by - dh
+    return Path().apply {
+        moveTo(left, by)
+        lineTo(left, top + dw / 2f)
+        arcTo(Rect(left, top, left + dw, top + dw), 180f, 180f, false)
+        lineTo(left + dw, by)
+        close()
+    }
+}
+
+/** Dunkler Innenraum mit warmem Licht; liegt hinter dem Wichtel, damit er hineingehen kann. */
+private fun DrawScope.drawDoorBack(f: FrameState, w: Float, h: Float) {
+    val pos = f.doorPos ?: return
+    if (f.doorOpen < 0.004f) return
+    val dh = h * f.doorScale
+    val dw = dh * 0.56f
+    val cx = pos.x * w
+    val by = pos.y * h
+    drawPath(archPath(cx, by, dw, dh), Color(0xFF2B1A10))
+    drawPath(archPath(cx, by, dw * 0.8f, dh * 0.9f), Color(0xFFF6C768).copy(alpha = 0.55f * f.doorOpen))
+    drawPath(archPath(cx, by, dw * 0.45f, dh * 0.6f), Color(0xFFFFE8A8).copy(alpha = 0.45f * f.doorOpen))
+}
+
+/** Das Türblatt: links angeschlagen, schwingt beim Öffnen zur Seite (schmaler werdend) und davor wieder zu. */
+private fun DrawScope.drawDoorLeaf(f: FrameState, w: Float, h: Float) {
+    val pos = f.doorPos ?: return
+    if (f.doorOpen < 0.004f) return
+    val dh = h * f.doorScale
+    val dw = dh * 0.56f
+    val cx = pos.x * w
+    val by = pos.y * h
+    val left = cx - dw / 2f
+    val sx = kotlin.math.cos(f.doorOpen.coerceIn(0f, 1f) * 1.45f).coerceAtLeast(0.1f)
+    val shade = 1f - 0.25f * f.doorOpen
+    withTransform({ scale(sx, 1f, Offset(left, by)) }) {
+        val arch = archPath(cx, by, dw, dh)
+        drawPath(arch, Color(0.72f * shade, 0.48f * shade, 0.27f * shade))
+        // Bretter
+        for (i in 1..3) {
+            val x = left + dw * i / 4f
+            drawLine(Color(0x55402010), Offset(x, by - dh * 0.88f + (if (i == 2) -dw * 0.05f else 0f)), Offset(x, by), dw * 0.012f)
+        }
+        // Querbalken, Rahmen, Klinke
+        drawRect(Color(0x66402010), Offset(left, by - dh * 0.55f), Size(dw, dh * 0.04f))
+        drawRect(Color(0x66402010), Offset(left, by - dh * 0.18f), Size(dw, dh * 0.04f))
+        drawPath(arch, Color(0xFF5B3A1E), style = Stroke(dw * 0.045f))
+        drawCircle(Color(0xFFF2C94C), dw * 0.045f, Offset(left + dw * 0.8f, by - dh * 0.42f))
     }
 }

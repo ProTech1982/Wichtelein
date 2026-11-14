@@ -25,7 +25,10 @@ data class Settings(
     val effect: Float = 0.15f,
     val voiceId: String = VoiceCatalog.DEFAULT_ID,
     val customLines: String = "",
-    val colorIndex: Int = 0,
+    val hatColor: Int = 0,
+    val jacketColor: Int = 0,
+    val legColor: Int = 0,
+    val bootColor: Int = 0,
     val sizeScale: Float = 0.30f,
     val elfVoice: Boolean = true,
     val rate: Float = 1.0f,
@@ -33,6 +36,8 @@ data class Settings(
     /** Abgeschaltete Szenen (Wichtelaktionen). */
     val disabledScenes: Set<String> = emptySet(),
 ) {
+    fun colors() = ElfColors(hatColor, jacketColor, legColor, bootColor).clamped()
+
     fun activeProfile(): Profile? = profiles.firstOrNull { it.id == activeProfileId } ?: profiles.firstOrNull()
 
     /** Namen des aktiven Profils (für {name} in den Sprüchen). */
@@ -67,6 +72,8 @@ object SettingsStore {
             active = prof.id
             onboarded = true
         }
+        // Übernahme von Version 0.1: Farbvarianten 1..3 (Rot, Blau, Lila) sind heute Einträge 1, 5, 6 der Palette
+        val legacyColor = when (p.getInt("colorIndex", 0)) { 1 -> 1; 2 -> 5; 3 -> 6; else -> 0 }
         return Settings(
             elfName = p.getString("elfName", d.elfName) ?: d.elfName,
             profiles = profiles,
@@ -76,7 +83,10 @@ object SettingsStore {
             effect = p.getFloat("effect", d.effect),
             voiceId = p.getString("voiceId", d.voiceId) ?: d.voiceId,
             customLines = p.getString("customLines", d.customLines) ?: d.customLines,
-            colorIndex = p.getInt("colorIndex", d.colorIndex),
+            hatColor = p.getInt("hatColor", legacyColor),
+            jacketColor = p.getInt("jacketColor", legacyColor),
+            legColor = p.getInt("legColor", legacyColor),
+            bootColor = p.getInt("bootColor", d.bootColor),
             sizeScale = p.getFloat("sizeScale", d.sizeScale),
             elfVoice = p.getBoolean("elfVoice", d.elfVoice),
             rate = p.getFloat("rate", d.rate),
@@ -95,7 +105,10 @@ object SettingsStore {
             .putFloat("effect", s.effect)
             .putString("voiceId", s.voiceId)
             .putString("customLines", s.customLines)
-            .putInt("colorIndex", s.colorIndex)
+            .putInt("hatColor", s.hatColor)
+            .putInt("jacketColor", s.jacketColor)
+            .putInt("legColor", s.legColor)
+            .putInt("bootColor", s.bootColor)
             .putFloat("sizeScale", s.sizeScale)
             .putBoolean("elfVoice", s.elfVoice)
             .putFloat("rate", s.rate)

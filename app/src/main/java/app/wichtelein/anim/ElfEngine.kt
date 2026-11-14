@@ -116,6 +116,14 @@ class ElfEngine(
     val particles = mutableListOf<Particle>()
     var flying: MessItem? = null
 
+    /** Tür des Wichtelhauses: Lage, Größe und Öffnungsgrad (0 = zu, 1 = offen). */
+    var doorPos: Pt? = null
+        private set
+    var doorScale = 0.2f
+        private set
+    var doorOpen = 0f
+        private set
+
     private var bubbleUntil = 0f
     private var lastAction = -1
     private var lastNanos = 0L
@@ -132,6 +140,7 @@ class ElfEngine(
     fun snapshot() = FrameState(
         x, y, facing, visible, pose.copy(), bubble,
         mess.map { it.copy() }, flying?.copy(), particles.map { it.copy() },
+        doorPos, doorScale, doorOpen,
     )
 
     // ---------------------------------------------------------------- Takt
@@ -593,6 +602,99 @@ class ElfEngine(
         sayWait(Lines.surprised.random(rng), Mood.SURPRISED)
     }
 
+    // ---------------------------------------------------------------- Wichtelhaus mit Tür
+
+    fun configureDoor(p: Pt?, scale: Float) {
+        doorPos = p
+        doorScale = scale
+    }
+
+    /** Ohne gesetzte Tür benutzen die Szenen eine Standardstelle. */
+    private val door: Pt get() = doorPos ?: Pt(0.5f, 0.62f)
+
+    private fun frontOfDoor() = Pt(door.x, (door.y + 0.02f).coerceAtMost(0.95f))
+
+    suspend fun openDoor(ms: Long = 900) {
+        val from = doorOpen
+        anim(ms) { t -> doorOpen = from + (1f - from) * t }
+        doorOpen = 1f
+    }
+
+    suspend fun closeDoor(ms: Long = 700) {
+        val from = doorOpen
+        anim(ms) { t -> doorOpen = from * (1f - t) }
+        doorOpen = 0f
+    }
+
+    /** Klopft an die Tür. */
+    suspend fun doKnock(times: Int = 3) {
+        say(Lines.doorKnock.random(rng))
+        repeat(times) {
+            anim(300) { t -> pose.armR = 120f * sin(t * PIf) }
+        }
+        pose.relax()
+    }
+
+    /** Geht zur Tür, öffnet sie, tritt ein und schließt sie von innen. Danach ist der Wichtel im Haus (unsichtbar). */
+    suspend fun doEnterHouse(fast: Boolean = false) {
+        walkTo(frontOfDoor())
+        say(Lines.doorHome.random(rng))
+        openDoor(if (fast) 350 else 900)
+        val sx = x
+        val sy = y
+        val ty = door.y - 0.005f
+        anim(if (fast) 500L else 1000L) { t ->
+            val s = sin(clock * 11f)
+            x = sx + (door.x - sx) * t
+            y = sy + (ty - sy) * t
+            pose.scale = 1f - 0.97f * t
+            pose.legL = 25f * s
+            pose.legR = -25f * s
+            pose.bob = abs(s) * 0.015f
+        }
+        pose.relax()
+        pose.scale = 0f
+        closeDoor(if (fast) 250 else 700)
+    }
+
+    /** Kommt aus dem Haus (die Tür geht auf), tritt zur Seite und schließt die Tür hinter sich. */
+    suspend fun doExitHouse(carryGift: Boolean = false, fast: Boolean = false) {
+        x = door.x
+        y = door.y - 0.005f
+        facing = 1
+        pose.relax()
+        pose.scale = 0f
+        visible = true
+        pose.prop = if (carryGift) Prop.GIFT else Prop.NONE
+        openDoor(if (fast) 300 else 900)
+        val sy = y
+        val ty = frontOfDoor().y
+        anim(if (fast) 500L else 1000L) { t ->
+            val s = sin(clock * 11f)
+            y = sy + (ty - sy) * t
+            pose.scale = 0.03f + 0.97f * t
+            pose.legL = 25f * s
+            pose.legR = -25f * s
+            pose.bob = abs(s) * 0.015f
+        }
+        pose.relax()
+        pose.scale = 1f
+        say(Lines.doorExit.random(rng), Mood.AMUSED)
+        walkTo(Pt((door.x + 0.16f).coerceAtMost(0.92f), ty))
+        closeDoor(if (fast) 300 else 700)
+    }
+
+    /** Vor der Tür sauber machen und dann einladend winken. */
+    suspend fun doDoorSweep() {
+        walkTo(Pt((door.x - 0.1f).coerceAtLeast(0.08f), frontOfDoor().y))
+        doSweep(2200)
+        openDoor()
+        say(Lines.doorWelcome.random(rng))
+        anim(1800) { pose.armR = 150f + 22f * sin(clock * 10f) }
+        pose.relax()
+        closeDoor()
+    }
+
     // ---------------------------------------------------------------- Ablauf
 
     /**
@@ -606,7 +708,7 @@ class ElfEngine(
         var last: SceneDef? = null
         var first = req.sceneId?.let { Scenes.find(it) }
         while (true) {
-            val scene = first ?: Scenes.pick(req.category, req.enabledScenes, last, rng)
+            val scene = first ?: Scenes.pick(req.category, req.enabledScenes, last, rng, req.door != null)
             first = null
             last = scene
             played.add(scene.name)

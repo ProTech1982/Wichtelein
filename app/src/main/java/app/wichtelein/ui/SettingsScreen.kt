@@ -7,6 +7,7 @@ import app.wichtelein.speech.*
 import app.wichtelein.videoexport.*
 import app.wichtelein.settings.*
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -29,6 +32,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,23 +71,7 @@ fun SettingsScreen(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
-        Text("Farbe")
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ElfPalettes.forEachIndexed { i, p ->
-                Box(
-                    Modifier
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .background(p.hat)
-                        .border(
-                            width = if (i == settings.colorIndex) 4.dp else 1.dp,
-                            color = if (i == settings.colorIndex) Color(0xFF222222) else Color(0xFFBBBBBB),
-                            shape = CircleShape,
-                        )
-                        .clickable { onChange(settings.copy(colorIndex = i)) },
-                )
-            }
-        }
+        ClothingEditor(settings, onChange)
         Text("Standardgröße")
         Slider(value = settings.sizeScale, onValueChange = { onChange(settings.copy(sizeScale = it)) }, valueRange = 0.12f..0.6f)
 
@@ -146,4 +135,45 @@ fun SettingsScreen(
 @Composable
 private fun Section(title: String) {
     Text(title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp))
+}
+
+/** Kleidung: Vorschau des Wichtels und Farbwahl für Mütze, Jacke, Strumpfhose und Schuhe. */
+@Composable
+private fun ClothingEditor(settings: Settings, onChange: (Settings) -> Unit) {
+    val sprites = rememberElfSprites(settings.colors())
+    val pose = remember { Pose().apply { armR = 12f; armL = 6f } }
+    Canvas(Modifier.fillMaxWidth().height(200.dp)) {
+        val eh = size.height * 0.93f
+        sprites.draw(this, pose, Offset(size.width / 2f, size.height * 0.97f), eh, 1)
+    }
+    Text("Kleidung", fontWeight = FontWeight.Medium)
+    ColorRow("Mütze", ElfPalette.clothes, settings.hatColor) { onChange(settings.copy(hatColor = it)) }
+    ColorRow("Jacke", ElfPalette.clothes, settings.jacketColor) { onChange(settings.copy(jacketColor = it)) }
+    ColorRow("Strumpfhose", ElfPalette.clothes, settings.legColor) { onChange(settings.copy(legColor = it)) }
+    ColorRow("Schuhe", ElfPalette.boots, settings.bootColor) { onChange(settings.copy(bootColor = it)) }
+    TextButton(onClick = { onChange(settings.copy(hatColor = 0, jacketColor = 0, legColor = 0, bootColor = 0)) }) {
+        Text("Original-Farben")
+    }
+}
+
+@Composable
+private fun ColorRow(label: String, choices: List<ColorChoice>, selected: Int, onPick: (Int) -> Unit) {
+    val sel = selected.coerceIn(0, choices.lastIndex)
+    Text("$label: ${choices[sel].name}", fontSize = 13.sp)
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        choices.forEachIndexed { i, c ->
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(c.swatch)
+                    .border(
+                        width = if (i == sel) 4.dp else 1.dp,
+                        color = if (i == sel) Color(0xFF222222) else Color(0xFFBBBBBB),
+                        shape = CircleShape,
+                    )
+                    .clickable { onPick(i) },
+            )
+        }
+    }
 }

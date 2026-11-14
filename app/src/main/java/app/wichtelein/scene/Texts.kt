@@ -73,6 +73,22 @@ object Lines {
         "Buh! Hier bin ich!",
         "Hast du mich gesehen, {kind}?",
     )
+    val doorHome = listOf(
+        "Ich gehe kurz nach Hause, {name}.",
+        "Mein Haus ruft mich!",
+    )
+    val doorExit = listOf(
+        "Da bin ich wieder!",
+        "Zuhause ist es am schönsten, aber draußen ist es lustig.",
+    )
+    val doorKnock = listOf(
+        "Klopf, klopf! Ist jemand zu Hause?",
+        "Klopf, klopf, klopf!",
+    )
+    val doorWelcome = listOf(
+        "Herzlich willkommen im Wichtelhaus!",
+        "Meine Tür steht immer offen, {name}.",
+    )
     val sit = listOf(
         "Puh, kurz hinsetzen.",
         "So, jetzt gemütlich.",

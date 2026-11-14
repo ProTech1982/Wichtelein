@@ -29,16 +29,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import kotlin.math.max
 
-/** Farbwahl in den Einstellungen; die Nummer ist die Farbvariante der Wichtel-Bilder (elf0..elf3). */
-class ElfPalette(val name: String, val hat: Color, val dark: Color)
-
-val ElfPalettes = listOf(
-    ElfPalette("Grün", Color(0xFF2E9E4F), Color(0xFF1B6B33)),
-    ElfPalette("Rot", Color(0xFFD93A3A), Color(0xFF8F2222)),
-    ElfPalette("Blau", Color(0xFF3A7BD9), Color(0xFF244F94)),
-    ElfPalette("Lila", Color(0xFF8E4FD9), Color(0xFF5E2F94)),
-)
-
 /**
  * Austauschbare Wichtelfigur. Heute zeichnet [ElfSprites] eine 2D-Puppe aus Bildteilen; die Aufführung (Pose, Position)
  * ist davon unabhängig. So lässt sich später eine Figur aus vorgerenderten Blender-Sequenzen oder ein echtes
@@ -60,14 +50,26 @@ class ElfSprites(private val images: Map<String, ImageBitmap>) : ElfFigure {
     companion object {
         val partNames = listOf("head", "torso", "arml", "armr", "legl", "legr")
 
-        fun load(context: Context, variant: Int): ElfSprites {
+        /** Lädt die Bildteile und färbt Mütze, Jacke, Strumpfhose und Schuhe nach [colors] um. */
+        fun load(context: Context, colors: ElfColors = ElfColors()): ElfSprites {
             val res = context.resources
-            val v = variant.coerceIn(0, ElfPalettes.lastIndex)
+            val c = colors.clamped()
             val opts = BitmapFactory.Options().apply { inScaled = false }
             val map = partNames.associateWith { n ->
-                val id = res.getIdentifier("elf${v}_$n", "drawable", context.packageName)
-                require(id != 0) { "Bild elf${v}_$n fehlt" }
-                BitmapFactory.decodeResource(res, id, opts).asImageBitmap()
+                val id = res.getIdentifier("elf0_$n", "drawable", context.packageName)
+                require(id != 0) { "Bild elf0_$n fehlt" }
+                val src = BitmapFactory.decodeResource(res, id, opts)
+                val colored = when (n) {
+                    "head" -> Recolor.apply(src, ElfPalette.clothes[c.hat], 120f, 0, Recolor::isGreen)
+                    "torso", "arml", "armr" -> Recolor.apply(src, ElfPalette.clothes[c.jacket], 120f, 0, Recolor::isGreen)
+                    "legl", "legr" -> {
+                        // erst die Schuhe (rotbraun, untere Hälfte), dann die grüne Strumpfhose
+                        val shoes = Recolor.apply(src, ElfPalette.boots[c.boots], 0f, 110, Recolor::isBootRed)
+                        Recolor.apply(shoes, ElfPalette.clothes[c.legs], 120f, 0, Recolor::isGreen)
+                    }
+                    else -> src
+                }
+                colored.asImageBitmap()
             }
             return ElfSprites(map)
         }
@@ -75,9 +77,9 @@ class ElfSprites(private val images: Map<String, ImageBitmap>) : ElfFigure {
 }
 
 @Composable
-fun rememberElfSprites(variant: Int): ElfSprites {
+fun rememberElfSprites(colors: ElfColors = ElfColors()): ElfSprites {
     val context = LocalContext.current
-    return remember(variant) { ElfSprites.load(context, variant) }
+    return remember(colors) { ElfSprites.load(context, colors) }
 }
 
 // Maße im Originalbild (614 x 807): Füße bei y = 800, Mütze oben bei y = 31.

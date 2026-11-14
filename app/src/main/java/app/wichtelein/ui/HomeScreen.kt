@@ -64,7 +64,7 @@ fun HomeScreen(
                 (if (kid != null) " zu $kid" else "") + " und macht Unsinn oder räumt auf!",
         )
 
-        val sprites = rememberElfSprites(settings.colorIndex)
+        val sprites = rememberElfSprites(settings.colors())
         val pose = remember { Pose().apply { armR = 150f } }
         Canvas(Modifier.fillMaxWidth().height(170.dp)) {
             val eh = size.height * 0.92f

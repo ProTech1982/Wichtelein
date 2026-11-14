@@ -69,15 +69,15 @@ class RenderTest {
         val bg = Color(0xFFCDB89A)
         val frame = mutableStateOf<FrameState?>(null)
         rule.setContent {
-            val sprites = rememberElfSprites(0)
+            val sprites = rememberElfSprites(ElfColors())
             Box(Modifier.size(360.dp, 640.dp).background(bg)) {
                 ElfOverlay(frame.value, sprites, 0.3f, Modifier.size(360.dp, 640.dp))
             }
         }
-        val scenes = listOf("brav_fegen", "frech_chaos", "ueb_geschenk", "brav_gutenacht", "ueb_tanzparty", "frech_stolpern")
+        val scenes = listOf("brav_fegen", "frech_chaos", "ueb_geschenk", "brav_gutenacht", "ueb_tanzparty", "frech_stolpern", "brav_heim", "frech_tuer")
         for (id in scenes) {
             val perf = Recorder.record(
-                PerfRequest(Pt(0.4f, 0.78f), listOf(Pt(0.7f, 0.7f), Pt(0.3f, 0.85f)), 0.3f, null, id, 5L, 22_000, null, testSettings),
+                PerfRequest(Pt(0.4f, 0.78f), listOf(Pt(0.7f, 0.7f), Pt(0.3f, 0.85f)), 0.3f, null, id, 5L, 22_000, null, testSettings, door = Pt(0.78f, 0.6f), doorScale = 0.22f),
             )
             var visiblePixelsMax = 0
             var n = 0
@@ -320,5 +320,80 @@ class RotatedExportTest {
         val b = r.getFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST)!!
         r.release()
         return Bitmap.createScaledBitmap(b, 160, 90, true)
+    }
+}
+
+
+/** Kleidungsfarben: nur das gewählte Kleidungsstück ändert sich. */
+@RunWith(AndroidJUnit4::class)
+class ColorTest {
+    @get:Rule val rule = createComposeRule()
+
+    private fun count(bmp: Bitmap, match: (Float, Float, Float) -> Boolean): Int {
+        val hsv = FloatArray(3)
+        var n = 0
+        for (y in 0 until bmp.height) for (x in 0 until bmp.width) {
+            val c = bmp.getPixel(x, y)
+            if (AColor.alpha(c) < 200) continue
+            AColor.colorToHSV(c, hsv)
+            if (match(hsv[0], hsv[1], hsv[2])) n++
+        }
+        return n
+    }
+
+    private fun bmp(s: ElfSprites, part: String) = s.image(part).asAndroidBitmap()
+
+    @Test fun onlyTheChosenGarmentChanges() {
+        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
+        val base = ElfSprites.load(ctx)
+        val green = { h: Float, s: Float, v: Float -> Recolor.isGreen(h, s, v) }
+        val red = { h: Float, s: Float, v: Float -> (h <= 25f || h >= 325f) && s > 0.4f && v > 0.25f }
+        val blue = { h: Float, s: Float, v: Float -> h in 180f..260f && s > 0.4f && v > 0.2f }
+
+        val baseHatGreen = count(bmp(base, "head"), green)
+        val baseJacketGreen = count(bmp(base, "torso"), green)
+        val baseLegGreen = count(bmp(base, "legl"), green)
+        assertTrue("Mütze hat zu wenig Grün: $baseHatGreen", baseHatGreen > 1500)
+        assertTrue("Jacke hat zu wenig Grün: $baseJacketGreen", baseJacketGreen > 4000)
+
+        // Nur die Mütze rot
+        val hatRed = ElfSprites.load(ctx, ElfColors(hat = 1))
+        assertTrue("Mütze noch grün", count(bmp(hatRed, "head"), green) < baseHatGreen / 10)
+        assertTrue("Mütze nicht rot", count(bmp(hatRed, "head"), red) > baseHatGreen / 2)
+        assertEquals("Jacke darf sich nicht ändern", baseJacketGreen, count(bmp(hatRed, "torso"), green))
+        assertEquals("Beine dürfen sich nicht ändern", baseLegGreen, count(bmp(hatRed, "legl"), green))
+
+        // Nur die Jacke blau (Körper und beide Arme)
+        val jacketBlue = ElfSprites.load(ctx, ElfColors(jacket = 5))
+        assertTrue("Jacke noch grün", count(bmp(jacketBlue, "torso"), green) < baseJacketGreen / 10)
+        assertTrue("Jacke nicht blau", count(bmp(jacketBlue, "torso"), blue) > baseJacketGreen / 2)
+        assertTrue("Arm nicht blau", count(bmp(jacketBlue, "armr"), blue) > 500)
+        assertEquals("Mütze darf sich nicht ändern", baseHatGreen, count(bmp(jacketBlue, "head"), green))
+
+        // Nur die Schuhe blau
+        val bootsBlue = ElfSprites.load(ctx, ElfColors(boots = 4))
+        val baseBootRed = count(bmp(base, "legl").let { Bitmap.createBitmap(it, 0, 110, it.width, it.height - 110) }, red)
+        val newBootRed = count(bmp(bootsBlue, "legl").let { Bitmap.createBitmap(it, 0, 110, it.width, it.height - 110) }, red)
+        assertTrue("Schuhe waren nicht rotbraun? $baseBootRed", baseBootRed > 800)
+        assertTrue("Schuhe noch rot: $newBootRed", newBootRed < baseBootRed / 5)
+        assertEquals("Strumpfhose darf sich nicht ändern", baseLegGreen, count(bmp(bootsBlue, "legl"), green))
+    }
+
+    @Test fun rendersSeveralOutfits() {
+        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
+        val outfits = listOf(
+            ElfColors(), ElfColors(1, 1, 1, 0), ElfColors(8, 5, 8, 1), ElfColors(7, 6, 3, 3), ElfColors(2, 10, 9, 2),
+        ).map { ElfSprites.load(ctx, it) }
+        rule.setContent {
+            androidx.compose.foundation.Canvas(Modifier.size(600.dp, 260.dp).background(Color(0xFFE8DCC8))) {
+                val pose = Pose()
+                outfits.forEachIndexed { i, s ->
+                    s.draw(this, pose, androidx.compose.ui.geometry.Offset(size.width * (i + 0.5f) / outfits.size, size.height * 0.95f), size.height * 0.9f, 1)
+                }
+            }
+        }
+        rule.waitForIdle()
+        val b = shot(rule.onAllNodes(isRoot()).onFirst(), "outfits.png")
+        assertTrue(b.width > 100)
     }
 }
