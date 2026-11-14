@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -121,10 +122,11 @@ fun MyVideosScreen(onBack: () -> Unit) {
                         Column(Modifier.weight(1f)) {
                             Text(DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(f.lastModified())), fontWeight = FontWeight.Medium)
                             Text("${f.length() / 1024} KB", fontSize = 12.sp)
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(onClick = { ExportManager.view(context, f) }) { Text("▶", fontSize = 13.sp) }
-                                OutlinedButton(onClick = { ExportManager.share(context, f) }) { Text("Teilen", fontSize = 13.sp) }
-                                OutlinedButton(onClick = { toDelete = f }) { Text("🗑", fontSize = 13.sp) }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                val pad = PaddingValues(horizontal = 6.dp)
+                                OutlinedButton(onClick = { ExportManager.view(context, f) }, Modifier.weight(1f), contentPadding = pad) { Text("▶", fontSize = 13.sp, maxLines = 1) }
+                                OutlinedButton(onClick = { ExportManager.share(context, f) }, Modifier.weight(2f), contentPadding = pad) { Text("Teilen", fontSize = 13.sp, maxLines = 1) }
+                                OutlinedButton(onClick = { toDelete = f }, Modifier.weight(1f), contentPadding = pad) { Text("🗑", fontSize = 13.sp, maxLines = 1) }
                             }
                         }
                     }
