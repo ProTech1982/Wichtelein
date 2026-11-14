@@ -232,7 +232,7 @@ fun EditorScreen(
         Column(
             Modifier
                 .fillMaxWidth()
-                .heightIn(max = 300.dp)
+                .heightIn(max = 230.dp)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -305,38 +305,41 @@ fun EditorScreen(
                     }
                 }
             }
+        }
 
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { seed = System.nanoTime() and 0xFFFFFFL }, modifier = Modifier.weight(1f)) { Text("🎲 Neu würfeln", color = Color.White) }
-                Button(
-                    onClick = {
-                        val p = perf ?: return@Button
-                        export = ExportUi.Running(0f)
-                        scope.launch {
-                            export = try {
-                                val result = ExportManager.export(
-                                    context = context,
-                                    video = file,
-                                    info = info,
-                                    perf = p,
-                                    settings = settings,
-                                    onProgress = { export = ExportUi.Running(it) },
-                                )
-                                ExportUi.Done(result)
-                            } catch (t: Throwable) {
-                                ExportUi.Failed(t.message ?: "Unbekannter Fehler")
-                            }
+        // feste Leiste: immer sichtbar, auch wenn das Bedienfeld scrollt
+        Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { seed = System.nanoTime() and 0xFFFFFFL }, modifier = Modifier.weight(1f)) { Text("🎲 Neu würfeln", color = Color.White) }
+            Button(
+                onClick = {
+                    val p = perf ?: return@Button
+                    export = ExportUi.Running(0f)
+                    scope.launch {
+                        export = try {
+                            val result = ExportManager.export(
+                                context = context,
+                                video = file,
+                                info = info,
+                                perf = p,
+                                settings = settings,
+                                onProgress = { export = ExportUi.Running(it) },
+                            )
+                            ExportUi.Done(result)
+                        } catch (t: Throwable) {
+                            ExportUi.Failed(t.message ?: "Unbekannter Fehler")
                         }
-                    },
-                    enabled = perf != null && voiceStatus == null && export == null,
-                    modifier = Modifier.weight(1f),
-                ) { Text("💾 Als Video speichern") }
-            }
-            Text(
-                perf?.sceneNames?.joinToString(" → ") ?: "Szene wird erzeugt …",
-                color = Color(0xFF9E9E9E),
-                fontSize = 11.sp,
-            )
+                    }
+                },
+                enabled = perf != null && voiceStatus == null && export == null,
+                modifier = Modifier.weight(1f),
+            ) { Text("💾 Als Video speichern") }
+        }
+        Text(
+            perf?.sceneNames?.joinToString(" → ") ?: "Szene wird erzeugt …",
+            color = Color(0xFF9E9E9E),
+            fontSize = 11.sp,
+        )
         }
     }
 
