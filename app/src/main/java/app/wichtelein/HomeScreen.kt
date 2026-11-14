@@ -112,43 +112,7 @@ fun HomeScreen(
             Text("Wichtel spricht (Sprachausgabe)")
             Switch(checked = settings.speak, onCheckedChange = { onChange(settings.copy(speak = it)) })
         }
-        Text("Stimme")
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(
-                selected = settings.elfVoice,
-                onClick = { onChange(settings.copy(elfVoice = true)) },
-                label = { Text("Wichtelstimme") },
-            )
-            FilterChip(
-                selected = !settings.elfVoice,
-                onClick = { onChange(settings.copy(elfVoice = false)) },
-                label = { Text("Systemstimme") },
-            )
-        }
-        if (settings.elfVoice) {
-            Text("Stimmung")
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Mood.choices.forEach { (label, id) ->
-                    FilterChip(
-                        selected = settings.mood == id,
-                        onClick = { onChange(settings.copy(mood = id)) },
-                        label = { Text(label) },
-                    )
-                }
-            }
-        }
-        Text("Tonhöhe: tief ↔ hoch")
-        Slider(
-            value = settings.pitch,
-            onValueChange = { onChange(settings.copy(pitch = it)) },
-            valueRange = 0.8f..2.0f,
-        )
-        Text("Sprechtempo: langsam ↔ schnell")
-        Slider(
-            value = settings.rate,
-            onValueChange = { onChange(settings.copy(rate = it)) },
-            valueRange = 0.7f..1.4f,
-        )
+        VoiceSettings(settings, onChange)
 
         OutlinedTextField(
             value = settings.customLines,

@@ -28,8 +28,15 @@ class Speaker(context: Context) {
         private set
 
     var enabled = true
-    /** Einstellung 0,8 bis 2,0; bei der Wichtelstimme wird daraus der Anhebungsfaktor. */
-    var pitch = 1.6f
+    /** Wichtel-Effekt 0..1 (0 = natürlich); bei der Wichtelstimme wird daraus der Anhebungsfaktor. */
+    var effect = 0.15f
+    var voiceId = VoiceCatalog.DEFAULT_ID
+        set(value) {
+            if (field != value) {
+                field = value
+                ElfVoice.prepareAsync(appContext, value)
+            }
+        }
     var rate = 1.0f
     var mood = Mood.AMUSED
     var useElfVoice = true
@@ -74,7 +81,7 @@ class Speaker(context: Context) {
     private fun speakElf(text: String, moodId: Int) {
         val id = generation.incrementAndGet()
         stopPlayback()
-        val factor = 1f + (pitch - 1f) * 0.7f
+        val factor = 1f + 0.45f * effect
         val r = rate
         playExec.execute {
             val audio = try {
@@ -127,7 +134,7 @@ class Speaker(context: Context) {
     private fun speakSystem(text: String) {
         val t = system ?: return
         if (systemAvailable != true) return
-        t.setPitch(pitch)
+        t.setPitch(1f + effect)
         t.setSpeechRate(rate)
         t.speak(text, TextToSpeech.QUEUE_FLUSH, null, "wichtel")
     }

@@ -16,7 +16,7 @@ import java.util.concurrent.Executors
 /** Gesprochener Satz als Rohdaten (Mono, Float -1..1). */
 class VoiceAudio(val samples: FloatArray, val sampleRate: Int)
 
-/** Stimmungen des Modells (Sprecher-Nummern von „thorsten_emotional“). */
+/** Stimmungen des Modells „Thorsten emotional“ (Sprecher-Nummern). */
 object Mood {
     const val AMUSED = 0
     const val NEUTRAL = 4
@@ -25,18 +25,18 @@ object Mood {
     const val WHISPER = 7
 
     val choices = listOf(
+        "Normal" to NEUTRAL,
         "Fröhlich" to AMUSED,
         "Überrascht" to SURPRISED,
-        "Normal" to NEUTRAL,
         "Müde" to SLEEPY,
         "Flüsternd" to WHISPER,
     )
 }
 
 /**
- * Die Wichtelstimme: ein neuronales deutsches Sprachmodell (Piper „Thorsten emotional“, CC0, läuft komplett offline
- * über sherpa-onnx), dessen Tonhöhe per [pitchShift] angehoben wird. Das Modell liegt in den App-Assets
- * (`voice/`, siehe `tools/fetch-voice.sh`) und wird beim ersten Start einmalig in den App-Speicher entpackt.
+ * Die Wichtelstimme: ein neuronales deutsches Sprachmodell (Piper, läuft offline über sherpa-onnx).
+ * Eingebaut ist „Thorsten emotional“ (Assets `voice/`, siehe `tools/fetch-voice.sh`); weitere Stimmen lädt
+ * [VoiceDownloads]. Die Tonhöhe lässt sich per [pitchShift] leicht anheben (Wichtel-Effekt).
  */
 object ElfVoice {
     enum class State { IDLE, PREPARING, READY, UNAVAILABLE }
@@ -48,42 +48,47 @@ object ElfVoice {
     var error: String? = null
         private set
 
+    /** Welche Stimme gerade geladen ist. */
+    var activeId: String? = null
+        private set
+
     @Volatile private var tts: OfflineTts? = null
+    private var requested: String? = null
     private val exec = Executors.newSingleThreadExecutor()
 
-    /** Startet die Vorbereitung im Hintergrund (nur einmal). */
+    /** Lädt die Stimme [voiceId] im Hintergrund (nichts zu tun, wenn sie schon geladen wird). */
     @Synchronized
-    fun prepareAsync(context: Context) {
-        if (state != State.IDLE) return
+    fun prepareAsync(context: Context, voiceId: String = VoiceCatalog.DEFAULT_ID) {
+        if (requested == voiceId && (state == State.PREPARING || state == State.READY)) return
+        requested = voiceId
         state = State.PREPARING
         val app = context.applicationContext
         exec.execute {
             try {
-                tts = load(app)
-                state = State.READY
+                val old = tts
+                tts = null
+                old?.release()
+                val loaded = load(app, voiceId)
+                tts = loaded
+                activeId = voiceId
+                error = null
+                if (requested == voiceId) state = State.READY
             } catch (t: Throwable) {
                 error = t.message ?: t.javaClass.simpleName
-                state = State.UNAVAILABLE
+                if (requested == voiceId) state = State.UNAVAILABLE
             }
         }
     }
 
-    private fun load(context: Context): OfflineTts {
-        val am = context.assets
-        if (am.list("voice")?.contains("model.onnx") != true) {
-            throw IllegalStateException("Stimmen-Modell ist nicht in der App enthalten")
-        }
-        val dest = File(context.filesDir, "voice-$DATA_VERSION")
-        val marker = File(dest, ".ready")
-        if (!marker.exists()) {
-            dest.deleteRecursively()
-            copyAssetDir(am, "voice", dest)
-            marker.writeText("ok")
-        }
+    private fun load(context: Context, voiceId: String): OfflineTts {
+        val base = ensureBundled(context)
+        val info = VoiceCatalog.find(voiceId)
+        val dir = if (info.bundled) base else VoiceCatalog.dir(context, info.id)
+        if (!File(dir, "model.onnx").exists()) throw IllegalStateException("Stimme „${info.name}“ ist nicht installiert")
         val vits = OfflineTtsVitsModelConfig(
-            model = File(dest, "model.onnx").path,
-            tokens = File(dest, "tokens.txt").path,
-            dataDir = File(dest, "espeak-ng-data").path,
+            model = File(dir, "model.onnx").path,
+            tokens = File(dir, "tokens.txt").path,
+            dataDir = File(base, "espeak-ng-data").path,
             noiseScale = 0.667f,
             noiseScaleW = 0.8f,
             lengthScale = 1.0f,
@@ -96,6 +101,21 @@ object ElfVoice {
         return OfflineTts(assetManager = null, config = config)
     }
 
+    /** Entpackt das eingebaute Modell samt espeak-Daten (einmalig) und liefert den Ordner. */
+    private fun ensureBundled(context: Context): File {
+        val am = context.assets
+        val dest = File(context.filesDir, "voice-$DATA_VERSION")
+        val marker = File(dest, ".ready")
+        if (marker.exists()) return dest
+        if (am.list("voice")?.contains("model.onnx") != true) {
+            throw IllegalStateException("Stimmen-Modell ist nicht in der App enthalten")
+        }
+        dest.deleteRecursively()
+        copyAssetDir(am, "voice", dest)
+        marker.writeText("ok")
+        return dest
+    }
+
     private fun copyAssetDir(am: AssetManager, src: String, dst: File) {
         val children = am.list(src) ?: emptyArray()
         if (children.isEmpty()) {
@@ -103,8 +123,7 @@ object ElfVoice {
                 dst.parentFile?.mkdirs()
                 am.open(src).use { input -> dst.outputStream().use { input.copyTo(it) } }
             } catch (_: IOException) {
-                // leeres Verzeichnis
-                dst.mkdirs()
+                dst.mkdirs() // leeres Verzeichnis
             }
         } else {
             dst.mkdirs()
@@ -114,17 +133,15 @@ object ElfVoice {
 
     /**
      * Erzeugt einen Satz. [pitchFactor] hebt die Stimme an (1 = unverändert), [rate] ist das Sprechtempo
-     * (1 = normal). Blockiert, deshalb nicht auf dem UI-Thread aufrufen. Gibt null zurück, wenn die Stimme fehlt.
+     * (1 = normal). Blockiert, deshalb nicht auf dem UI-Thread aufrufen. Gibt null zurück, wenn keine Stimme geladen ist.
      */
     @Synchronized
     fun synthesize(text: String, mood: Int, rate: Float, pitchFactor: Float): VoiceAudio? {
         val engine = tts ?: return null
-        val sid = mood.coerceIn(0, max(0, engine.numSpeakers() - 1))
+        val sid = mood.coerceIn(0, maxOf(0, engine.numSpeakers() - 1))
         val audio = engine.generate(text, sid, rate.coerceIn(0.5f, 1.6f))
         if (audio.samples.isEmpty()) throw IllegalStateException("Sprachmodell lieferte keine Audiodaten")
         val shifted = pitchShift(audio.samples, pitchFactor)
         return VoiceAudio(normalizePeak(shifted, 0.9f), audio.sampleRate)
     }
-
-    private fun max(a: Int, b: Int) = if (a > b) a else b
 }

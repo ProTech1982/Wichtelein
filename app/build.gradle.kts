@@ -60,6 +60,7 @@ dependencies {
     // Offline-Sprachausgabe; die Datei lädt tools/fetch-voice.sh
     implementation(files("libs/sherpa-onnx-1.13.8.aar"))
 
+    implementation("org.apache.commons:commons-compress:1.27.1")
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")

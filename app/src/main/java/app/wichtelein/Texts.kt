@@ -78,7 +78,7 @@ object Lines {
 
 /** Ersetzt die Platzhalter in einem Satz. */
 fun fill(template: String, kid: String, elf: String): String =
-    template.replace("{kind}", kid).replace("{wichtel}", elf)
+    template.replace("{name}", kid).replace("{kind}", kid).replace("{wichtel}", elf)
 
 /** Wie lange eine Sprechblase sichtbar bleibt. */
 fun bubbleDurationMs(text: String): Long = 1800L + text.length * 65L

@@ -66,7 +66,8 @@ fun PlayScreen(
     DisposableEffect(Unit) { onDispose { speaker.shutdown() } }
     SideEffect {
         speaker.enabled = settings.speak
-        speaker.pitch = settings.pitch
+        speaker.effect = settings.effect
+        speaker.voiceId = settings.voiceId
         speaker.rate = settings.rate
         speaker.mood = settings.mood
         speaker.useElfVoice = settings.elfVoice

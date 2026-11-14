@@ -68,4 +68,25 @@ class VoiceTest {
         val ratio = elf.samples.size.toDouble() / plain.samples.size
         assertTrue("Dauer weicht ab: $ratio", abs(ratio - 1.0) < 0.15)
     }
+
+    @Test fun downloadedVoiceRamonaSpeaks() {
+        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
+        val dir = File(ctx.filesDir, "shots").apply { mkdirs() }
+        val v = VoiceCatalog.find("ramona")
+        kotlinx.coroutines.runBlocking { VoiceDownloads.download(ctx, v) }
+        val st = VoiceDownloads.states["ramona"]
+        assertTrue("Download fehlgeschlagen: ${st?.error}", st?.done == true)
+        assertTrue(VoiceCatalog.isInstalled(ctx, "ramona"))
+        ElfVoice.prepareAsync(ctx, "ramona")
+        val t0 = System.currentTimeMillis()
+        while (!(ElfVoice.state == ElfVoice.State.READY && ElfVoice.activeId == "ramona") &&
+            ElfVoice.state != ElfVoice.State.UNAVAILABLE && System.currentTimeMillis() - t0 < 240_000
+        ) Thread.sleep(300)
+        assertEquals("Ramona nicht bereit: ${ElfVoice.error}", "ramona", ElfVoice.activeId)
+        val a = ElfVoice.synthesize("Hallo Max, ich bin Pippo, dein Wichtel!", Mood.NEUTRAL, 1.0f, 1.0f)
+        assertNotNull(a)
+        writeWav(File(dir, "voice_ramona.wav"), a!!)
+        assertTrue("zu kurz", a.samples.size > a.sampleRate)
+        assertTrue("still", rms(a.samples) > 0.05)
+    }
 }
