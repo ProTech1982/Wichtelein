@@ -239,3 +239,78 @@ class EditorExportTest {
         assertNotNull(out)
     }
 }
+
+
+/** Handyvideos sind oft quer gespeichert und per Drehung markiert: Export muss sie richtig herum bearbeiten. */
+@RunWith(AndroidJUnit4::class)
+class RotatedExportTest {
+    private fun remuxWithRotation(src: File, dst: File, degrees: Int) {
+        val ex = MediaExtractor()
+        ex.setDataSource(src.absolutePath)
+        val muxer = android.media.MediaMuxer(dst.absolutePath, android.media.MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+        val map = HashMap<Int, Int>()
+        for (i in 0 until ex.trackCount) {
+            ex.selectTrack(i)
+            map[i] = muxer.addTrack(ex.getTrackFormat(i))
+        }
+        muxer.setOrientationHint(degrees)
+        muxer.start()
+        val buf = java.nio.ByteBuffer.allocate(1 shl 20)
+        val info = android.media.MediaCodec.BufferInfo()
+        while (true) {
+            buf.clear()
+            val n = ex.readSampleData(buf, 0)
+            if (n < 0) break
+            info.set(0, n, ex.sampleTime, ex.sampleFlags)
+            muxer.writeSampleData(map[ex.sampleTrackIndex]!!, buf, info)
+            ex.advance()
+        }
+        muxer.stop()
+        muxer.release()
+        ex.release()
+    }
+
+    @Test fun rotatedVideoIsExportedUprightWithElfInPlace() {
+        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
+        val plain = File(ctx.cacheDir, "test_room_plain.mp4")
+        InstrumentationRegistry.getInstrumentation().context.assets.open("test_room.mp4").use { i -> plain.outputStream().use { i.copyTo(it) } }
+        val video = File(ctx.cacheDir, "test_room_rot90.mp4")
+        remuxWithRotation(plain, video, 90)
+        val info = readVideoInfo(video)
+        assertEquals("angezeigte Breite", 640, info.width)
+        assertEquals("angezeigte Höhe", 360, info.height)
+
+        val settings = Settings(elfName = "Pippo", speak = false, onboarded = true).withProfile("Max")
+        val perf = Recorder.record(PerfRequest(Pt(0.5f, 0.78f), emptyList(), 0.3f, null, "brav_fegen", 3L, info.durationMs, null, settings))
+        val result = kotlinx.coroutines.runBlocking { ExportManager.export(ctx, video, info, perf, settings) { } }
+        val outInfo = readVideoInfo(result.file)
+        savePng(frame(result.file, 2_000_000), "rot_result_frame.png")
+        assertEquals("Export muss aufrecht sein: Breite", 640, outInfo.width)
+        assertEquals("Export muss aufrecht sein: Höhe", 360, outInfo.height)
+
+        val a = frame(video, 2_000_000)
+        val b = frame(result.file, 2_000_000)
+        var n = 0
+        var sx = 0L
+        var sy = 0L
+        for (y in 0 until b.height) for (x in 0 until b.width) {
+            val p = a.getPixel(x, y)
+            val q = b.getPixel(x, y)
+            if (abs(AColor.red(p) - AColor.red(q)) + abs(AColor.green(p) - AColor.green(q)) + abs(AColor.blue(p) - AColor.blue(q)) > 120) {
+                n++; sx += x; sy += y
+            }
+        }
+        assertTrue("Wichtel nicht im Bild ($n)", n > 60)
+        val cx = sx.toFloat() / n / b.width
+        val cy = sy.toFloat() / n / b.height
+        assertTrue("Wichtel nicht in der Bildmitte unten: x=$cx y=$cy", cx in 0.3f..0.7f && cy in 0.4f..0.95f)
+    }
+
+    private fun frame(f: File, us: Long): Bitmap {
+        val r = MediaMetadataRetriever()
+        r.setDataSource(f.absolutePath)
+        val b = r.getFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST)!!
+        r.release()
+        return Bitmap.createScaledBitmap(b, 160, 90, true)
+    }
+}

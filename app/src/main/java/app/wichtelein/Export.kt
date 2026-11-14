@@ -82,13 +82,17 @@ object ExportManager {
         // 1) Sprache (nur mit der Wichtelstimme als Rohdaten möglich)
         var wav: File? = null
         var hasSpeech = false
-        if (SpeechRender.awaitVoice(app, settings, 60_000)) {
-            val clips = withContext(Dispatchers.Default) { perf.speech.map { SpeechRender.render(settings, it) } }
-            if (clips.any { it != null }) {
-                val pcm = SpeechMixer.mix(perf.speech, clips, info.durationMs)
-                wav = File(app.cacheDir, "wichtel-sprache.wav").also { it.writeBytes(SpeechMixer.toWav(pcm)) }
-                hasSpeech = true
-            }
+        val clips: List<VoiceAudio?> = when {
+            !settings.speak -> emptyList()
+            SpeechRender.awaitVoice(app, settings, 60_000) ->
+                withContext(Dispatchers.Default) { perf.speech.map { SpeechRender.render(settings, it) } }
+            // Systemstimme (oder Wichtelstimme nicht verfügbar): Sprache über synthesizeToFile erzeugen
+            else -> withContext(Dispatchers.Default) { SystemTtsRender.renderAll(app, settings, perf.speech) }
+        }
+        if (clips.any { it != null }) {
+            val pcm = SpeechMixer.mix(perf.speech, clips, info.durationMs)
+            wav = File(app.cacheDir, "wichtel-sprache.wav").also { it.writeBytes(SpeechMixer.toWav(pcm)) }
+            hasSpeech = true
         }
 
         // 2) Overlay: pro Videobild die passende Szene der Aufführung
@@ -235,7 +239,7 @@ fun ExportDialog(state: ExportUi?, onClose: () -> Unit, onOpenVideos: () -> Unit
             text = {
                 Text(
                     (if (state.result.galleryUri != null) "Das Video liegt in der Galerie (Filme/Wichtelein) und unter „Meine Wichtelvideos“." else "Das Video liegt unter „Meine Wichtelvideos“.") +
-                        (if (!state.result.hasSpeech) "\n\nHinweis: Ohne Wichtelstimme enthält das Video keine gesprochenen Sätze (nur Sprechblasen)." else ""),
+                        (if (!state.result.hasSpeech) "\n\nHinweis: Es konnte keine Sprache erzeugt werden (keine deutsche Stimme verfügbar oder Sprache aus). Das Video zeigt nur Sprechblasen." else ""),
                 )
             },
             confirmButton = { TextButton(onClick = { ExportManager.share(context, state.result.file) }) { Text("Teilen") } },

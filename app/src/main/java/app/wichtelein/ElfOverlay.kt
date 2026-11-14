@@ -38,7 +38,7 @@ private val ConfettiColors = listOf(
 @Composable
 fun ElfOverlay(
     frame: FrameState?,
-    sprites: ElfSprites,
+    sprites: ElfFigure,
     sizeScale: Float,
     modifier: Modifier = Modifier,
     onTap: ((Float, Float) -> Unit)? = null,
@@ -58,7 +58,7 @@ fun ElfOverlay(
  * Zeichnet einen Moment der Aufführung: Gegenstände, Wichtel, Partikel und Sprechblase.
  * Wird für die Vorschau und für den Videoexport benutzt, deshalb gibt es hier nur Größen relativ zur Fläche.
  */
-fun DrawScope.drawWichtelFrame(f: FrameState, sprites: ElfSprites, sizeScale: Float, measurer: TextMeasurer) {
+fun DrawScope.drawWichtelFrame(f: FrameState, sprites: ElfFigure, sizeScale: Float, measurer: TextMeasurer) {
     val w = size.width
     val h = size.height
 
@@ -68,7 +68,7 @@ fun DrawScope.drawWichtelFrame(f: FrameState, sprites: ElfSprites, sizeScale: Fl
 
     if (f.visible) {
         val eh = h * sizeScale * depth(f.y)
-        drawElf(f.pose, sprites, Offset(f.x * w, f.y * h), eh, f.facing)
+        sprites.draw(this, f.pose, Offset(f.x * w, f.y * h), eh, f.facing)
     }
 
     f.flying?.let { fl ->

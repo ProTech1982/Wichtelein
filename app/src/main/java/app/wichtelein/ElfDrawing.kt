@@ -32,9 +32,23 @@ val ElfPalettes = listOf(
     ElfPalette("Lila", Color(0xFF8E4FD9), Color(0xFF5E2F94)),
 )
 
-/** Die Einzelteile des Wichtels (Kopf mit Mütze, Körper, Arme, Beine mit Schuhen) als Bilder. */
-class ElfSprites(private val images: Map<String, ImageBitmap>) {
+/**
+ * Austauschbare Wichtelfigur. Heute zeichnet [ElfSprites] eine 2D-Puppe aus Bildteilen; die Aufführung (Pose, Position)
+ * ist davon unabhängig. So lässt sich später eine Figur aus vorgerenderten Blender-Sequenzen oder ein echtes
+ * 3D-Modell einsetzen, ohne Szenen, Zeitleiste, Editor oder Export zu ändern.
+ */
+interface ElfFigure {
+    /** Zeichnet die Figur mit den Füßen bei [base], [h] Pixel hoch; [facing] = 1 oder -1 (gespiegelt). */
+    fun draw(scope: DrawScope, pose: Pose, base: Offset, h: Float, facing: Int)
+}
+
+/** Die Einzelteile des Wichtels (Kopf mit Mütze, Körper, Arme, Beine mit Schuhen) als Bilder: die 2D-Puppe. */
+class ElfSprites(private val images: Map<String, ImageBitmap>) : ElfFigure {
     fun image(name: String): ImageBitmap = images.getValue(name)
+
+    override fun draw(scope: DrawScope, pose: Pose, base: Offset, h: Float, facing: Int) {
+        scope.drawElf(pose, this, base, h, facing)
+    }
 
     companion object {
         val partNames = listOf("head", "torso", "arml", "armr", "legl", "legr")
@@ -112,7 +126,7 @@ fun DrawScope.drawElf(p: Pose, sprites: ElfSprites, base: Offset, h: Float, faci
                 if (p.prop != Prop.NONE) drawProp(p.prop)
                 drawPart(sprites, ARM_R)
             }
-            withTransform({ rotate(p.hatTilt * 150f, PIV_HEAD) }) {
+            withTransform({ rotate(p.hatTilt * 150f + p.nod, PIV_HEAD) }) {
                 drawPart(sprites, HEAD)
                 drawFace(p)
             }
@@ -147,7 +161,7 @@ private fun DrawScope.drawFace(p: Pose) {
         drawRoundRect(Color.White, Offset(352f - mw * 0.36f, 233f), Size(mw * 0.72f, 9f), CornerRadius(4f))
         if (open > 0.5f) drawOval(Color(0xFFD9667A), Offset(352f - 16f, 232f + mh - 16f), Size(32f, 13f))
     }
-    if (p.eyesClosed) {
+    if (p.eyesClosed || p.blink) {
         for (cx in listOf(318f, 377f)) {
             drawOval(SkinTone, Offset(cx - 27f, 160f), Size(54f, 46f))
             drawArc(

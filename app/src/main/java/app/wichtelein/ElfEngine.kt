@@ -25,6 +25,10 @@ class Pose {
     var mouth = 0f
     var talk = 0f
     var eyesClosed = false
+    /** kurzes Blinzeln (unabhängig von den Aktionen) */
+    var blink = false
+    /** Kopfnicken in Grad (beim Sprechen) */
+    var nod = 0f
     var hatTilt = 0f
     var scale = 1f
     var prop = Prop.NONE
@@ -46,6 +50,7 @@ class Pose {
         it.armL = armL; it.armR = armR; it.legL = legL; it.legR = legR
         it.lean = lean; it.spin = spin; it.bob = bob; it.squash = squash
         it.mouth = mouth; it.talk = talk; it.eyesClosed = eyesClosed; it.hatTilt = hatTilt
+        it.blink = blink; it.nod = nod
         it.scale = scale; it.prop = prop
     }
 }
@@ -108,6 +113,8 @@ class ElfEngine(
     private var lastAction = -1
     private var lastNanos = 0L
     private var clock = 0f
+    private var blinkIn = 1.8f
+    private var blinkLeft = 0f
 
     /** Vergangene Zeit der Aufführung in Millisekunden. */
     val timeMs: Long get() = (clock * 1000f).toLong()
@@ -129,6 +136,14 @@ class ElfEngine(
         clock += dt
         if (bubble != null && clock > bubbleUntil) bubble = null
         pose.talk = if (bubble != null) 0.35f + 0.65f * abs(sin(clock * 14f)) else 0f
+        pose.nod = if (bubble != null) 3f * sin(clock * 7f) else 0f
+        blinkIn -= dt
+        if (blinkIn <= 0f) {
+            blinkIn = 2.2f + rng.nextFloat() * 3.5f
+            blinkLeft = 0.13f
+        }
+        if (blinkLeft > 0f) blinkLeft -= dt
+        pose.blink = blinkLeft > 0f
         val iter = particles.iterator()
         while (iter.hasNext()) {
             val p = iter.next()
