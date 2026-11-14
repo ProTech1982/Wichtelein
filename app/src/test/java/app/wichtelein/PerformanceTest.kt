@@ -46,7 +46,7 @@ class PerformanceTest {
 
     @Test fun elfAppearsAndGreetsByName() {
         val p = Recorder.record(req())
-        assertFalse(p.frames.first().visible)
+        assertTrue(p.frames.first().pose.scale < 0.05f) // erscheint erst mit Wölkchen
         assertTrue(p.frames.any { it.visible })
         val first = p.speech.first().text
         assertTrue(first, first.contains("Max") || first.contains("Pippo") || first.isNotEmpty())

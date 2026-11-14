@@ -106,7 +106,8 @@ object Scenes {
         val allowed = all.filter { enabled == null || it.id in enabled }
         var pool = allowed.filter { it.category == cat && it != last }
         if (pool.isEmpty()) pool = allowed.filter { it != last }
-        if (pool.isEmpty()) pool = all
+        if (pool.isEmpty()) pool = allowed // nur eine erlaubte Szene: sie darf sich wiederholen
+        if (pool.isEmpty()) pool = all // alles abgeschaltet: lieber etwas spielen als nichts
         return pool.random(rng)
     }
 }

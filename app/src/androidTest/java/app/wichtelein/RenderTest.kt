@@ -20,7 +20,9 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.isRoot
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onAllNodes
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -73,7 +75,7 @@ class RenderTest {
             while (ms < perf.durationMs) {
                 rule.runOnIdle { frame.value = perf.frameAt(ms) }
                 rule.waitForIdle()
-                val bmp = shot(rule.onRoot(), "scene_${id}_%02d.png".format(n++))
+                val bmp = shot(rule.onAllNodes(isRoot()).onFirst(), "scene_${id}_%02d.png".format(n++))
                 var diff = 0
                 val bgInt = AColor.rgb((bg.red * 255).toInt(), (bg.green * 255).toInt(), (bg.blue * 255).toInt())
                 for (y in 0 until bmp.height step 4) for (x in 0 until bmp.width step 4) {
@@ -101,14 +103,14 @@ class RenderTest {
         rule.onNodeWithText("Meine Wichtelvideos").assertExists()
         rule.onNodeWithText("Wichtelaktionen").assertExists()
         rule.onNodeWithText("Einstellungen").assertExists()
-        shot(rule.onRoot(), "home.png")
+        shot(rule.onAllNodes(isRoot()).onFirst(), "home.png")
     }
 
     @Test fun firstStartAsksForChildName() {
         rule.setContent { MaterialTheme { HomeScreen(Settings(), false, 0, {}, {}, {}, {}, {}, {}, {}) } }
         rule.onNodeWithText("Willkommen bei Wichtelein!").assertExists()
         rule.onNodeWithText("Name des Kindes").assertExists()
-        shot(rule.onRoot(), "onboarding.png")
+        shot(rule.onAllNodes(isRoot()).onFirst(), "onboarding.png")
     }
 }
 
@@ -123,7 +125,7 @@ class LaunchTest {
         }
         rule.onNodeWithText("Wichtelein").assertExists()
         rule.onNodeWithText("Video aufnehmen").assertExists()
-        shot(rule.onRoot(), "launch.png")
+        shot(rule.onAllNodes(isRoot()).onFirst(), "launch.png")
     }
 }
 
@@ -157,10 +159,10 @@ class EditorExportTest {
         fun enabled(t: String) = exists(t) && runCatching { rule.onNodeWithText(t).assertIsEnabled() }.isSuccess
 
         pump(420_000, "Editor bereit (Aufführung + Stimme)") { enabled(save) }
-        shot(rule.onRoot(), "editor.png")
+        shot(rule.onAllNodes(isRoot()).onFirst(), "editor.png")
         rule.onNodeWithText(save).performClick()
         pump(420_000, "Export fertig") { exists("Fertig! 🎉") || exists("Export fehlgeschlagen") }
-        shot(rule.onRoot(), "export_done.png")
+        shot(rule.onAllNodes(isRoot()).onFirst(), "export_done.png")
         assertTrue("Export fehlgeschlagen", exists("Fertig! 🎉"))
 
         // Ergebnis prüfen
