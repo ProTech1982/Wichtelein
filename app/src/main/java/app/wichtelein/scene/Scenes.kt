@@ -1,4 +1,11 @@
-package app.wichtelein
+package app.wichtelein.scene
+
+import app.wichtelein.camera.*
+import app.wichtelein.anim.*
+import app.wichtelein.speech.*
+import app.wichtelein.videoexport.*
+import app.wichtelein.settings.*
+import app.wichtelein.ui.*
 
 import kotlin.random.Random
 

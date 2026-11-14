@@ -1,4 +1,11 @@
-package app.wichtelein
+package app.wichtelein.ui
+
+import app.wichtelein.camera.*
+import app.wichtelein.anim.*
+import app.wichtelein.scene.*
+import app.wichtelein.speech.*
+import app.wichtelein.videoexport.*
+import app.wichtelein.settings.*
 
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever

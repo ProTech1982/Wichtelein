@@ -1,4 +1,11 @@
-package app.wichtelein
+package app.wichtelein.speech
+
+import app.wichtelein.camera.*
+import app.wichtelein.anim.*
+import app.wichtelein.scene.*
+import app.wichtelein.videoexport.*
+import app.wichtelein.settings.*
+import app.wichtelein.ui.*
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement

@@ -1,5 +1,13 @@
 package app.wichtelein
 
+import app.wichtelein.camera.*
+import app.wichtelein.anim.*
+import app.wichtelein.scene.*
+import app.wichtelein.speech.*
+import app.wichtelein.videoexport.*
+import app.wichtelein.settings.*
+import app.wichtelein.ui.*
+
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.ByteArrayOutputStream
