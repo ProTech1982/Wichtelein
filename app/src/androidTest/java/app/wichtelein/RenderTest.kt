@@ -199,14 +199,11 @@ class EditorExportTest {
                 rule.mainClock.advanceTimeBy(100)
                 Thread.sleep(40)
                 if (System.currentTimeMillis() - t0 > timeoutMs) {
-                    val state = rule.onAllNodes(isRoot()).fetchSemanticsNodes().indices.joinToString("
----
-") { i ->
+                    val count = rule.onAllNodes(isRoot()).fetchSemanticsNodes().size
+                    val state = (0 until count).joinToString(" --- ") { i ->
                         runCatching { rule.onAllNodes(isRoot())[i].printToString(maxDepth = 6) }.getOrDefault("?")
                     }
-                    throw AssertionError("Zeitüberschreitung: $what
-Zustand:
-${state.take(1800)}")
+                    throw AssertionError("Zeitüberschreitung: " + what + " | Zustand: " + state.take(1800))
                 }
             }
         }
