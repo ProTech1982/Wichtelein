@@ -105,6 +105,38 @@ class RenderTest {
         shot(rule.onAllNodes(isRoot()).onFirst(), "home.png")
     }
 
+    @Test fun settingsActionsAndVideosScreensRender() {
+        val screen = androidx.compose.runtime.mutableIntStateOf(0)
+        rule.setContent {
+            MaterialTheme {
+                Surface(Modifier.size(360.dp, 1500.dp)) {
+                    when (screen.intValue) {
+                        0 -> SettingsScreen(testSettings, {}, {}, null, {})
+                        1 -> ActionsScreen(testSettings, {}, {})
+                        else -> MyVideosScreen({})
+                    }
+                }
+            }
+        }
+        rule.onNodeWithText("Einstellungen").assertExists()
+        rule.onNodeWithText("Name des Wichtels").assertExists()
+        rule.onNodeWithText("➕ Kind hinzufügen").assertExists()
+        rule.onNodeWithText("🔊  Stimme anhören").assertExists()
+        shot(rule.onAllNodes(isRoot()).onFirst(), "settings.png")
+        rule.runOnIdle { screen.intValue = 1 }
+        rule.waitForIdle()
+        rule.onNodeWithText("Wichtelaktionen").assertExists()
+        rule.onNodeWithText("😇 Braver Wichtel").assertExists()
+        rule.onNodeWithText("😜 Frecher Wichtel").assertExists()
+        rule.onNodeWithText("🎁 Überraschung").assertExists()
+        rule.onNodeWithText("Zimmer fegen").assertExists()
+        shot(rule.onAllNodes(isRoot()).onFirst(), "actions.png")
+        rule.runOnIdle { screen.intValue = 2 }
+        rule.waitForIdle()
+        rule.onNodeWithText("Meine Wichtelvideos").assertExists()
+        shot(rule.onAllNodes(isRoot()).onFirst(), "videos.png")
+    }
+
     @Test fun firstStartAsksForChildName() {
         rule.setContent { MaterialTheme { HomeScreen(Settings(), false, 0, {}, {}, {}, {}, {}, {}, {}) } }
         rule.onNodeWithText("Willkommen bei Wichtelein!").assertExists()
