@@ -8,9 +8,10 @@ Namen, Sprüche, Stimme, Farbe und die erlaubten Szenen sind frei einstellbar, d
 
 ## So funktioniert es
 
+0. **Kleidung:** In den Einstellungen lassen sich Mütze, Jacke, Strumpfhose und Schuhe einzeln umfärben (11 Farben, Vorschau).
 1. **Erster Start:** Ein Erwachsener gibt den Namen des Kindes ein (weitere Kinder später in den Einstellungen).
 2. **Video aufnehmen** (Hoch- oder Querformat, bis 30 s, ohne Ton) oder **Video auswählen**.
-3. **Editor:** Startpunkt antippen, Größe einstellen, optional einen Weg aus bis zu 8 Punkten antippen, Kategorie
+3. **Editor:** Startpunkt antippen, Größe einstellen, optional einen Weg aus bis zu 8 Punkten antippen, bei einem **Wichtelhaus** die Tür markieren (Position und Größe), Kategorie
    (*Braver Wichtel*, *Frecher Wichtel*, *Überraschung* oder Zufall) und gewünschte Szene wählen oder **neu würfeln**.
    Die Vorschau läuft sofort über dem Video, die Sprache wird passend zum Zeitpunkt abgespielt.
 4. **Als Video speichern:** Fortschrittsanzeige, danach liegt das MP4 in der Galerie (*Filme/Wichtelein*) und unter
@@ -19,12 +20,15 @@ Namen, Sprüche, Stimme, Farbe und die erlaubten Szenen sind frei einstellbar, d
 
 ## Was fertig ist, was nur Prototyp ist, was fehlt
 
-**Umgesetzt und im Android-Emulator der CI geprüft** (9 Emulator-Tests und Unit-Tests, siehe unten):
+**Umgesetzt und im Android-Emulator der CI geprüft** (11 Emulator-Tests und Unit-Tests, siehe unten):
 - Startseite mit den fünf Bereichen, Namensabfrage beim ersten Start, Kinderprofile, Einstellungen, Wichtelaktionen,
   Meine Wichtelvideos (Darstellung), Editor mit Startpunkt, Größe, Weg, Szene und Würfeln.
 - Aktionen: Laufen, Stehen, Winken, Fegen, Tanzen, Stolpern, Hinsetzen, Verstecken, Purzelbaum, Schlafen, Naschen, Chaos
   (Spielzeug werfen), Aufräumen, Zauber; Gegenstände: Besen, Geschenk, Keks, Spielzeug, Konfetti.
-- 15 Szenen in 3 Kategorien, die Auswahl variiert; jede Aufführung ist über einen Startwert reproduzierbar und lässt sich neu erzeugen.
+- **Wichtelhaus-Tür:** Im Editor wird die Tür im Video markiert; der Wichtel öffnet sie (Türblatt schwingt auf, warmes Licht), geht hinein, schließt sie,
+  kommt wieder heraus oder fegt davor (4 Türszenen, nur wenn eine Tür markiert ist). Die Tür wird als Overlay gezeichnet.
+- **Kleidungsfarben** je Kleidungsstück (Mütze, Jacke, Strumpfhose, Schuhe), zur Laufzeit per HSV-Umfärbung der Bildteile.
+- 19 Szenen in 3 Kategorien, die Auswahl variiert; jede Aufführung ist über einen Startwert reproduzierbar und lässt sich neu erzeugen.
 - Über 30 kindgerechte Sprüche plus Szenensprüche, Platzhalter `{name}` und `{wichtel}`, eigene Sätze.
 - Sprache und Bewegung kommen aus **einer** Zeitleiste und passen daher zusammen.
 - Export als MP4 mit Bild (Wichtel über dem Originalvideo, Schatten) und Ton (Sprache, ggf. Originalton), Fortschritt, Fehlerdialog;
@@ -36,7 +40,7 @@ Namen, Sprüche, Stimme, Farbe und die erlaubten Szenen sind frei einstellbar, d
 
 **Prototypisch / mit Einschränkung:**
 - Der Wichtel ist eine **2D-Puppe** aus ausgeschnittenen Teilen eines Referenzbildes (Frontansicht, wird gespiegelt), keine 3D-Figur:
-  Beine, Arme, Körper und Kopf drehen sich um ihre Gelenke, dazu Blinzeln, Kopfnicken beim Sprechen, Mund, Schatten.
+  Beine, Arme, Körper und Kopf drehen sich um ihre Gelenke (Farben frei wählbar), dazu Blinzeln, Kopfnicken beim Sprechen, Mund, Schatten.
   Das ist bewusst gewählt, weil es deutlich besser aussieht als ein selbst modelliertes einfaches 3D-Modell.
   Die Bilder sind in `app/src/main/res/drawable-nodpi/`. **Herkunft und Nutzungsrechte des Referenzbildes sind vor einer
   Veröffentlichung der Figur zu klären.**
@@ -52,6 +56,8 @@ Namen, Sprüche, Stimme, Farbe und die erlaubten Szenen sind frei einstellbar, d
   schlug fehl). Die Figur ist über die Schnittstelle `ElfFigure` austauschbar; Szenen, Zeitleiste, Editor und Export bleiben dann unverändert.
 - Echtes AR mit ARCore (laut Auftrag eine spätere Zusatzfunktion).
 - Anpassbare Bewegungsabläufe pro Szene über die Wegpunkte hinaus; Mehrfach-Videos in einem Projekt.
+- Weitere Kleidungsstücke (z. B. andere Mützen oder Schals) – bisher nur die Farben.
+- Die Wichtelhaus-Tür ist ein gezeichnetes Türblatt über der echten Tür im Video; Aussehen und Farbe lassen sich noch nicht einstellen.
 
 ## Stimmen
 

@@ -9,7 +9,8 @@ Emulator-Job flackert gelegentlich (Boot-Timeout -> Job neu starten).
 - Engine deterministisch (virtuelle Uhr), `Performance`-Zeitleiste, 15 Szenen/3 Kategorien, 36 Sprüche, Aktionen inkl. Hinsetzen/Stolpern/Geschenk.
 - UI: Start (5 Bereiche), Erststart, Profile, Editor (Start/Größe/Weg/Szene/Würfeln/Vorschau), Wichtelaktionen, Meine Wichtelvideos, Einstellungen.
 - Export MP4 mit Ton (Media3 Transformer, Overlay + WAV-Sequenz), Galerie, Teilen. Emulator-Test prüft Video+Ton+Wichtel im Bild.
-- Tests: JVM (Szenen, Zeitleiste, Einstellungen, Stimmen-Katalog, Pitch, WAV) + 9 Emulator-Tests (u. a. gedrehtes Video).
+- Tests: JVM (Szenen, Zeitleiste, Einstellungen, Stimmen-Katalog, Pitch, WAV) + 11 Emulator-Tests (u. a. gedrehtes Video, Umfärbung).
+- Kleidungsfarben je Kleidungsstück (Laufzeit-Umfärbung), Wichtelhaus-Tür (Editor-Modus, 4 Türszenen, gezeichnetes Türblatt), 19 Szenen.
 - Code in Pakete gegliedert; `ElfFigure` macht die Figur austauschbar; Systemstimme im Export (ungetestet im Emulator).
 
 ## Offen / ungeprüft
