@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Ohren -->
+    <path android:fillColor="#F7D2B0" android:pathData="M26,66 L14,56 L30,52 Z" />
+    <path android:fillColor="#F7D2B0" android:pathData="M82,66 L94,56 L78,52 Z" />
+    <!-- Gesicht -->
+    <path android:fillColor="#F7D2B0"
+        android:pathData="M54,50 m-26,0 a26,26 0 1,0 52,0 a26,26 0 1,0 -52,0" />
+    <!-- Hut -->
+    <path android:fillColor="#2E9E4F" android:pathData="M26,52 Q30,26 62,14 Q54,30 82,52 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M24,50 L84,50 L84,58 L24,58 Z" />
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M62,14 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+    <!-- Augen und Wangen -->
+    <path android:fillColor="#3A2A20" android:pathData="M44,68 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+    <path android:fillColor="#3A2A20" android:pathData="M64,68 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+    <path android:fillColor="#F29A9A" android:pathData="M36,77 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0" />
+    <path android:fillColor="#F29A9A" android:pathData="M72,77 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0" />
+    <!-- Lächeln -->
+    <path android:strokeColor="#A8433A" android:strokeWidth="2.5" android:strokeLineCap="round"
+        android:pathData="M46,78 Q54,86 62,78" />
+</vector>
