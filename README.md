@@ -19,7 +19,7 @@ Namen, Sprüche, Stimme, Farbe und die erlaubten Szenen sind frei einstellbar, d
 
 ## Was fertig ist, was nur Prototyp ist, was fehlt
 
-**Umgesetzt und im Android-Emulator der CI geprüft** (8 Emulator-Tests, Unit-Tests, siehe unten):
+**Umgesetzt und im Android-Emulator der CI geprüft** (9 Emulator-Tests und Unit-Tests, siehe unten):
 - Startseite mit den fünf Bereichen, Namensabfrage beim ersten Start, Kinderprofile, Einstellungen, Wichtelaktionen,
   Meine Wichtelvideos (Darstellung), Editor mit Startpunkt, Größe, Weg, Szene und Würfeln.
 - Aktionen: Laufen, Stehen, Winken, Fegen, Tanzen, Stolpern, Hinsetzen, Verstecken, Purzelbaum, Schlafen, Naschen, Chaos
@@ -28,23 +28,29 @@ Namen, Sprüche, Stimme, Farbe und die erlaubten Szenen sind frei einstellbar, d
 - Über 30 kindgerechte Sprüche plus Szenensprüche, Platzhalter `{name}` und `{wichtel}`, eigene Sätze.
 - Sprache und Bewegung kommen aus **einer** Zeitleiste und passen daher zusammen.
 - Export als MP4 mit Bild (Wichtel über dem Originalvideo, Schatten) und Ton (Sprache, ggf. Originalton), Fortschritt, Fehlerdialog;
-  getestet bis zum fertigen Video: Video- und Tonspur vorhanden, Wichtel im Bild.
+  getestet bis zum fertigen Video: Video- und Tonspur vorhanden, Wichtel im Bild – auch bei Videos, die wie Handyaufnahmen
+  gedreht gespeichert sind (Hochformat als gedrehtes Querformat).
 - Offline, kein Konto, keine Werbung, keine Tracker. Berechtigung nur für die Kamera; das Internet wird nur für die
   Update-Suche und optionale Stimmen-Downloads benutzt.
 - Signierte Release-APK per GitHub Actions, Update-Suche in der App.
 
 **Prototypisch / mit Einschränkung:**
-- Der Wichtel ist eine **2D-Puppe** aus ausgeschnittenen Teilen eines Referenzbildes (Frontansicht, wird gespiegelt), keine 3D-Figur.
+- Der Wichtel ist eine **2D-Puppe** aus ausgeschnittenen Teilen eines Referenzbildes (Frontansicht, wird gespiegelt), keine 3D-Figur:
+  Beine, Arme, Körper und Kopf drehen sich um ihre Gelenke, dazu Blinzeln, Kopfnicken beim Sprechen, Mund, Schatten.
+  Das ist bewusst gewählt, weil es deutlich besser aussieht als ein selbst modelliertes einfaches 3D-Modell.
   Die Bilder sind in `app/src/main/res/drawable-nodpi/`. **Herkunft und Nutzungsrechte des Referenzbildes sind vor einer
   Veröffentlichung der Figur zu klären.**
 - Es gibt kein Tracking: Der Wichtel liegt als Overlay über einem Video, die Kamera sollte also ruhig stehen. Keine räumliche Erkennung.
-- Im exportierten Video ist nur die **Wichtelstimme** (offline) enthalten. Die Systemstimme kann die Vorschau sprechen, liefert
-  aber keine Audiodaten für den Export; dann enthält das Video nur Sprechblasen (die App weist darauf hin).
+- Im Export ist die Sprache der **Wichtelstimme** (offline) enthalten, geprüft im Emulator. Wird die **Systemstimme** gewählt, erzeugt die App
+  die Sprache über `synthesizeToFile`; das ist umgesetzt und per Unit-Test des WAV-Einlesens abgesichert, konnte aber im Emulator
+  nicht ausgeführt werden (kein deutsches TTS-Paket im Test-Image). Gelingt es nicht, zeigt das Video nur Sprechblasen und die App sagt es.
 - Hoch-/Querformat-Aufnahme und das Abspielen über „Ansehen“/„Teilen“ sind implementiert, aber **nicht auf einem echten Handy getestet**
   (der Emulator hat keine brauchbare Kamera). Ebenso ist die **Klangqualität der Stimmen nur vom Nutzer beurteilbar**.
 
 **Fehlt:**
-- Blender-3D-Figur und vorgerenderte transparente Animationssequenzen, echtes AR (ARCore).
+- Blender-3D-Figur und vorgerenderte transparente Animationssequenzen: Blender war beim Bau nicht erreichbar (MCP-Verbindung
+  schlug fehl). Die Figur ist über die Schnittstelle `ElfFigure` austauschbar; Szenen, Zeitleiste, Editor und Export bleiben dann unverändert.
+- Echtes AR mit ARCore (laut Auftrag eine spätere Zusatzfunktion).
 - Anpassbare Bewegungsabläufe pro Szene über die Wegpunkte hinaus; Mehrfach-Videos in einem Projekt.
 
 ## Stimmen
@@ -57,18 +63,19 @@ Fehlt das Modell, spricht die Android-Systemstimme, sonst bleiben nur die Sprech
 
 ## Technik und Aufbau
 
-Kotlin, Jetpack Compose, CameraX, AndroidX Media3 Transformer, sherpa-onnx. Eine App, Aufgaben nach Dateien getrennt:
+Kotlin, Jetpack Compose, CameraX, AndroidX Media3 Transformer, sherpa-onnx. Eine App, Aufgaben nach Paketen getrennt
+(`dependabot.yml` schlägt wöchentlich Aktualisierungen der Abhängigkeiten vor):
 
-| Bereich | Dateien |
+| Bereich (Paket unter `app.wichtelein`) | Inhalt |
 |---|---|
-| Kamera | `CameraScreen.kt` |
-| Animation | `ElfEngine.kt` (Aktionen, Takt), `ElfDrawing.kt` (Figur aus Teilen), `Performance.kt` (Aufnahme der Zeitleiste) |
-| Szenen und Zufall | `Scenes.kt`, `Texts.kt` |
-| Darstellung | `ElfOverlay.kt` (eine Zeichenfunktion für Vorschau und Export) |
-| Sprache | `ElfVoice.kt`, `VoiceCatalog.kt`, `VoiceEffect.kt`, `Speaker.kt`, `SpeechRender.kt`, `VoiceUi.kt` |
-| Videoexport | `Export.kt` |
-| Oberfläche und Einstellungen | `MainActivity.kt`, `HomeScreen.kt`, `EditorScreen.kt`, `SettingsScreen.kt`, `ActionsAndVideosScreens.kt`, `Settings.kt` |
-| Updates | `Updater.kt` |
+| `camera` | `CameraScreen.kt` (Aufnahme, Drehung), `VideoInfo.kt` |
+| `anim` | `ElfEngine.kt` (Aktionen, Takt), `ElfDrawing.kt` (Figur `ElfFigure`/2D-Puppe), `Performance.kt` (Aufnahme der Zeitleiste), `ElfOverlay.kt` (eine Zeichenfunktion für Vorschau und Export) |
+| `scene` | `Scenes.kt` (15 Szenen, Zufallsauswahl), `Texts.kt` (Sprüche, Platzhalter) |
+| `speech` | `ElfVoice.kt`, `VoiceCatalog.kt`, `VoiceEffect.kt`, `Speaker.kt`, `SpeechRender.kt`, `VoiceUi.kt` |
+| `videoexport` | `Export.kt` (Media3 Transformer, Galerie, Teilen) |
+| `settings` | `Settings.kt` (Einstellungen, Profile), `Updater.kt` |
+| `ui` | `HomeScreen.kt`, `EditorScreen.kt`, `SettingsScreen.kt`, `ActionsAndVideosScreens.kt` |
+| Wurzel | `MainActivity.kt` (Navigation) |
 
 Ablauf: Der Editor lässt die Engine mit einer virtuellen Uhr und festem Zufallsstartwert eine komplette Aufführung **aufnehmen**
 (Bilder mit 30 fps + Sprach-Ereignisse). Vorschau und Export spielen dieselbe Zeitleiste ab.
