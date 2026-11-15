@@ -25,7 +25,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
@@ -134,6 +136,8 @@ fun EditorScreen(
     var action by remember { mutableStateOf(ElfAction.SWEEP) }
     // welche Figur eine neue Aktion macht (nur wichtig, wenn Wichtel und Elfin zusammen auftreten)
     var who by remember { mutableIntStateOf(0) }
+    // Höhe des Bedienfelds (0 = automatisch); wird mit dem Griff über dem Bedienfeld eingestellt
+    var panelDp by remember { androidx.compose.runtime.mutableFloatStateOf(settings.editorPanelDp) }
     val whoNow = if (settings.both) who else 0
     var objType by remember { mutableStateOf(SceneryType.TREE_CLASSIC) }
     var sliderBase by remember { mutableStateOf<EditState?>(null) }
@@ -248,6 +252,7 @@ fun EditorScreen(
         val req = PerfRequest(
             start = st.start ?: Pt(0.5f, 0.78f),
             start2 = st.start2,
+            path2 = st.path2,
             path = st.path,
             door = st.door,
             doorScale = st.doorScale,
@@ -364,10 +369,10 @@ fun EditorScreen(
                 }
             }
             Tool.PATH -> {
-                val n = EditOps.addPath(st, p)
+                val n = if (settings.both && who == 1) EditOps.addPath2(st, p) else EditOps.addPath(st, p)
                 if (n != st) {
                     commit(n)
-                    sel = Sel.Path(n.path.lastIndex)
+                    sel = if (settings.both && who == 1) Sel.Path2(n.path2.lastIndex) else Sel.Path(n.path.lastIndex)
                 }
             }
             Tool.ACTION -> if (action.needsPoint) {
@@ -501,10 +506,32 @@ fun EditorScreen(
             }
         }
 
+        // Griff: nach oben ziehen = größeres Bedienfeld, nach unten = größeres Bild
+        val maxPanel = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp - 230).coerceAtLeast(160).toFloat()
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(30.dp)
+                .background(Color(0xFF1C1C1C))
+                .testTag("griff")
+                .pointerInput(Unit) {
+                    androidx.compose.foundation.gestures.detectVerticalDragGestures(
+                        onDragEnd = { onSettings(latestSettings.copy(editorPanelDp = panelDp)) },
+                    ) { change, dy ->
+                        change.consume()
+                        val cur = if (panelDp <= 0f) 250f else panelDp
+                        panelDp = (cur - dy / density).coerceIn(90f, maxPanel)
+                    }
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(Modifier.width(56.dp).height(5.dp).background(Color(0xFF8A8A8A), RoundedCornerShape(3.dp)))
+        }
         Column(
             Modifier
                 .fillMaxWidth()
-                .heightIn(max = 250.dp)
+                .heightIn(min = if (panelDp > 0f) panelDp.dp else 0.dp, max = if (panelDp > 0f) panelDp.dp else 250.dp)
+                .testTag("bedienfeld")
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -595,18 +622,33 @@ fun EditorScreen(
                     }
                 }
                 Tool.PATH -> {
+                    val forElfin = settings.both && who == 1
+                    if (settings.both) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("Weg für", color = Color.White, fontSize = 13.sp)
+                            FilterChip(selected = who != 1, onClick = { who = 0 }, label = { Text("🧙 ${settings.elfName.ifBlank { "Wichtel" }} (${st.path.size})") })
+                            FilterChip(selected = who == 1, onClick = { who = 1 }, label = { Text("🧝‍♀️ ${settings.elfinName.ifBlank { "Elfin" }} (${st.path2.size})") })
+                        }
+                    }
                     Text(
-                        "Tippe nacheinander Stellen, die der Wichtel ablaufen soll (höchstens ${EditOps.MAX_WAYPOINTS}). Punkte lassen sich verschieben, " +
-                            "antippen und löschen. Er läuft den Weg als Rundgang ab und bleibt in der Nähe der Punkte.",
+                        "Tippe nacheinander Stellen, die ${if (settings.both) (if (forElfin) "die Elfin" else "der Wichtel") else "die Figur"} ablaufen soll (höchstens ${EditOps.MAX_WAYPOINTS}). " +
+                            "Punkte lassen sich verschieben, antippen und löschen. Sie läuft den Weg als Rundgang ab und bleibt in der Nähe der Punkte.",
                         color = Hint,
                         fontSize = 12.sp,
                     )
+                    val shown = if (forElfin) st.path2 else st.path
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         OutlinedButton(
-                            onClick = { if (st.path.isNotEmpty()) commit(EditOps.remove(st, Sel.Path(st.path.lastIndex))); fixSelection() },
-                            enabled = st.path.isNotEmpty(),
+                            onClick = {
+                                if (shown.isNotEmpty()) commit(EditOps.remove(st, if (forElfin) Sel.Path2(shown.lastIndex) else Sel.Path(shown.lastIndex)))
+                                fixSelection()
+                            },
+                            enabled = shown.isNotEmpty(),
                         ) { Text("Letzten Punkt entfernen", color = Color.White) }
-                        TextButton(onClick = { commit(st.copy(path = emptyList())); fixSelection() }, enabled = st.path.isNotEmpty()) { Text("Weg löschen") }
+                        TextButton(
+                            onClick = { commit(if (forElfin) st.copy(path2 = emptyList()) else st.copy(path = emptyList())); fixSelection() },
+                            enabled = shown.isNotEmpty(),
+                        ) { Text("Weg löschen") }
                     }
                 }
                 Tool.ACTION -> {
@@ -933,6 +975,17 @@ private fun EditMarkers(
             drawCircle(Color(0xFFFFC107), 16f, c)
             if (sel == Sel.Path(i)) drawCircle(SelColor, 22f, c, style = Stroke(5f))
             drawText(measurer, "${i + 1}", safe(c - Offset(6f, 12f)), style = TextStyle(fontSize = 13.sp, color = Color.Black, fontWeight = FontWeight.Bold))
+        }
+        // Weg der Elfin (rosa)
+        val pts2 = listOfNotNull(st.start2) + st.path2
+        for (i in 0 until pts2.size - 1) {
+            drawLine(Color(0xCCE91E8C), at(pts2[i]), at(pts2[i + 1]), strokeWidth = 4f)
+        }
+        st.path2.forEachIndexed { i, p ->
+            val c = at(p)
+            drawCircle(Color(0xFFE91E8C), 16f, c)
+            if (sel == Sel.Path2(i)) drawCircle(SelColor, 22f, c, style = Stroke(5f))
+            drawText(measurer, "${i + 1}", safe(c - Offset(6f, 12f)), style = TextStyle(fontSize = 13.sp, color = Color.White, fontWeight = FontWeight.Bold))
         }
         // Aktionspunkte: blaue Pins, durch eine Linie in der Reihenfolge verbunden
         val stepPts = st.script.mapIndexedNotNull { i, step -> step.at?.let { Triple(i, step, at(it)) } }

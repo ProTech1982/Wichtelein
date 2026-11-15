@@ -12,7 +12,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -157,6 +159,14 @@ class PhotoFilmTest {
         val save = "💾 Als Video speichern"
         pump(120_000, "Editor bereit") { exists(save) && runCatching { rule.onNodeWithText(save).assertIsEnabled() }.isSuccess }
         assertTrue("Foto-Film-Titel", exists("Foto-Film"))
+        // Griff über dem Bedienfeld: nach oben ziehen macht den Bearbeitungsbereich größer
+        val griffBefore = rule.onNodeWithTag("griff").getBoundsInRoot().top
+        rule.onNodeWithTag("griff").performTouchInput { swipe(center, Offset(center.x, center.y - 260f), 400) }
+        rule.waitForIdle()
+        val griffAfter = rule.onNodeWithTag("griff").getBoundsInRoot().top
+        assertTrue("Bedienfeld wächst: $griffBefore -> $griffAfter", griffAfter.value < griffBefore.value - 20f)
+        val panelAfter = rule.onNodeWithTag("bedienfeld").getBoundsInRoot().height
+        assertTrue("Bedienfeld höher als 250 dp: $panelAfter", panelAfter.value > 260f)
         rule.onNodeWithText("🎬 Szene").performSemanticsAction(SemanticsActions.OnClick)
         pump(10_000, "Szenen-Werkzeug") { exists("Länge des Films: 12 s") }
         assertTrue("Längenregler ohne Aktionspunkte", exists("Länge des Films: 12 s"))

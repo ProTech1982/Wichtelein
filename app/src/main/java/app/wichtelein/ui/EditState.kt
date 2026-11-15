@@ -11,6 +11,8 @@ data class EditState(
     /** Startpunkt der Elfin, wenn beide auftreten */
     val start2: Pt? = null,
     val path: List<Pt> = emptyList(),
+    /** Wegpunkte der Elfin, wenn beide auftreten */
+    val path2: List<Pt> = emptyList(),
     val script: List<ScriptStep> = emptyList(),
     val door: Pt? = null,
     val doorScale: Float = 0.2f,
@@ -29,6 +31,7 @@ sealed interface Sel {
     object Start : Sel
     object Start2 : Sel
     data class Path(val index: Int) : Sel
+    data class Path2(val index: Int) : Sel
     data class Step(val index: Int) : Sel
     object Door : Sel
     data class Item(val id: Int) : Sel
@@ -41,6 +44,7 @@ fun Sel.kind(): SelKind = when (this) {
     Sel.Start -> SelKind.START
     Sel.Start2 -> SelKind.START
     is Sel.Path -> SelKind.PATH
+    is Sel.Path2 -> SelKind.PATH
     is Sel.Step -> SelKind.STEP
     Sel.Door -> SelKind.DOOR
     is Sel.Item -> SelKind.ITEM
@@ -59,6 +63,7 @@ object EditOps {
         Sel.Start -> s.start != null
         Sel.Start2 -> s.start2 != null
         is Sel.Path -> sel.index in s.path.indices
+        is Sel.Path2 -> sel.index in s.path2.indices
         is Sel.Step -> sel.index in s.script.indices && s.script[sel.index].at != null
         Sel.Door -> s.door != null
         is Sel.Item -> s.scenery.any { it.id == sel.id }
@@ -71,6 +76,7 @@ object EditOps {
             Sel.Start -> s.copy(start = q)
             Sel.Start2 -> s.copy(start2 = q)
             is Sel.Path -> if (sel.index in s.path.indices) s.copy(path = s.path.toMutableList().also { it[sel.index] = q }) else s
+            is Sel.Path2 -> if (sel.index in s.path2.indices) s.copy(path2 = s.path2.toMutableList().also { it[sel.index] = q }) else s
             is Sel.Step -> if (contains(s, sel)) s.copy(script = s.script.toMutableList().also { it[sel.index] = it[sel.index].copy(at = q) }) else s
             Sel.Door -> if (s.door != null) s.copy(door = q) else s
             is Sel.Item -> s.copy(scenery = s.scenery.map { if (it.id == sel.id) it.copy(at = q) else it })
@@ -82,6 +88,7 @@ object EditOps {
         Sel.Start -> s.copy(start = null)
         Sel.Start2 -> s.copy(start2 = null)
         is Sel.Path -> if (sel.index in s.path.indices) s.copy(path = s.path.filterIndexed { i, _ -> i != sel.index }) else s
+        is Sel.Path2 -> if (sel.index in s.path2.indices) s.copy(path2 = s.path2.filterIndexed { i, _ -> i != sel.index }) else s
         is Sel.Step -> if (sel.index in s.script.indices) s.copy(script = s.script.filterIndexed { i, _ -> i != sel.index }) else s
         Sel.Door -> s.copy(door = null)
         is Sel.Item -> s.copy(scenery = s.scenery.filter { it.id != sel.id })
@@ -98,6 +105,7 @@ object EditOps {
         Sel.Start -> s.start
         Sel.Start2 -> s.start2
         is Sel.Path -> s.path.getOrNull(sel.index)
+        is Sel.Path2 -> s.path2.getOrNull(sel.index)
         is Sel.Step -> s.script.getOrNull(sel.index)?.at
         Sel.Door -> s.door
         is Sel.Item -> s.scenery.firstOrNull { it.id == sel.id }?.at
@@ -109,6 +117,9 @@ object EditOps {
 
     fun addPath(s: EditState, p: Pt): EditState =
         if (s.path.size >= MAX_WAYPOINTS) s else s.copy(path = s.path + clamp(p))
+
+    fun addPath2(s: EditState, p: Pt): EditState =
+        if (s.path2.size >= MAX_WAYPOINTS) s else s.copy(path2 = s.path2 + clamp(p))
 
     /** [who] = welche Figur die Aktion macht (0 = Wichtel, 1 = Elfin); zählt nur, wenn beide auftreten. */
     fun addStep(s: EditState, action: ElfAction, p: Pt?, who: Int = 0): EditState =
@@ -174,6 +185,7 @@ object EditOps {
         }
         if (SelKind.STEP in kinds) for (i in s.script.indices.reversed()) if (s.script[i].at?.let { near(it) } == true) return Sel.Step(i)
         if (SelKind.PATH in kinds) for (i in s.path.indices.reversed()) if (near(s.path[i])) return Sel.Path(i)
+        if (SelKind.PATH in kinds) for (i in s.path2.indices.reversed()) if (near(s.path2[i])) return Sel.Path2(i)
         if (SelKind.START in kinds) s.start?.let { if (near(it)) return Sel.Start }
         if (SelKind.START in kinds) s.start2?.let { if (near(it)) return Sel.Start2 }
         if (SelKind.ITEM in kinds) for (item in s.scenery.reversed()) {
@@ -194,6 +206,7 @@ object EditOps {
         Sel.Start -> "Startpunkt"
         Sel.Start2 -> "Startpunkt der Elfin"
         is Sel.Path -> "Wegpunkt ${sel.index + 1}"
+        is Sel.Path2 -> "Wegpunkt der Elfin ${sel.index + 1}"
         is Sel.Step -> "Aktion ${sel.index + 1}: " + (when (s.script.getOrNull(sel.index)?.who) { 1 -> "🧝‍♀️ "; 2 -> "🧙🧝‍♀️ "; else -> "" }) + (s.script.getOrNull(sel.index)?.action?.label ?: "")
         Sel.Door -> "Tür"
         is Sel.Item -> s.scenery.firstOrNull { it.id == sel.id }?.type?.label ?: "Gegenstand"

@@ -65,6 +65,8 @@ verschieben, vergrößern, spiegeln, umfärben und mit oder ohne Licht zeigen; d
   Richtungen gerendert. Er dreht sich beim Laufen in Laufrichtung (auf den Betrachter zu, seitlich, vom Betrachter weg), steht beim Fegen seitlich (mit Staubwolken
   am Ende jedes Besenstrichs) und dreht sich zum Haus um 360° mit dem Rücken zum Betrachter, bevor er die Tür öffnet und hineingeht. Winken, Fegen und Laufen
   sind echte Bilder aus der jeweiligen Richtung; Hinsetzen, Purzelbaum, Schlafen u. Ä. entstehen aus dem Stehbild. Farben: Mütze und Mantel.
+- **Wege je Figur und größerer Bearbeitungsbereich (0.9.4):** Beim Weg-Werkzeug wählst du, ob der Wichtel oder die Elfin den Weg geht (rosa Punkte für die Elfin). Mit dem Griff über dem Bedienfeld
+  ziehst du den Bearbeitungsbereich nach oben größer. Dii ist für beide wählbar, die Stimmenprobe der Elfin spielt jetzt.
 - **Elfin mit eigenen Sätzen und Farben (0.9.3):** Die Elfin spricht komplett eigene Texte („Elfenstaub“, „Elfenstreich“ …), hat eigene Kleiderfarben, eigene „Eigene Sätze“ und im Editor einen eigenen Startpunkt.
   Aktionen können für den Wichtel, die Elfin oder beide zusammen gesetzt werden (bei „beide“ warten sie aufeinander). Antippen und Verschieben berücksichtigt die Drehung von Gegenständen und Tür.
 - **Wichtel und Elfin zusammen (0.9.3):** Einstellungen → Figuren: nur der Wichtel, nur die Elfin oder beide. Bei beiden wählst du im Editor pro Aktion, wer sie macht; der Wichtel bekommt nur männliche,

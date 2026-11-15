@@ -64,6 +64,8 @@ data class Settings(
     val soundFx: Boolean = true,
     /** Abgeschaltete Szenen (Wichtelaktionen). */
     val disabledScenes: Set<String> = emptySet(),
+    /** Höhe des Bedienfelds im Editor in dp (0 = automatisch, sonst vom Nutzer per Griff eingestellt) */
+    val editorPanelDp: Float = 0f,
     /** Aussehen der App: 0 = wie das Handy (System), 1 = hell, 2 = dunkel */
     val themeMode: Int = 0,
 ) {
@@ -165,6 +167,7 @@ object SettingsStore {
             sceneryStyles = app.wichtelein.anim.SceneryPalette.decode(p.getString("sceneryStyles", "")),
             disabledScenes = (p.getStringSet("disabledScenes", emptySet()) ?: emptySet()).toSet(),
             themeMode = p.getInt("themeMode", d.themeMode).coerceIn(0, 2),
+            editorPanelDp = p.getFloat("editorPanelDp", 0f).coerceIn(0f, 1200f),
         )
     }
 
@@ -207,6 +210,7 @@ object SettingsStore {
             .putString("sceneryStyles", app.wichtelein.anim.SceneryPalette.encode(s.sceneryStyles))
             .putStringSet("disabledScenes", s.disabledScenes)
             .putInt("themeMode", s.themeMode)
+            .putFloat("editorPanelDp", s.editorPanelDp)
             .apply()
     }
 

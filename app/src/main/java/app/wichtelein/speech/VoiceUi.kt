@@ -48,7 +48,6 @@ fun VoiceSettings(settings: Settings, onChange: (Settings) -> Unit) {
         speaker.rate = settings.rate
         speaker.mood = settings.mood
         speaker.useElfVoice = settings.elfVoice
-        speaker.voiceId = settings.voiceFor(if (settings.elfin) 1 else 0)
     }
     val actors = when (settings.cast) { 1 -> listOf(1); 2 -> listOf(0, 1); else -> listOf(0) }
 
@@ -124,8 +123,8 @@ fun VoiceSettings(settings: Settings, onChange: (Settings) -> Unit) {
             Button(
                 onClick = {
                     val kid = settings.kidList().firstOrNull() ?: "mein Freund"
-                    speaker.voiceId = settings.voiceFor(actor)
-                    speaker.speak(fill("Hallo {name}! Ich bin {wichtel}, dein Wichtel. Heute habe ich wieder etwas angestellt!", kid, settings.nameFor(actor)))
+                    val text = if (actor == 1) "Hallo {name}! Ich bin {wichtel}, deine Elfin. Heute habe ich wieder etwas Glitzerndes angestellt!" else "Hallo {name}! Ich bin {wichtel}, dein Wichtel. Heute habe ich wieder etwas angestellt!"
+                    speaker.speakWithVoice(settings.voiceFor(actor), fill(text, kid, settings.nameFor(actor)))
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(if (actors.size > 1) (if (actor == 1) "🔊  Elfin anhören" else "🔊  Wichtel anhören") else "🔊  Stimme anhören") }

@@ -31,6 +31,8 @@ class VoiceInfo(
     val moods: Boolean = false,
     /** weibliche Stimme (sonst männlich); der Wichtel bekommt nur männliche, die Elfin nur weibliche Stimmen */
     val female: Boolean = false,
+    /** passt für Wichtel und Elfin (wählbar in beiden Listen) */
+    val both: Boolean = false,
 ) {
     val bundled get() = file == null
     val url get() = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/$file"
@@ -51,8 +53,8 @@ object VoiceCatalog {
             "vits-piper-de_DE-miro-high.tar.bz2", "8226bb45d3684286981a55b3e0937e373f37673036a7eee27fc51def2d8c926d",
         ),
         VoiceInfo(
-            "dii_high", "Dii (hohe Qualität)", "Weiblich, hohe Qualität.", 64,
-            "vits-piper-de_DE-dii-high.tar.bz2", "64d46d39afb0f53a49871f5415259ffe474f443696148930b34a003612b69110", female = true,
+            "dii_high", "Dii (hohe Qualität)", "Hohe Qualität – für Wichtel und Elfin wählbar.", 64,
+            "vits-piper-de_DE-dii-high.tar.bz2", "64d46d39afb0f53a49871f5415259ffe474f443696148930b34a003612b69110", female = true, both = true,
         ),
         VoiceInfo(
             "ramona", "Ramona", "Weiblich, heller – passt gut zu einem Wichtelkind.", 63,
@@ -69,7 +71,7 @@ object VoiceCatalog {
     )
 
     /** Stimmen für den Wichtel (männlich) bzw. die Elfin (weiblich) */
-    fun forActor(actor: Int): List<VoiceInfo> = all.filter { it.female == (actor == 1) }
+    fun forActor(actor: Int): List<VoiceInfo> = all.filter { it.both || it.female == (actor == 1) }
 
     fun find(id: String): VoiceInfo = all.firstOrNull { it.id == id } ?: all.first()
 

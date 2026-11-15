@@ -85,6 +85,44 @@ class Speaker(context: Context) {
         speakSystem(text)
     }
 
+    /**
+     * Hörprobe mit einer bestimmten Stimme (Einstellungen): lädt die Stimme, falls nötig, wartet darauf und spricht dann.
+     * Ist sie nicht verfügbar (z. B. noch nicht heruntergeladen), spricht die Systemstimme.
+     */
+    fun speakWithVoice(voice: String, text: String, moodOverride: Int? = null) {
+        if (!enabled) return
+        val id = generation.incrementAndGet()
+        stopPlayback()
+        if (!useElfVoice) {
+            speakSystem(text)
+            return
+        }
+        val moodId = moodOverride ?: mood
+        val factor = 1f + 0.45f * effect
+        val r = rate
+        playExec.execute {
+            ElfVoice.prepareAsync(appContext, voice)
+            val t0 = System.currentTimeMillis()
+            while (System.currentTimeMillis() - t0 < 90_000L) {
+                if (generation.get() != id) return@execute
+                if (ElfVoice.state == ElfVoice.State.READY && ElfVoice.activeId == voice) break
+                if (ElfVoice.state == ElfVoice.State.UNAVAILABLE) break
+                Thread.sleep(150)
+            }
+            if (generation.get() != id) return@execute
+            if (ElfVoice.state == ElfVoice.State.READY && ElfVoice.activeId == voice) {
+                val audio = try {
+                    ElfVoice.synthesize(text, moodId, r, factor)
+                } catch (t: Throwable) {
+                    null
+                }
+                if (audio != null && generation.get() == id) play(audio)
+            } else {
+                speakSystem(text)
+            }
+        }
+    }
+
     /** Spielt einen fertig erzeugten Sprachclip ab (Vorschau). */
     fun playClip(audio: VoiceAudio) {
         generation.incrementAndGet()

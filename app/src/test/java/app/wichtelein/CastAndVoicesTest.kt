@@ -67,12 +67,15 @@ class CastAndVoicesTest {
 
     @Test fun onlyFemaleVoicesForTheElfinAndOnlyMaleForTheWichtel() {
         assertTrue(VoiceCatalog.forActor(1).isNotEmpty() && VoiceCatalog.forActor(1).all { it.female })
-        assertTrue(VoiceCatalog.forActor(0).isNotEmpty() && VoiceCatalog.forActor(0).none { it.female })
+        assertTrue(VoiceCatalog.forActor(0).isNotEmpty() && VoiceCatalog.forActor(0).none { it.female && !it.both })
         assertFalse(VoiceCatalog.find(VoiceCatalog.DEFAULT_ID).female)
         assertTrue(VoiceCatalog.find(VoiceCatalog.DEFAULT_ELFIN_ID).female)
         assertTrue(VoiceCatalog.find("ramona").female && VoiceCatalog.find("kerstin").female && VoiceCatalog.find("dii_high").female)
         assertFalse(VoiceCatalog.find("thorsten_high").female || VoiceCatalog.find("karlsson").female)
-        assertEquals(VoiceCatalog.all.size, VoiceCatalog.forActor(0).size + VoiceCatalog.forActor(1).size)
+        // Dii steht in beiden Listen
+        assertEquals(VoiceCatalog.all.size + VoiceCatalog.all.count { it.both }, VoiceCatalog.forActor(0).size + VoiceCatalog.forActor(1).size)
+        assertTrue(VoiceCatalog.forActor(0).any { it.id == "dii_high" } && VoiceCatalog.forActor(1).any { it.id == "dii_high" })
+        assertEquals(listOf("dii_high"), VoiceCatalog.all.filter { it.both }.map { it.id })
     }
 
     @Test fun voicesAndNamesFollowTheFigure() {

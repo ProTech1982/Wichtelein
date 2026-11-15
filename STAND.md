@@ -4,7 +4,13 @@ Auftrag: Wichtelein fertig bauen wie in `Prompt.txt` (Downloads, gehört zu eine
 Gebaut wird nur in GitHub Actions (kein Android-SDK lokal). Release = Push auf main (android.yml, Tag build-N).
 Entwicklungszweige per `gh workflow run ci.yml --ref <zweig>` testen (ci.yml hat workflow_dispatch). Emulator-Job flackert gelegentlich (Boot-Timeout -> neu starten).
 
-## Version 0.9.3 (Release 1.0 erst, wenn der Nutzer „ok“ sagt)
+## Version 0.9.4 (Release 1.0 erst, wenn der Nutzer „ok“ sagt)
+- Hörprobe der Stimmen: `Speaker.speakWithVoice(voice, text)` lädt die Stimme und wartet darauf (vorher spielte die Elfin-Probe nicht, weil die Stimme noch lud und die SideEffect die Stimme zurücksetzte).
+- Dii ist für Wichtel und Elfin wählbar (`VoiceInfo.both`).
+- Eigener Weg der Elfin: `EditState.path2`, `Sel.Path2`, `PerfRequest.path2` (die Elfin läuft `path2`, der Wichtel `path`); Weg-Werkzeug mit Wahl der Figur.
+- Editor: Griff über dem Bedienfeld (testTag `griff`), Höhe in `Settings.editorPanelDp` (0 = automatisch).
+
+## Version 0.9.3
 - Einstellungen: aufklappbare Bereiche (`Fold`, Zustand in einer `mutableStateMapOf`), „Alle aufklappen/zuklappen“.
 - Besetzung `Settings.cast` (0 Wichtel, 1 Elfin, 2 beide; `elfin`/`both` sind berechnet). Zwei Figuren: `Recorder` lässt zwei `ElfEngine` (Parameter `actor`) gleichzeitig laufen, die zweite hängt als
   `FrameState.partner` am Bild; `ScriptStep.who` bestimmt, wer eine Aktion macht; ohne eigene Aktionen steht die andere Figur nur da (`PerfRequest.idleOnly`). `CastFigure(main, partner)` trägt beide Figuren,
