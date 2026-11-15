@@ -134,6 +134,22 @@ class RenderTest {
             }
         }
         rule.onNodeWithText("Einstellungen").assertExists()
+        // anfangs sind alle Bereiche zugeklappt: nur die Überschriften sind da
+        rule.onNodeWithText("🎭 Figuren").assertExists()
+        rule.onNodeWithText("🗣 Sprache und Stimmen").assertExists()
+        rule.onNodeWithText("Name des Wichtels").assertDoesNotExist()
+        shot(rule.onAllNodes(isRoot()).onFirst(), "settings-zu.png")
+        // einzeln aufklappen
+        rule.onNodeWithText("🎭 Figuren").performClick()
+        rule.waitForIdle()
+        rule.onNodeWithText("Name des Wichtels").assertExists()
+        rule.onNodeWithText("🎭 Figuren").performClick()
+        rule.waitForIdle()
+        rule.onNodeWithText("Name des Wichtels").assertDoesNotExist()
+        // alle auf einmal
+        rule.onNodeWithText("Alle aufklappen").performClick()
+        rule.waitForIdle()
+        rule.onNodeWithText("Alle zuklappen").assertExists()
         rule.onNodeWithText("Name des Wichtels").assertExists()
         rule.onNodeWithText("➕ Kind hinzufügen").assertExists()
         rule.onNodeWithText("🔊  Stimme anhören").assertExists()

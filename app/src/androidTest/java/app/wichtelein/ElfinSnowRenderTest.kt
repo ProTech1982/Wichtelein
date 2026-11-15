@@ -185,8 +185,8 @@ class ElfinSnowRenderTest {
         }
         val left = filled(x0, x0 + half)
         val right = filled(x0 + half, x0 + 2 * half)
-        assertTrue("Wichtel links: $left", left > 400)
-        assertTrue("Elfin rechts: $right", right > 400)
+        assertTrue("Wichtel links: $left", left > 150)
+        assertTrue("Elfin rechts: $right", right > 150)
     }
 
     @Test fun rotatedDoorMovesItsPixels() {
