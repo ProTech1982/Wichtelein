@@ -145,7 +145,9 @@ class PerformanceTest {
     }
 
     @Test fun elfStaysOutsideAndPeeksIntoTheHouse() {
-        val p = Recorder.record(doorReq("brav_heim"))
+        val p = Recorder.record(
+            PerfRequest(Pt(0.3f, 0.8f), emptyList(), 0.3f, null, "brav_heim", 4L, 40_000L, setOf("brav_heim"), settings, door = Pt(0.8f, 0.6f), doorScale = 0.2f),
+        )
         // der Wichtel verschwindet nie (kein „Keller“): er bleibt in voller Größe sichtbar
         assertTrue("schrumpft/verschwindet", p.frames.filter { it.doorOpen > 0.02f }.all { it.visible && it.pose.scale > 0.95f })
         // bei geöffneter Tür steht er neben der Tür

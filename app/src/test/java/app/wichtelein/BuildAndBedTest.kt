@@ -81,8 +81,14 @@ class BuildAndBedTest {
     }
 
     @Test fun itemsOfEveryTypeCanBeBuilt() {
-        val all = SceneryType.values().mapIndexed { i, t -> SceneryItem(i + 1, t, Pt(0.15f + 0.14f * i, 0.85f), t.defaultScale) }
-        val p = Recorder.record(req(all, listOf(ScriptStep(ElfAction.WAVE, Pt(0.5f, 0.8f)))))
+        val all = SceneryType.values().mapIndexed { i, t -> SceneryItem(i + 1, t, Pt(0.05f + 0.055f * i, 0.85f), t.defaultScale) }
+        // viele Gegenstände dauern lange: genug Zeit zum Aufbauen aller
+        val p = Recorder.record(
+            PerfRequest(
+                Pt(0.5f, 0.8f), emptyList(), 0.3f, null, null, 4L, 300_000L, null, settings,
+                script = listOf(ScriptStep(ElfAction.WAVE, Pt(0.5f, 0.8f))), stopAfterScript = true, aspect = 0.56f, scenery = all,
+            ),
+        )
         for (it in all) assertEquals(it.type.id, 1f, p.frames.last().built[it.id] ?: 0f, 1e-6f)
     }
 
