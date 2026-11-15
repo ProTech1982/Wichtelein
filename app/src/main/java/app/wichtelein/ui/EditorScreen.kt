@@ -509,6 +509,7 @@ fun EditorScreen(
 
         // Griff: nach oben ziehen = größeres Bedienfeld, nach unten = größeres Bild
         val maxPanel = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp - 230).coerceAtLeast(160).toFloat()
+        val pxPerDp = androidx.compose.ui.platform.LocalDensity.current.density
         Box(
             Modifier
                 .fillMaxWidth()
@@ -521,7 +522,7 @@ fun EditorScreen(
                     ) { change, dy ->
                         change.consume()
                         val cur = if (panelDp <= 0f) 250f else panelDp
-                        panelDp = (cur - dy / density).coerceIn(90f, maxPanel)
+                        panelDp = (cur - dy / pxPerDp).coerceIn(90f, maxPanel)
                     }
                 },
             contentAlignment = Alignment.Center,
