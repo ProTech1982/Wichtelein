@@ -126,6 +126,10 @@ fun DrawScope.drawWichtelFrame(
     val elfH = eh(f.x, f.y)
     if (f.visible && elfPos != null) {
         sprites.draw(this, f.pose, elfPos, elfH, f.facing)
+        // im Bett: die vordere Bettkante liegt über dem Wichtel (er liegt „im“ Bett)
+        if (sc != null && f.onItem >= 0) sc.items.firstOrNull { it.id == f.onItem && it.type.isBed }?.let {
+            drawScenery(listOf(it), sc.assets, f.timeSec, progress, false, 0.33f)
+        }
     }
     if (sc != null) drawScenery(sc.items.filter { it.at.y > f.y && it.id != f.onItem }.sortedBy { it.at.y }, sc.assets, f.timeSec, progress, showUnbuilt)
 
@@ -141,6 +145,8 @@ fun DrawScope.drawWichtelFrame(
         drawParticle(p, o, eh(p.x, p.y) * 0.04f, h, measurer)
     }
 
+    if (f.snow > 0.01f) drawSnow(f.snow, f.timeSec)
+
     val text = f.bubble
     if (text != null && f.bubbleSpec.show && f.visible && f.pose.scale > 0.5f && elfPos != null) {
         val spec = f.bubbleSpec
@@ -150,6 +156,29 @@ fun DrawScope.drawWichtelFrame(
         val maxW = (w * 0.62f * spec.size.coerceAtMost(1.3f) * shapeK).toInt().coerceIn(40, (w * 0.9f).toInt().coerceAtLeast(41))
         val layout = measurer.measure(text, style, constraints = Constraints(maxWidth = maxW))
         drawBubble(layout, spec, elfPos.x, elfPos.y - elfH * 1.12f, w, h)
+    }
+}
+
+private fun hash01(n: Int, salt: Int): Float {
+    val v = kotlin.math.sin((n * 12.9898f + salt * 78.233f).toDouble()) * 43758.5453
+    return (v - kotlin.math.floor(v)).toFloat()
+}
+
+/** Schneefall: feste Flocken, die nur von der Zeit abhängen (damit Vorschau und Video gleich aussehen); [level] bestimmt, wie viele zu sehen sind. */
+fun DrawScope.drawSnow(level: Float, timeSec: Float) {
+    val w = size.width
+    val h = size.height
+    val total = 170
+    val shown = (total * level.coerceIn(0f, 1f)).toInt()
+    for (i in 0 until shown) {
+        val depth = hash01(i, 1)
+        val speed = 0.06f + 0.10f * depth
+        val r = h * (0.0028f + 0.0065f * depth)
+        val fall = (hash01(i, 2) + timeSec * speed / 1.1f) % 1f
+        val y = fall * (h * 1.1f) - h * 0.05f
+        val sway = kotlin.math.sin(timeSec * (0.8f + hash01(i, 3)) + hash01(i, 4) * 6.28f) * w * 0.012f
+        val x = hash01(i, 5) * w + sway
+        drawCircle(Color.White.copy(alpha = 0.55f + 0.4f * depth), r, Offset(x, y))
     }
 }
 

@@ -4,6 +4,14 @@ Auftrag: Wichtelein fertig bauen wie in `Prompt.txt` (Downloads, gehört zu eine
 Gebaut wird nur in GitHub Actions (kein Android-SDK lokal). Release = Push auf main (android.yml, Tag build-N).
 Entwicklungszweige per `gh workflow run ci.yml --ref <zweig>` testen (ci.yml hat workflow_dispatch). Emulator-Job flackert gelegentlich (Boot-Timeout -> neu starten).
 
+## Version 0.9.1 (Zweig v0.9.1-entwicklung, noch nicht als Release 1.0 freigegeben)
+- Gegenstände in zwei Stilen: `SceneryGroup.CLASSIC` (Holz, warmes Licht) und `NEON` (alte Cyberpunk-Variante, jetzt „Neon-…“). Neu: Schneemann, Geschenke, Schlitten, Zuckerstangen, Bank, Lagerfeuer,
+  Holzzaun, Holzbett, klassische Laterne/Lichterkette/Tannenbaum. Quelle `blender/szene3d.py` (Aufruf mit Liste der Namen, **absoluter** Ausgabepfad!), Bilder in `assets/scenery/`.
+- Betten (`SceneryType.isBed`) sind jetzt Seitenansicht (Kopf links, gespiegelt = rechts); der Wichtel liegt quer, die vordere Bettkante wird über ihn gezeichnet (`frontOnlyFrac`).
+- Schnee: Aktionen `SNOW`/`SNOW_OFF` (`doSnowOn/doSnowOff`, `FrameState.snow`, `drawSnow` aus der Zeit berechnet), Szene „brav_schnee“.
+- App-Aussehen: `Settings.themeMode` (0 System, 1 hell, 2 dunkel), `AppTheme.mode`, `WichtelLight/WichtelDark` in MainActivity.
+- Elfin: `anim/ElfinDrawing.kt` (gezeichnete 2D-Figur, `Settings.elfin`), wählbar in den Einstellungen; benutzt dieselbe `Pose` und die Farbwahl (Mantel = Kleid, Hose = Strumpfhose).
+
 ## Version 0.9.0 (enthält 0.8.1)
 - Neue Aktionen `HOUSE_IN`/`HOUSE_OUT` (`doGoInside`/`doComeOutside`), Szene „brav_zuhause“; im Haus ist der Wichtel unsichtbar (`inHouse`).
 - 0.8.1: Export verlängert kurze Videos per Schleife (`needLoop`, `EditedMediaItemSequence(…, true)`), Editor-Dauer = Aufführung (bis 4 min), Aufbau zählt mit.

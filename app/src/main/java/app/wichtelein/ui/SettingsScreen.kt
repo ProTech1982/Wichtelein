@@ -141,6 +141,13 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth(),
         )
 
+        Section("Aussehen der App")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("Wie das Handy", "Hell", "Dunkel").forEachIndexed { i, label ->
+                androidx.compose.material3.FilterChip(selected = settings.themeMode == i, onClick = { onChange(settings.copy(themeMode = i)) }, label = { Text(label) })
+            }
+        }
+
         Section("Datenschutz")
         Text(
             "Alles bleibt auf diesem Gerät: Videos, Namen und Einstellungen. Es gibt kein Konto, keine Werbung und keine Tracker. " +
@@ -171,7 +178,13 @@ private fun ClothingEditor(settings: Settings, onChange: (Settings) -> Unit) {
         sprites.draw(this, pose, Offset(size.width / 2f, size.height * 0.97f), eh, 1)
     }
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    if (Elf3D.available(ctx)) {
+    Text("Wer erscheint?", fontWeight = FontWeight.Medium)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        androidx.compose.material3.FilterChip(selected = !settings.elfin, onClick = { onChange(settings.copy(elfin = false)) }, label = { Text("🧙 Wichtel") })
+        androidx.compose.material3.FilterChip(selected = settings.elfin, onClick = { onChange(settings.copy(elfin = true)) }, label = { Text("🧝‍♀️ Wichtelfrau (Elfin)") })
+    }
+    if (settings.elfin) Text("Die Elfin hat Mütze, Kleid, Strumpfhose und Stiefel zum Umfärben (Mantel = Kleid, Hose = Strumpfhose). Sie ist als 2D-Figur gezeichnet.", fontSize = 12.sp, color = Color.Gray)
+    if (Elf3D.available(ctx) && !settings.elfin) {
         Text("Figur", fontWeight = FontWeight.Medium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             androidx.compose.material3.FilterChip(

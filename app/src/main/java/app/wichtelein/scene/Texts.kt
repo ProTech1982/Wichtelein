@@ -116,6 +116,18 @@ object Lines {
         "Simsalabim! Ein Geschenk!",
         "Schau mal, {name}, was da plötzlich liegt!",
     )
+    val snowOn = listOf(
+        "Oh, schaut mal nach oben!",
+        "Ich glaube, es fängt an zu schneien!",
+    )
+    val snowLike = listOf(
+        "Schneeflöckchen, Weißröckchen!",
+        "Wie schön, alles wird ganz weiß!",
+    )
+    val snowOff = listOf(
+        "Genug Schnee für heute!",
+        "Danke, liebe Wolken!",
+    )
     val magic = listOf(
         "Hokuspokus Wichtelzipfel!",
         "Abrakadabra, Spielzeug komm herbei!",

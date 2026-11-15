@@ -196,8 +196,49 @@ class ElfEngine(
         x, y, facing, visible, pose.copy(), bubble,
         mess.map { it.copy() }, flying?.copy(), particles.map { it.copy() },
         doorPos, doorScale, doorOpen, doorHingeLeft, doorRound, clock,
-        if (built.isEmpty()) emptyMap() else HashMap(built), bubbleSpec, onItem,
+        if (built.isEmpty()) emptyMap() else HashMap(built), bubbleSpec, onItem, snowLevel(),
     )
+
+    // ---------------------------------------------------------------- Schnee
+
+    /** Zeitpunkt (Engine-Uhr), an dem es zu schneien beginnt bzw. aufhört; negativ = nie */
+    private var snowOnAt = -1f
+    private var snowOffAt = -1f
+
+    /** Schneestärke: der Schnee setzt langsam ein (3 s) und klingt nach dem Ende langsam ab (3 s). */
+    private fun snowLevel(): Float {
+        if (snowOnAt < 0f) return 0f
+        val up = ((clock - snowOnAt) / 3f).coerceIn(0f, 1f)
+        val down = if (snowOffAt >= snowOnAt) (1f - (clock - snowOffAt) / 3f).coerceIn(0f, 1f) else 1f
+        return minOf(up, down)
+    }
+
+    /** Der Wichtel schaut nach oben, freut sich und es beginnt zu schneien (bleibt so, bis „Der Schnee hört auf“). */
+    suspend fun doSnowOn() {
+        if (snowOnAt >= 0f && snowOffAt < snowOnAt) return
+        faceFront()
+        say(Lines.snowOn.random(rng), Mood.AMUSED)
+        sfx(Fx.SPARKLE, 0.8f)
+        snowOnAt = clock
+        anim(2600) {
+            pose.armR = 150f + 15f * sin(clock * 5f)
+            pose.armL = 150f - 15f * sin(clock * 5f)
+            pose.hatTilt = 0.05f * sin(clock * 3f)
+        }
+        pose.relax()
+        sayWait(Lines.snowLike.random(rng), Mood.AMUSED)
+    }
+
+    /** Der Schneefall hört auf. */
+    suspend fun doSnowOff() {
+        if (snowOnAt < 0f || snowOffAt >= snowOnAt) return
+        faceFront()
+        snowOffAt = clock
+        say(Lines.snowOff.random(rng))
+        anim(1800) { pose.armR = 120f + 15f * sin(clock * 6f) }
+        pose.relax()
+    }
+
 
     // ---------------------------------------------------------------- Takt
 
@@ -331,7 +372,7 @@ class ElfEngine(
     }
 
     /** Das erste Bett im Bild, falls es eins gibt. */
-    fun findBed(): SceneryItem? = items.firstOrNull { it.type == SceneryType.BED }
+    fun findBed(): SceneryItem? = items.firstOrNull { it.type.isBed }
 
     private fun halfWidth(it: SceneryItem) = it.scale * it.type.ratio / aspect / 2f
 
@@ -347,7 +388,7 @@ class ElfEngine(
         val toRight = item.at.x > x
         facing = if (toRight) 1 else -1
         turnTo(if (toRight) 90f else 270f)
-        say("Jetzt stelle ich ${item.type.label} auf!")
+        say("Jetzt stelle ich ${item.type.spoken} auf!")
         sfx(Fx.WHOOSH, 0.6f)
         var hit = -1
         val hw = halfWidth(item)
@@ -388,7 +429,7 @@ class ElfEngine(
         sayWait("Gute Nacht! Ab ins Bett.")
         // Liegepunkt: Mitte der Matratze; der Körper dreht sich um seine Mitte
         val sign = if (bed.flip) 1f else -1f
-        val centerY = bed.at.y - bed.scale * 0.28f
+        val centerY = bed.at.y - bed.scale * 0.40f
         val lie = Pt(bed.at.x, (centerY + 0.4f * hNorm).coerceAtMost(0.98f))
         val sx = x
         val sy = y
@@ -491,7 +532,7 @@ class ElfEngine(
 
     // ---------------------------------------------------------------- Drehen (3D-Figur)
 
-    private val animateTurns: Boolean get() = settings().figure3d
+    private val animateTurns: Boolean get() = settings().figure3d && !settings().elfin
 
     private fun normAngle(a: Float) = ((a % 360f) + 360f) % 360f
 
@@ -1161,6 +1202,8 @@ class ElfEngine(
             ElfAction.SNACK -> doSnack()
             ElfAction.GIFT -> doGiftCarry(step.at ?: Pt(x, y))
             ElfAction.MAGIC -> doMagic()
+            ElfAction.SNOW -> doSnowOn()
+            ElfAction.SNOW_OFF -> doSnowOff()
             ElfAction.TUMBLE -> doTumble()
             ElfAction.TRIP -> doTrip()
             ElfAction.CHAOS -> doChaos(walk = false)

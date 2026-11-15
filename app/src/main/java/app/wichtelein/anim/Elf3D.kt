@@ -176,11 +176,15 @@ class Elf3D(private val context: Context, private val colors: ElfColors = ElfCol
 /** Wählt die Figur nach den Einstellungen (3D, wenn gewünscht und vorhanden, sonst die 2D-Puppe). */
 object ElfFigures {
     fun load(context: Context, settings: Settings): ElfFigure =
-        if (settings.figure3d && Elf3D.available(context)) Elf3D(context, settings.colors()) else ElfSprites.load(context, settings.colors())
+        when {
+            settings.elfin -> ElfinFigure(settings.colors())
+            settings.figure3d && Elf3D.available(context) -> Elf3D(context, settings.colors())
+            else -> ElfSprites.load(context, settings.colors())
+        }
 }
 
 @Composable
 fun rememberElfFigure(settings: Settings): ElfFigure {
     val context = LocalContext.current
-    return remember(settings.colors(), settings.figure3d) { ElfFigures.load(context, settings) }
+    return remember(settings.colors(), settings.figure3d, settings.elfin) { ElfFigures.load(context, settings) }
 }

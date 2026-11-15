@@ -50,6 +50,11 @@ object Scenes {
             doWave()
             doSleep()
         },
+        SceneDef("brav_schnee", "Es schneit", Category.BRAV, "Der Wichtel schaut nach oben, es fängt an zu schneien und er freut sich.") { _ ->
+            doSnowOn()
+            idle(4000)
+            doWave()
+        },
         SceneDef("brav_bett", "Ins Bett und schnarchen", Category.BRAV, "Der Wichtel legt sich in sein Bett und schnarcht laut.", needsBed = true) { _ ->
             doBed(findBed())
         },

@@ -43,6 +43,8 @@ enum class ElfAction(val label: String, val emoji: String, val needsDoor: Boolea
     HOUSE_IN("Ins Haus gehen & drinnen bleiben", "🏠", needsDoor = true, needsPoint = false),
     HOUSE_OUT("Aus dem Haus kommen", "🚪", needsDoor = true, needsPoint = false),
     DOOR_SWEEP("Vor der Tür fegen", "🧹", needsDoor = true, needsPoint = false),
+    SNOW("Es fängt an zu schneien", "❄", needsPoint = false),
+    SNOW_OFF("Der Schnee hört auf", "☀", needsPoint = false),
 }
 
 /** Ein Aktionspunkt im Bild: [action] wird an der Stelle [at] ausgeführt (bei Türaktionen ohne Stelle). */
@@ -98,6 +100,8 @@ class FrameState(
     val bubbleSpec: BubbleSpec = BubbleSpec(),
     /** Gegenstand, auf dem der Wichtel gerade liegt (er wird dann hinter ihm gezeichnet), sonst -1 */
     val onItem: Int = -1,
+    /** Stärke des Schneefalls 0..1 (0 = kein Schnee) */
+    val snow: Float = 0f,
 )
 
 /** Eine fertig aufgenommene Wichtel-Aufführung: Bilder mit festem Takt plus Sprach-Ereignisse. */

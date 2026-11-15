@@ -65,6 +65,11 @@ verschieben, vergrößern, spiegeln, umfärben und mit oder ohne Licht zeigen; d
   Richtungen gerendert. Er dreht sich beim Laufen in Laufrichtung (auf den Betrachter zu, seitlich, vom Betrachter weg), steht beim Fegen seitlich (mit Staubwolken
   am Ende jedes Besenstrichs) und dreht sich zum Haus um 360° mit dem Rücken zum Betrachter, bevor er die Tür öffnet und hineingeht. Winken, Fegen und Laufen
   sind echte Bilder aus der jeweiligen Richtung; Hinsetzen, Purzelbaum, Schlafen u. Ä. entstehen aus dem Stehbild. Farben: Mütze und Mantel.
+- **Gegenstände klassisch oder Neon (0.9.1):** Tannenbaum, Zaun (Holz), Laterne, Lichterkette, Holzbett gibt es jetzt klassisch mit warmem Licht; die Neon-Gegenstände (Cyberpunk) bleiben als eigene Gruppe.
+  Neu sind Schneemann, Geschenke, Schlitten, Zuckerstangen, Bank und Lagerfeuer. Betten sind seitlich zu sehen, der Wichtel legt sich quer hinein und die Bettkante liegt vor ihm.
+- **Schnee (0.9.1):** Aktion „❄ Es fängt an zu schneien“ (setzt langsam ein) und „☀ Der Schnee hört auf“.
+- **Aussehen der App (0.9.1):** wie das Handy, hell oder dunkel (Einstellungen).
+- **Wichtelfrau (0.9.1):** In den Einstellungen kann statt des Wichtels die Elfin erscheinen (gezeichnete 2D-Figur mit Zipfelmütze, Zöpfen und Kleid, umfärbbar).
 - **Ins Haus gehen und drinnen bleiben (0.9.0):** Aktion „🏠 Ins Haus gehen & drinnen bleiben“: Er geht zur Tür, öffnet sie, geht hinein (wird dabei etwas kleiner), dreht sich
   drinnen zum Betrachter um, winkt kurz und schließt die Tür von innen. Danach bleibt er im Haus, bis die Aktion „🚪 Aus dem Haus kommen“ (oder eine andere Aktion) ihn wieder herausholt;
   er kommt dann größer werdend heraus, dreht sich um und schließt die Tür. Auch als Szene „Ins Haus und drinnen bleiben“.

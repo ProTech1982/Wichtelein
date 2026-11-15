@@ -48,10 +48,14 @@ data class Settings(
     val perspective: Float = 1f,
     /** 3D-Wichtel (in Blender gerendert, 360° drehbar) statt der 2D-Figur */
     val figure3d: Boolean = false,
+    /** die Wichtelfrau (Elfin) statt des Wichtels */
+    val elfin: Boolean = false,
     /** Weihnachtsgeräusche (Glöckchen, Tür, Besen, …) */
     val soundFx: Boolean = true,
     /** Abgeschaltete Szenen (Wichtelaktionen). */
     val disabledScenes: Set<String> = emptySet(),
+    /** Aussehen der App: 0 = wie das Handy (System), 1 = hell, 2 = dunkel */
+    val themeMode: Int = 0,
 ) {
     fun colors() = ElfColors(hatColor, jacketColor, legColor, bootColor).clamped()
 
@@ -110,6 +114,7 @@ object SettingsStore {
             mood = p.getInt("moodV2", d.mood),
             soundFx = p.getBoolean("soundFx", d.soundFx),
             figure3d = p.getBoolean("figure3d", d.figure3d),
+            elfin = p.getBoolean("elfin", d.elfin),
             perspective = p.getFloat("perspective", d.perspective),
             bubble = app.wichtelein.anim.BubbleSpec(
                 show = p.getBoolean("bubbleShow", true),
@@ -122,6 +127,7 @@ object SettingsStore {
             musicName = p.getString("musicName", "") ?: "",
             sceneryStyles = app.wichtelein.anim.SceneryPalette.decode(p.getString("sceneryStyles", "")),
             disabledScenes = (p.getStringSet("disabledScenes", emptySet()) ?: emptySet()).toSet(),
+            themeMode = p.getInt("themeMode", d.themeMode).coerceIn(0, 2),
         )
     }
 
@@ -145,6 +151,7 @@ object SettingsStore {
             .putInt("moodV2", s.mood)
             .putBoolean("soundFx", s.soundFx)
             .putBoolean("figure3d", s.figure3d)
+            .putBoolean("elfin", s.elfin)
             .putFloat("perspective", s.perspective)
             .putBoolean("bubbleShow", s.bubble.show)
             .putInt("bubbleShape", s.bubble.shape.ordinal)
@@ -155,6 +162,7 @@ object SettingsStore {
             .putString("musicName", s.musicName)
             .putString("sceneryStyles", app.wichtelein.anim.SceneryPalette.encode(s.sceneryStyles))
             .putStringSet("disabledScenes", s.disabledScenes)
+            .putInt("themeMode", s.themeMode)
             .apply()
     }
 

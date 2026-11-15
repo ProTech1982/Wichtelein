@@ -22,10 +22,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.activity.SystemBarStyle
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -38,22 +42,51 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/** Aussehen der App (0 = System, 1 = hell, 2 = dunkel); wird beim Start geladen und in den Einstellungen geändert. */
+object AppTheme {
+    var mode by mutableIntStateOf(0)
+}
+
+val WichtelLight = lightColorScheme(
+    primary = Color(0xFF2E9E4F),
+    secondary = Color(0xFFD93A3A),
+    background = Color(0xFFFFF8EC),
+    surface = Color(0xFFFFF8EC),
+    surfaceVariant = Color(0xFFF1E6CF),
+)
+
+val WichtelDark = darkColorScheme(
+    primary = Color(0xFF5FD283),
+    onPrimary = Color(0xFF05250F),
+    secondary = Color(0xFFFF7A7A),
+    background = Color(0xFF16181A),
+    surface = Color(0xFF16181A),
+    surfaceVariant = Color(0xFF2A2E31),
+    onSurfaceVariant = Color(0xFFD0D4D6),
+)
+
 enum class Screen { HOME, CAMERA, PHOTO_CAMERA, EDITOR, VIDEOS, ACTIONS, SETTINGS, AR }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppTheme.mode = SettingsStore.load(this).themeMode
         enableEdgeToEdge()
         setContent {
-            MaterialTheme(
-                colorScheme = lightColorScheme(
-                    primary = Color(0xFF2E9E4F),
-                    secondary = Color(0xFFD93A3A),
-                    background = Color(0xFFFFF8EC),
-                    surface = Color(0xFFFFF8EC),
-                    surfaceVariant = Color(0xFFF1E6CF),
-                ),
-            ) {
+            val dark = when (AppTheme.mode) {
+                1 -> false
+                2 -> true
+                else -> isSystemInDarkTheme()
+            }
+            // Statusleiste und Navigationsleiste passend zum gewählten Aussehen
+            DisposableEffect(dark) {
+                enableEdgeToEdge(
+                    statusBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT) { dark },
+                    navigationBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT) { dark },
+                )
+                onDispose { }
+            }
+            MaterialTheme(colorScheme = if (dark) WichtelDark else WichtelLight) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     WichtelApp()
                 }
@@ -78,6 +111,7 @@ fun WichtelApp() {
 
     fun update(s: Settings) {
         settings = s
+        AppTheme.mode = s.themeMode
         SettingsStore.save(context, s)
     }
 

@@ -54,13 +54,15 @@ class SceneryRenderTest {
     @Test fun drawsAllObjectsWithBlinkingLights() {
         val assets = SceneryAssets.load(ctx)
         val types = SceneryType.values().toList()
+        val cols = 6
+        val rows = (types.size + cols - 1) / cols
         rule.setContent {
-            Column(Modifier.size(300.dp, 300.dp).background(Color(0xFFB8A898))) {
-                for (row in 0..1) Row {
-                    for (col in 0..2) {
-                        val t = types[row * 3 + col]
+            Column(Modifier.size((100 * cols).dp, (150 * rows).dp).background(Color(0xFFB8A898))) {
+                for (row in 0 until rows) Row {
+                    for (col in 0 until cols) {
+                        val t = types.getOrNull(row * cols + col)
                         Canvas(Modifier.size(100.dp, 150.dp)) {
-                            drawScenery(listOf(SceneryItem(1, t, Pt(0.5f, 0.92f), 0.8f)), assets, 0.4f)
+                            if (t != null) drawScenery(listOf(SceneryItem(1, t, Pt(0.5f, 0.92f), 0.8f)), assets, 0.4f)
                         }
                     }
                 }
@@ -70,12 +72,12 @@ class SceneryRenderTest {
         val b = rule.onAllNodes(isRoot()).onFirst().captureToImage().asAndroidBitmap()
         File(File(ctx.filesDir, "shots").apply { mkdirs() }, "scenery.png").outputStream().use { b.compress(Bitmap.CompressFormat.PNG, 100, it) }
         val bg = AColor.rgb(0xB8, 0xA8, 0x98)
-        for (i in 0 until 6) {
-            val cw = b.width / 3
-            val ch = b.height / 2
+        for (i in types.indices) {
+            val cw = b.width / cols
+            val ch = b.height / rows
             var changed = 0
             for (y in 0 until ch step 3) for (x in 0 until cw step 3) {
-                val c = b.getPixel((i % 3) * cw + x, (i / 3) * ch + y)
+                val c = b.getPixel((i % cols) * cw + x, (i / cols) * ch + y)
                 if (kotlin.math.abs(AColor.red(c) - AColor.red(bg)) + kotlin.math.abs(AColor.green(c) - AColor.green(bg)) + kotlin.math.abs(AColor.blue(c) - AColor.blue(bg)) > 60) changed++
             }
             assertTrue("Gegenstand ${types[i].id} nicht sichtbar: $changed", changed > 150)

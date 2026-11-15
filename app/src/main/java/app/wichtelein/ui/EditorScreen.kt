@@ -132,7 +132,7 @@ fun EditorScreen(
     var sel by remember { mutableStateOf<Sel?>(null) }
     var tool by remember { mutableStateOf(Tool.START) }
     var action by remember { mutableStateOf(ElfAction.SWEEP) }
-    var objType by remember { mutableStateOf(SceneryType.TREE) }
+    var objType by remember { mutableStateOf(SceneryType.TREE_CLASSIC) }
     var sliderBase by remember { mutableStateOf<EditState?>(null) }
     var fine by remember { mutableStateOf(false) }
 
@@ -588,7 +588,7 @@ fun EditorScreen(
                                 selected = action == a,
                                 onClick = {
                                     action = a
-                                    if (!a.needsPoint && (!a.needsDoor || st.door != null) && (!a.needsBed || st.scenery.any { it.type == SceneryType.BED })) {
+                                    if (!a.needsPoint && (!a.needsDoor || st.door != null) && (!a.needsBed || st.scenery.any { it.type.isBed })) {
                                         val n = EditOps.addStep(st, a, null)
                                         if (n != st) {
                                             commit(n)
@@ -600,7 +600,7 @@ fun EditorScreen(
                             )
                         }
                     }
-                    if (action.needsBed && st.scenery.none { it.type == SceneryType.BED }) {
+                    if (action.needsBed && st.scenery.none { it.type.isBed }) {
                         Text("Stelle zuerst ein Bett auf (Chip „🎄 Objekte“), dann lässt sich diese Aktion hinzufügen.", color = Warn, fontSize = 12.sp)
                     }
                     if (action.needsDoor && st.door == null) {
@@ -668,9 +668,12 @@ fun EditorScreen(
                         color = Hint,
                         fontSize = 12.sp,
                     )
-                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SceneryType.values().forEach { t ->
-                            FilterChip(selected = objType == t, onClick = { objType = t }, label = { Text("${t.emoji} ${t.label}") })
+                    for (g in SceneryGroup.values()) {
+                        Text(g.label, color = Hint, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SceneryType.values().filter { it.group == g }.forEach { t ->
+                                FilterChip(selected = objType == t, onClick = { objType = t }, label = { Text("${t.emoji} ${t.label}") })
+                            }
                         }
                     }
                     if (sceneryAssets.art(objType) == null) Text("Dieser Gegenstand ist in dieser App-Version nicht enthalten.", color = Warn, fontSize = 12.sp)

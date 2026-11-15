@@ -18,15 +18,44 @@ import kotlin.math.PI
 import kotlin.math.sin
 import org.json.JSONObject
 
-/** Dinge, die man ins Bild stellen kann (in Blender gerendert, Cyberpunk-Weihnacht mit Neonlicht). */
-enum class SceneryType(val id: String, val label: String, val emoji: String, val defaultScale: Float, val ratio: Float) {
-    TREE("tree", "Tannenbaum", "🎄", 0.42f, 0.82f),
-    BED("bed", "Bett", "🛏", 0.30f, 1.40f),
-    FENCE("fence", "Zaun", "🚧", 0.14f, 2.14f),
-    LAMP("lamp", "Laterne", "🏮", 0.34f, 0.60f),
-    LIGHTS("lights", "Lichterkette", "💡", 0.16f, 1.73f),
-    SIGN("sign", "Neonschild", "🪧", 0.18f, 1.10f),
+/**
+ * Dinge, die man ins Bild stellen kann (in Blender gerendert). [group] = Stil („klassisch“ mit Holz und warmem Licht oder „Neon“ im
+ * Cyberpunk-Look), [isBed] = der Wichtel kann sich hineinlegen (Seitenansicht, Kopf links), [frontFrac] = Höhenanteil des Betts, der den
+ * liegenden Wichtel von vorn teilweise zudeckt.
+ */
+enum class SceneryType(
+    val id: String,
+    val label: String,
+    val emoji: String,
+    val defaultScale: Float,
+    val ratio: Float,
+    val group: SceneryGroup = SceneryGroup.CLASSIC,
+    val isBed: Boolean = false,
+) {
+    TREE_CLASSIC("tree_classic", "Tannenbaum", "🎄", 0.42f, 0.82f),
+    FENCE_WOOD("fence_wood", "Holzzaun", "🚧", 0.14f, 2.14f),
+    BED_WOOD("bed_wood", "Holzbett", "🛏", 0.26f, 1.79f, isBed = true),
+    LAMP_CLASSIC("lamp_classic", "Laterne", "🏮", 0.34f, 0.60f),
+    LIGHTS_CLASSIC("lights_classic", "Lichterkette", "💡", 0.16f, 1.73f),
+    SNOWMAN("snowman", "Schneemann", "⛄", 0.34f, 0.775f),
+    PRESENTS("presents", "Geschenke", "🎁", 0.14f, 1.54f),
+    SLED("sled", "Schlitten", "🛷", 0.12f, 1.875f),
+    CANDYCANE("candycane", "Zuckerstangen", "🍭", 0.28f, 0.875f),
+    BENCH("bench", "Bank", "🪑", 0.16f, 1.61f),
+    FIRE("fire", "Lagerfeuer", "🔥", 0.14f, 1.09f),
+    TREE("tree", "Neon-Tannenbaum", "🎄", 0.42f, 0.82f, SceneryGroup.NEON),
+    BED("bed", "Neon-Bett", "🛏", 0.26f, 1.79f, SceneryGroup.NEON, isBed = true),
+    FENCE("fence", "Neon-Zaun", "🚧", 0.14f, 2.14f, SceneryGroup.NEON),
+    LAMP("lamp", "Neon-Laterne", "🏮", 0.34f, 0.60f, SceneryGroup.NEON),
+    LIGHTS("lights", "Neon-Lichterkette", "💡", 0.16f, 1.73f, SceneryGroup.NEON),
+    SIGN("sign", "Neonschild", "🪧", 0.18f, 1.10f, SceneryGroup.NEON),
+    ;
+
+    /** Name im Satz („Jetzt stelle ich … auf!“) */
+    val spoken: String get() = label.removePrefix("Neon-")
 }
+
+enum class SceneryGroup(val label: String) { CLASSIC("Klassisch"), NEON("Neon (Cyberpunk)") }
 
 /** Ein platzierter Gegenstand: Fußpunkt [at] (relativ im Bild), Höhe [scale] in Bildhöhen, optional gespiegelt. */
 data class SceneryItem(val id: Int, val type: SceneryType, val at: Pt, val scale: Float, val flip: Boolean = false)
@@ -192,6 +221,8 @@ fun DrawScope.drawScenery(
     progressOf: (SceneryItem) -> Float = { 1f },
     /** noch nicht aufgebaute Gegenstände blass andeuten (im Editor, damit man sie platzieren kann) */
     ghost: Boolean = false,
+    /** nur die vordere Kante (untere Höhenanteile) zeichnen, z. B. die Bettkante vor dem liegenden Wichtel */
+    frontOnlyFrac: Float = 0f,
 ) {
     val w = size.width
     val h = size.height
@@ -207,6 +238,19 @@ fun DrawScope.drawScenery(
         withTransform({
             if (item.flip) scale(-1f, 1f, base)
         }) {
+            if (frontOnlyFrac > 0f) {
+                clipRect(top = base.y - hpx * frontOnlyFrac) {
+                    drawImage(
+                        art.image,
+                        srcOffset = IntOffset.Zero,
+                        srcSize = IntSize(art.image.width, art.image.height),
+                        dstOffset = IntOffset(origin.x.toInt(), origin.y.toInt()),
+                        dstSize = IntSize((m.w * k).toInt().coerceAtLeast(1), hpx.toInt().coerceAtLeast(1)),
+                        filterQuality = FilterQuality.High,
+                    )
+                }
+                return@withTransform
+            }
             if (prog <= 0f) {
                 // Geisterbild: so sieht man, wo der Gegenstand später steht
                 drawImage(
