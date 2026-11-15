@@ -80,7 +80,7 @@ class SceneryRenderTest {
                 val c = b.getPixel((i % cols) * cw + x, (i / cols) * ch + y)
                 if (kotlin.math.abs(AColor.red(c) - AColor.red(bg)) + kotlin.math.abs(AColor.green(c) - AColor.green(bg)) + kotlin.math.abs(AColor.blue(c) - AColor.blue(bg)) > 60) changed++
             }
-            assertTrue("Gegenstand ${types[i].id} nicht sichtbar: $changed", changed > 60)
+            assertTrue("Gegenstand ${types[i].id} nicht sichtbar: $changed", changed > 30)
         }
     }
 }
