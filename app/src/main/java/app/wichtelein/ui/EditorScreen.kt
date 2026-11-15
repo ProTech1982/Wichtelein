@@ -99,6 +99,8 @@ fun EditorScreen(
     var mode by remember { mutableStateOf(EditMode.START) }
     var door by remember { mutableStateOf<Pt?>(null) }
     var doorScale by remember { mutableFloatStateOf(0.2f) }
+    var doorHingeLeft by remember { mutableStateOf(true) }
+    var doorRound by remember { mutableFloatStateOf(1f) }
     var category by remember { mutableStateOf<Category?>(null) }
     var sceneId by remember { mutableStateOf<String?>(null) }
     var seed by remember { mutableLongStateOf(System.nanoTime() and 0xFFFFFFL) }
@@ -111,12 +113,14 @@ fun EditorScreen(
     val duration = min(info.durationMs, 90_000L).coerceAtLeast(3_000L)
 
     // 1) Aufführung aufnehmen, sobald sich etwas ändert
-    LaunchedEffect(settings, start, path, category, sceneId, seed, duration, door, doorScale) {
+    LaunchedEffect(settings, start, path, category, sceneId, seed, duration, door, doorScale, doorHingeLeft, doorRound) {
         val req = PerfRequest(
             start = start ?: Pt(0.5f, 0.78f),
             path = path,
             door = door,
             doorScale = doorScale,
+            doorHingeLeft = doorHingeLeft,
+            doorRound = doorRound,
             sizeScale = settings.sizeScale,
             category = category,
             sceneId = sceneId,
@@ -213,7 +217,7 @@ fun EditorScreen(
                         }
                     },
                 )
-                EditMarkers(start, path, door, doorScale, Modifier.fillMaxSize())
+                EditMarkers(start, path, door, doorScale, doorRound, Modifier.fillMaxSize())
             }
             voiceStatus?.let {
                 Text(
@@ -259,6 +263,13 @@ fun EditorScreen(
                     TextButton(onClick = { door = null }) { Text("Tür entfernen") }
                 }
                 Slider(value = doorScale, onValueChange = { doorScale = it }, valueRange = 0.06f..0.5f)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Öffnet nach", color = Color.White, fontSize = 13.sp)
+                    FilterChip(selected = doorHingeLeft, onClick = { doorHingeLeft = true }, label = { Text("◀ links") })
+                    FilterChip(selected = !doorHingeLeft, onClick = { doorHingeLeft = false }, label = { Text("rechts ▶") })
+                }
+                Text("Form: eckig ↔ rund", color = Color.White, fontSize = 13.sp)
+                Slider(value = doorRound, onValueChange = { doorRound = it }, valueRange = 0f..1f)
             }
             Text("Größe", color = Color.White, fontSize = 13.sp)
             Slider(
@@ -348,7 +359,7 @@ fun EditorScreen(
 
 /** Start- und Wegmarkierungen im Editor (nicht im exportierten Video). */
 @Composable
-private fun EditMarkers(start: Pt?, path: List<Pt>, door: Pt?, doorScale: Float, modifier: Modifier) {
+private fun EditMarkers(start: Pt?, path: List<Pt>, door: Pt?, doorScale: Float, doorRound: Float, modifier: Modifier) {
     val measurer = rememberTextMeasurer()
     Canvas(modifier) {
         val w = size.width
@@ -356,13 +367,7 @@ private fun EditMarkers(start: Pt?, path: List<Pt>, door: Pt?, doorScale: Float,
         door?.let {
             val dh = h * doorScale
             val dw = dh * 0.56f
-            drawRoundRect(
-                Color(0xCCFF7043),
-                Offset(it.x * w - dw / 2f, it.y * h - dh),
-                androidx.compose.ui.geometry.Size(dw, dh),
-                androidx.compose.ui.geometry.CornerRadius(dw / 2f, dw / 2f),
-                style = Stroke(5f),
-            )
+            drawPath(doorPath(it.x * w, it.y * h, dw, dh, doorRound), Color(0xCCFF7043), style = Stroke(5f))
         }
         val pts = listOfNotNull(start) + path
         for (i in 0 until pts.size - 1) {

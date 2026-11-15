@@ -152,6 +152,35 @@ class RenderTest {
         shot(rule.onAllNodes(isRoot()).onFirst(), "videos.png")
     }
 
+    @Test fun doorVariantsRender() {
+        val variants = listOf(true to 1f, true to 0f, false to 1f, false to 0.4f)
+        fun frame(hingeLeft: Boolean, round: Float) = FrameState(
+            0.5f, 0.84f, 1, true, Pose(), null, emptyList(), null, emptyList(),
+            Pt(0.5f, 0.86f), 0.5f, 0.65f, hingeLeft, round,
+        )
+        rule.setContent {
+            val sprites = rememberElfSprites(ElfColors())
+            androidx.compose.foundation.layout.Row(Modifier.background(Color(0xFFCDB89A))) {
+                variants.forEach { (h, r) ->
+                    Box(Modifier.size(150.dp, 260.dp)) { ElfOverlay(frame(h, r), sprites, 0.3f, Modifier.size(150.dp, 260.dp)) }
+                }
+            }
+        }
+        rule.waitForIdle()
+        val bmp = shot(rule.onAllNodes(isRoot()).onFirst(), "doors.png")
+        // in jedem Viertel muss die Tür sichtbar sein
+        val bg = AColor.rgb(0xCD, 0xB8, 0x9A)
+        val q = bmp.width / 4
+        for (i in 0 until 4) {
+            var n = 0
+            for (y in 0 until bmp.height step 3) for (x in i * q until (i + 1) * q step 3) {
+                val c = bmp.getPixel(x, y)
+                if (abs(AColor.red(c) - AColor.red(bg)) + abs(AColor.green(c) - AColor.green(bg)) > 60) n++
+            }
+            assertTrue("Tür $i nicht sichtbar ($n)", n > 150)
+        }
+    }
+
     @Test fun firstStartAsksForChildName() {
         rule.setContent { MaterialTheme { HomeScreen(Settings(), false, 0, {}, {}, {}, {}, {}, {}, {}) } }
         rule.onNodeWithText("Willkommen bei Wichtelein!").assertExists()

@@ -123,6 +123,10 @@ class ElfEngine(
         private set
     var doorOpen = 0f
         private set
+    var doorHingeLeft = true
+        private set
+    var doorRound = 1f
+        private set
 
     private var bubbleUntil = 0f
     private var lastAction = -1
@@ -140,7 +144,7 @@ class ElfEngine(
     fun snapshot() = FrameState(
         x, y, facing, visible, pose.copy(), bubble,
         mess.map { it.copy() }, flying?.copy(), particles.map { it.copy() },
-        doorPos, doorScale, doorOpen,
+        doorPos, doorScale, doorOpen, doorHingeLeft, doorRound,
     )
 
     // ---------------------------------------------------------------- Takt
@@ -604,9 +608,11 @@ class ElfEngine(
 
     // ---------------------------------------------------------------- Wichtelhaus mit Tür
 
-    fun configureDoor(p: Pt?, scale: Float) {
+    fun configureDoor(p: Pt?, scale: Float, hingeLeft: Boolean = true, round: Float = 1f) {
         doorPos = p
         doorScale = scale
+        doorHingeLeft = hingeLeft
+        doorRound = round.coerceIn(0f, 1f)
     }
 
     /** Ohne gesetzte Tür benutzen die Szenen eine Standardstelle. */

@@ -56,6 +56,9 @@ class FrameState(
     val doorPos: Pt? = null,
     val doorScale: Float = 0.2f,
     val doorOpen: Float = 0f,
+    /** Türanschlag (true = links angeschlagen, öffnet nach links) und Rundung oben (0 = eckig, 1 = Rundbogen). */
+    val doorHingeLeft: Boolean = true,
+    val doorRound: Float = 1f,
 )
 
 /** Eine fertig aufgenommene Wichtel-Aufführung: Bilder mit festem Takt plus Sprach-Ereignisse. */
@@ -86,6 +89,8 @@ class PerfRequest(
     /** Tür des Wichtelhauses im Video (null = keine) und ihre Höhe in Videohöhen. */
     val door: Pt? = null,
     val doorScale: Float = 0.2f,
+    val doorHingeLeft: Boolean = true,
+    val doorRound: Float = 1f,
 )
 
 object Recorder {
@@ -101,7 +106,7 @@ object Recorder {
             rng = Random(req.seed),
             ticker = ticker,
         )
-        engine.configureDoor(req.door, req.doorScale)
+        engine.configureDoor(req.door, req.doorScale, req.doorHingeLeft, req.doorRound)
         val scope = CoroutineScope(Dispatchers.Unconfined)
         val job = scope.launch { engine.perform(req, played) }
         val frames = ArrayList<FrameState>()

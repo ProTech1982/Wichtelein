@@ -172,4 +172,13 @@ class PerformanceTest {
         assertTrue(p.frames.any { it.pose.scale < 0.05f && it.visible })
         assertTrue(p.frames.all { it.doorPos == null })
     }
+
+    @Test fun doorOptionsReachTheFrames() {
+        val r = PerfRequest(Pt(0.3f, 0.8f), emptyList(), 0.3f, null, "brav_heim", 4L, 20_000, null, settings,
+            door = Pt(0.8f, 0.6f), doorScale = 0.2f, doorHingeLeft = false, doorRound = 0f)
+        val p = Recorder.record(r)
+        assertTrue(p.frames.all { !it.doorHingeLeft && it.doorRound == 0f })
+        val d = Recorder.record(doorReq("brav_heim", ms = 20_000))
+        assertTrue(d.frames.all { it.doorHingeLeft && it.doorRound == 1f })
+    }
 }
