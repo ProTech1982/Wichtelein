@@ -68,7 +68,7 @@ class ElfinSnowRenderTest {
         rule.waitForIdle()
         val b = rule.onAllNodes(isRoot()).onFirst().captureToImage().asAndroidBitmap()
         File(File(ctx.filesDir, "shots").apply { mkdirs() }, "elfin.png").outputStream().use { b.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        val cw = b.width / (poses.size + 2)
+        val cw = (50 * ctx.resources.displayMetrics.density).toInt()
         for (i in 0 until poses.size + 2) {
             var filled = 0
             for (y in 0 until b.height step 2) for (x in i * cw until (i + 1) * cw step 2) if (!isBackground(b.getPixel(x, y))) filled++
@@ -95,7 +95,7 @@ class ElfinSnowRenderTest {
         rule.waitForIdle()
         val b = rule.onAllNodes(isRoot()).onFirst().captureToImage().asAndroidBitmap()
         File(File(ctx.filesDir, "shots").apply { mkdirs() }, "schnee.png").outputStream().use { b.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        val cw = b.width / 3
+        val cw = (100 * ctx.resources.displayMetrics.density).toInt()
         fun white(i: Int): Int {
             var n = 0
             for (y in 0 until b.height) for (x in i * cw until (i + 1) * cw) {
