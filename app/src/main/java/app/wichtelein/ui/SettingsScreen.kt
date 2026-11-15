@@ -183,22 +183,22 @@ private fun ClothingEditor(settings: Settings, onChange: (Settings) -> Unit) {
         androidx.compose.material3.FilterChip(selected = !settings.elfin, onClick = { onChange(settings.copy(elfin = false)) }, label = { Text("🧙 Wichtel") })
         androidx.compose.material3.FilterChip(selected = settings.elfin, onClick = { onChange(settings.copy(elfin = true)) }, label = { Text("🧝‍♀️ Wichtelfrau (Elfin)") })
     }
-    if (settings.elfin) Text("Die Elfin hat Mütze, Kleid, Strumpfhose und Stiefel zum Umfärben (Mantel = Kleid, Hose = Strumpfhose). Sie ist als 2D-Figur gezeichnet.", fontSize = 12.sp, color = Color.Gray)
-    if (Elf3D.available(ctx) && !settings.elfin) {
+    if (settings.elfin) Text("Die Elfin hat Mütze, Kleid, Strumpfhose und Stiefel zum Umfärben (Mantel = Kleid, Hose = Strumpfhose). Sie gibt es als gezeichnete 2D-Figur und als 3D-Figur, die sich dreht.", fontSize = 12.sp, color = Color.Gray)
+    if (Elf3D.available(ctx, if (settings.elfin) "elfin3d" else "elf3d")) {
         Text("Figur", fontWeight = FontWeight.Medium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             androidx.compose.material3.FilterChip(
                 selected = !settings.figure3d,
                 onClick = { onChange(settings.copy(figure3d = false)) },
-                label = { Text("Wichtel 2D (Bild)") },
+                label = { Text(if (settings.elfin) "Elfin 2D (gezeichnet)" else "Wichtel 2D (Bild)") },
             )
             androidx.compose.material3.FilterChip(
                 selected = settings.figure3d,
                 onClick = { onChange(settings.copy(figure3d = true)) },
-                label = { Text("Wichtel 3D (dreht sich)") },
+                label = { Text(if (settings.elfin) "Elfin 3D (dreht sich)" else "Wichtel 3D (dreht sich)") },
             )
         }
-        if (settings.figure3d) Text("Der 3D-Wichtel hat Mützen- und Mantelfarbe; Hose und Schuhe bleiben wie sie sind.", fontSize = 12.sp, color = Color.Gray)
+        if (settings.figure3d) Text(if (settings.elfin) "Die 3D-Elfin hat Mützen- und Kleidfarbe (die roten Ringel der Strumpfhose folgen der Mützenfarbe)." else "Der 3D-Wichtel hat Mützen- und Mantelfarbe; Hose und Schuhe bleiben wie sie sind.", fontSize = 12.sp, color = Color.Gray)
     }
     Text("Kleidung", fontWeight = FontWeight.Medium)
     ColorRow("Mütze", ElfPalette.clothes, settings.hatColor) { onChange(settings.copy(hatColor = it)) }

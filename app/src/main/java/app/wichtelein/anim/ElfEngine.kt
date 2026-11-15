@@ -23,6 +23,9 @@ private const val PIf = Math.PI.toFloat()
 enum class Prop { NONE, BROOM, COOKIE, GIFT }
 
 /** Körperhaltung des Wichtels. Winkel in Grad; arm/leg positiv = nach außen. */
+/** „nie“ für Zeitpunkte der Engine-Uhr */
+private const val NEVER = -1000f
+
 class Pose {
     var armL = 0f
     var armR = 0f
@@ -202,12 +205,22 @@ class ElfEngine(
     // ---------------------------------------------------------------- Schnee
 
     /** Zeitpunkt (Engine-Uhr), an dem es zu schneien beginnt bzw. aufhört; negativ = nie */
-    private var snowOnAt = -1f
-    private var snowOffAt = -1f
+    private var snowOnAt = NEVER
+    private var snowOffAt = NEVER
+
+    private val isSnowing: Boolean get() = snowOnAt > NEVER && snowOffAt < snowOnAt
+
+    /** Schnee von Anfang an (Schalter im Editor): fällt sofort in voller Stärke. */
+    fun configureSnow(on: Boolean) {
+        if (on) {
+            snowOnAt = -3f
+            snowOffAt = NEVER
+        }
+    }
 
     /** Schneestärke: der Schnee setzt langsam ein (3 s) und klingt nach dem Ende langsam ab (3 s). */
     private fun snowLevel(): Float {
-        if (snowOnAt < 0f) return 0f
+        if (snowOnAt <= NEVER) return 0f
         val up = ((clock - snowOnAt) / 3f).coerceIn(0f, 1f)
         val down = if (snowOffAt >= snowOnAt) (1f - (clock - snowOffAt) / 3f).coerceIn(0f, 1f) else 1f
         return minOf(up, down)
@@ -215,7 +228,7 @@ class ElfEngine(
 
     /** Der Wichtel schaut nach oben, freut sich und es beginnt zu schneien (bleibt so, bis „Der Schnee hört auf“). */
     suspend fun doSnowOn() {
-        if (snowOnAt >= 0f && snowOffAt < snowOnAt) return
+        if (isSnowing) return
         faceFront()
         say(Lines.snowOn.random(rng), Mood.AMUSED)
         sfx(Fx.SPARKLE, 0.8f)
@@ -231,7 +244,7 @@ class ElfEngine(
 
     /** Der Schneefall hört auf. */
     suspend fun doSnowOff() {
-        if (snowOnAt < 0f || snowOffAt >= snowOnAt) return
+        if (!isSnowing) return
         faceFront()
         snowOffAt = clock
         say(Lines.snowOff.random(rng))
@@ -429,6 +442,7 @@ class ElfEngine(
         sayWait("Gute Nacht! Ab ins Bett.")
         // Liegepunkt: Mitte der Matratze; der Körper dreht sich um seine Mitte
         val sign = if (bed.flip) 1f else -1f
+        val lieSpin = sign * 90f + bed.rot
         val centerY = bed.at.y - bed.scale * 0.40f
         val lie = Pt(bed.at.x, (centerY + 0.4f * hNorm).coerceAtMost(0.98f))
         val sx = x
@@ -437,21 +451,21 @@ class ElfEngine(
         anim(1400) { t ->
             x = sx + (lie.x - sx) * t
             y = sy + (lie.y - sy) * t - 0.07f * sin(t * PIf)
-            pose.spin = sign * 90f * t
+            pose.spin = lieSpin * t
             pose.legL = 18f * sin(t * PIf)
             pose.legR = -18f * sin(t * PIf)
         }
         x = lie.x
         y = lie.y
-        pose.spin = sign * 90f
+        pose.spin = lieSpin
         pose.relax()
-        pose.spin = sign * 90f
+        pose.spin = lieSpin
         sfx(Fx.THUD, 0.5f)
         var zTimer = 0f
         var snoreAt = -1
         anim(5600) {
             pose.eyesClosed = true
-            pose.spin = sign * 90f
+            pose.spin = lieSpin
             pose.squash = 0.012f * sin(clock * 2.6f)
             val n = (clock / 1.7f).toInt()
             if (n != snoreAt) {
@@ -470,7 +484,7 @@ class ElfEngine(
         anim(1000) { t ->
             x = lie.x + (stand.x - lie.x) * t
             y = lie.y + (stand.y - lie.y) * t - 0.06f * sin(t * PIf)
-            pose.spin = sign * 90f * (1f - t)
+            pose.spin = lieSpin * (1f - t)
         }
         x = stand.x
         y = stand.y
@@ -532,7 +546,7 @@ class ElfEngine(
 
     // ---------------------------------------------------------------- Drehen (3D-Figur)
 
-    private val animateTurns: Boolean get() = settings().figure3d && !settings().elfin
+    private val animateTurns: Boolean get() = settings().figure3d
 
     private fun normAngle(a: Float) = ((a % 360f) + 360f) % 360f
 

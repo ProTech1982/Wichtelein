@@ -154,6 +154,8 @@ class PerfRequest(
     val autoBuild: Boolean = true,
     /** Der Wichtel bleibt in der Nähe der gesetzten Punkte (Start, Weg, Aktionen); false = ganzes Bild (AR) */
     val confineToPoints: Boolean = true,
+    /** Es schneit von Anfang an */
+    val snowFromStart: Boolean = false,
 )
 
 /** Nachlauf nach dem letzten Aktionspunkt im Foto-Film */
@@ -176,6 +178,7 @@ object Recorder {
         )
         engine.configureDoor(req.door, req.doorScale, req.doorHingeLeft, req.doorRound)
         engine.configureScenery(req.scenery)
+        engine.configureSnow(req.snowFromStart)
         engine.configureRoute(if (req.confineToPoints) listOf(req.start) + req.path else emptyList())
         engine.configureRoam(
             if (req.confineToPoints) listOf(req.start) + req.path + req.script.mapNotNull { it.at } else emptyList(),

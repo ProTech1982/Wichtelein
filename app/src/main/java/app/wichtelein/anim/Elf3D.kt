@@ -84,7 +84,8 @@ class Elf3DLayout(val cellW: Int, val cellH: Int, val feet: Offset, val height: 
             )
         }
 
-        fun fileName(c: FrameChoice) = "elf3d/%s_%02d_%02d.png".format(c.clip, c.heading, c.frame)
+        /** Ordner der Bilder in den Assets: der Wichtel liegt in `elf3d`, die Elfin in `elfin3d` */
+        fun fileName(c: FrameChoice, dir: String = "elf3d") = "$dir/%s_%02d_%02d.png".format(c.clip, c.heading, c.frame)
     }
 }
 
@@ -93,14 +94,14 @@ class Elf3DLayout(val cellW: Int, val cellH: Int, val feet: Offset, val height: 
  * Szene um 360° (Blickrichtung aus der Laufrichtung), läuft, fegt und winkt mit echten Bildern aus der jeweiligen Richtung.
  * Übrige Bewegungen (Hinsetzen, Purzeln, Schlafen …) entstehen aus dem Stehbild mit Verschiebung, Stauchung und Drehung.
  */
-class Elf3D(private val context: Context, private val colors: ElfColors = ElfColors()) : ElfFigure {
-    val layout: Elf3DLayout = Elf3DLayout.fromJson(context.assets.open("elf3d/elf3d.json").bufferedReader().use { it.readText() })
+class Elf3D(private val context: Context, private val colors: ElfColors = ElfColors(), private val dir: String = "elf3d") : ElfFigure {
+    val layout: Elf3DLayout = Elf3DLayout.fromJson(context.assets.open("$dir/elf3d.json").bufferedReader().use { it.readText() })
     private val cache = object : LruCache<String, ImageBitmap>(80) {}
     private val c = colors.clamped()
 
     /** Das Bild zu [choice] (aus dem Zwischenspeicher oder von der Platte, mit den gewählten Kleiderfarben). */
     fun image(choice: FrameChoice): ImageBitmap {
-        val name = Elf3DLayout.fileName(choice)
+        val name = Elf3DLayout.fileName(choice, dir)
         cache.get(name)?.let { return it }
         val opts = BitmapFactory.Options().apply { inScaled = false }
         val src: Bitmap = context.assets.open(name).use { BitmapFactory.decodeStream(it, null, opts) }
@@ -164,8 +165,8 @@ class Elf3D(private val context: Context, private val colors: ElfColors = ElfCol
     }
 
     companion object {
-        fun available(context: Context): Boolean = try {
-            context.assets.open("elf3d/elf3d.json").close()
+        fun available(context: Context, dir: String = "elf3d"): Boolean = try {
+            context.assets.open("$dir/elf3d.json").close()
             true
         } catch (_: Exception) {
             false
@@ -177,6 +178,7 @@ class Elf3D(private val context: Context, private val colors: ElfColors = ElfCol
 object ElfFigures {
     fun load(context: Context, settings: Settings): ElfFigure =
         when {
+            settings.elfin && settings.figure3d && Elf3D.available(context, "elfin3d") -> Elf3D(context, settings.colors(), "elfin3d")
             settings.elfin -> ElfinFigure(settings.colors())
             settings.figure3d && Elf3D.available(context) -> Elf3D(context, settings.colors())
             else -> ElfSprites.load(context, settings.colors())

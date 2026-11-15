@@ -4,7 +4,13 @@ Auftrag: Wichtelein fertig bauen wie in `Prompt.txt` (Downloads, gehört zu eine
 Gebaut wird nur in GitHub Actions (kein Android-SDK lokal). Release = Push auf main (android.yml, Tag build-N).
 Entwicklungszweige per `gh workflow run ci.yml --ref <zweig>` testen (ci.yml hat workflow_dispatch). Emulator-Job flackert gelegentlich (Boot-Timeout -> neu starten).
 
-## Version 0.9.1 (Zweig v0.9.1-entwicklung, noch nicht als Release 1.0 freigegeben)
+## Version 0.9.2 (Release 1.0 erst, wenn der Nutzer „ok“ sagt)
+- Gegenstände drehen: `SceneryItem.rot` (Grad um den Fußpunkt), `EditOps.rotateItem`, Editor: ⟲ ⟳, Schieber und „0°“; ein gedrehtes Bett dreht den liegenden Wichtel mit (`lieSpin`), die Bettkante vorn entfällt dann.
+- Schnee an/aus: Chip „❄ Schnee“ im Editor (`EditState.snow` → `PerfRequest.snowFromStart` → `ElfEngine.configureSnow`), die Aktionen gehen zusätzlich (Schnee hört auf, fängt an).
+- 3D-Elfin: `blender/elfin3d.py` wird aus `wichtel3d.py` erzeugt (Kleid, Zöpfe, Ringelstrumpfhose, Mütze mit Bommel); Bilder in `assets/elfin3d/` (gleiche Clips und Blickrichtungen wie `elf3d`),
+  `Elf3D(context, colors, dir)` und `Elf3D.available(context, dir)` kennen den Ordner; Einstellung: Elfin + Figur 3D.
+
+## Version 0.9.1 (Zweig v0.9.1-entwicklung)
 - Gegenstände in zwei Stilen: `SceneryGroup.CLASSIC` (Holz, warmes Licht) und `NEON` (alte Cyberpunk-Variante, jetzt „Neon-…“). Neu: Schneemann, Geschenke, Schlitten, Zuckerstangen, Bank, Lagerfeuer,
   Holzzaun, Holzbett, klassische Laterne/Lichterkette/Tannenbaum. Quelle `blender/szene3d.py` (Aufruf mit Liste der Namen, **absoluter** Ausgabepfad!), Bilder in `assets/scenery/`.
 - Betten (`SceneryType.isBed`) sind jetzt Seitenansicht (Kopf links, gespiegelt = rechts); der Wichtel liegt quer, die vordere Bettkante wird über ihn gezeichnet (`frontOnlyFrac`).

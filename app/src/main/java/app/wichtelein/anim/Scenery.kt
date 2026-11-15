@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -58,7 +59,8 @@ enum class SceneryType(
 enum class SceneryGroup(val label: String) { CLASSIC("Klassisch"), NEON("Neon (Cyberpunk)") }
 
 /** Ein platzierter Gegenstand: Fußpunkt [at] (relativ im Bild), Höhe [scale] in Bildhöhen, optional gespiegelt. */
-data class SceneryItem(val id: Int, val type: SceneryType, val at: Pt, val scale: Float, val flip: Boolean = false)
+/** [rot] = Drehung um den Fußpunkt in Grad (positiv = im Uhrzeigersinn). */
+data class SceneryItem(val id: Int, val type: SceneryType, val at: Pt, val scale: Float, val flip: Boolean = false, val rot: Float = 0f)
 
 /** Eine leuchtende Stelle im Bild des Gegenstands (z. B. eine Lampe der Lichterkette). */
 class SceneryLight(val x: Float, val y: Float, val r: Float, val color: Color, val speed: Float, val phase: Float)
@@ -236,6 +238,7 @@ fun DrawScope.drawScenery(
         val base = Offset(item.at.x * w, item.at.y * h)
         val origin = Offset(base.x - m.anchorX * k, base.y - m.anchorY * k)
         withTransform({
+            if (item.rot != 0f) rotate(item.rot, base)
             if (item.flip) scale(-1f, 1f, base)
         }) {
             if (frontOnlyFrac > 0f) {

@@ -16,6 +16,8 @@ data class EditState(
     val doorRound: Float = 1f,
     val scenery: List<SceneryItem> = emptyList(),
     val nextId: Int = 1,
+    /** Es schneit von Anfang an (die Aktionen „Es schneit“ / „Schnee hört auf“ gehen zusätzlich) */
+    val snow: Boolean = false,
 )
 
 /** Was gerade ausgewählt ist (zum Verschieben, Löschen, Größe ändern). */
@@ -106,6 +108,14 @@ object EditOps {
 
     fun resizeItem(s: EditState, id: Int, scale: Float): EditState =
         s.copy(scenery = s.scenery.map { if (it.id == id) it.copy(scale = scale.coerceIn(0.05f, 0.9f)) else it })
+
+    /** Dreht einen Gegenstand um den Fußpunkt auf [deg] Grad (−180..180). */
+    fun rotateItem(s: EditState, id: Int, deg: Float): EditState {
+        var d = deg % 360f
+        if (d > 180f) d -= 360f
+        if (d < -180f) d += 360f
+        return s.copy(scenery = s.scenery.map { if (it.id == id) it.copy(rot = d) else it })
+    }
 
     fun flipItem(s: EditState, id: Int): EditState =
         s.copy(scenery = s.scenery.map { if (it.id == id) it.copy(flip = !it.flip) else it })

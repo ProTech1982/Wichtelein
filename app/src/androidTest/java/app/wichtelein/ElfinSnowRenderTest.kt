@@ -125,4 +125,40 @@ class ElfinSnowRenderTest {
         assertTrue("mehr Schnee bei mehr Stärke: $m < $f", m in 20 until f)
         assertTrue("volle Stärke deutlich sichtbar: $f", f > 150)
     }
+
+    @Test fun threeDElfinIsCompleteAndSelectable() {
+        assertTrue("3D-Elfin fehlt in den Assets", Elf3D.available(ctx, "elfin3d"))
+        val s3 = Settings(elfin = true, figure3d = true)
+        assertTrue("3D-Elfin gewählt", ElfFigures.load(ctx, s3) is Elf3D)
+        assertTrue("2D-Elfin bleibt wählbar", ElfFigures.load(ctx, s3.copy(figure3d = false)) is ElfinFigure)
+        val f = Elf3D(ctx, ElfColors(), "elfin3d")
+        var frames = 0
+        for ((name, c) in f.layout.clips) {
+            for (h in 0 until c.headings) for (k in 0 until c.frames) {
+                val bmp = f.image(FrameChoice(name, h, k)).asAndroidBitmap()
+                assertTrue("Größe $name $h $k", bmp.width == f.layout.cellW && bmp.height == f.layout.cellH)
+                var opaque = 0
+                for (y in 0 until bmp.height step 4) for (x in 0 until bmp.width step 4) if (AColor.alpha(bmp.getPixel(x, y)) > 200) opaque++
+                val total = (bmp.width / 4 + 1) * (bmp.height / 4 + 1)
+                assertTrue("$name $h $k fast leer: $opaque von $total", opaque > total / 25)
+                frames++
+            }
+        }
+        assertTrue("alle Bilder da: $frames", frames >= 250)
+        // Mütze lässt sich umfärben
+        val red = Elf3D(ctx, ElfColors(), "elfin3d").image(FrameChoice("idle", 0, 0)).asAndroidBitmap()
+        val blue = Elf3D(ctx, ElfColors(hat = 5), "elfin3d").image(FrameChoice("idle", 0, 0)).asAndroidBitmap()
+        fun hatPixels(b: Bitmap, lo: Float, hi: Float): Int {
+            val hsv = FloatArray(3)
+            var n = 0
+            for (y in 0 until b.height / 2 step 2) for (x in 0 until b.width step 2) {
+                val c = b.getPixel(x, y)
+                if (AColor.alpha(c) < 200) continue
+                AColor.colorToHSV(c, hsv)
+                if (hsv[0] in lo..hi && hsv[1] > 0.5f && hsv[2] > 0.4f) n++
+            }
+            return n
+        }
+        assertTrue("blaue Mütze nach Umfärben", hatPixels(blue, 200f, 240f) > 200 && hatPixels(red, 200f, 240f) < 50)
+    }
 }

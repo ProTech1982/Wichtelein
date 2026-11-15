@@ -127,7 +127,7 @@ fun DrawScope.drawWichtelFrame(
     if (f.visible && elfPos != null) {
         sprites.draw(this, f.pose, elfPos, elfH, f.facing)
         // im Bett: die vordere Bettkante liegt über dem Wichtel (er liegt „im“ Bett)
-        if (sc != null && f.onItem >= 0) sc.items.firstOrNull { it.id == f.onItem && it.type.isBed }?.let {
+        if (sc != null && f.onItem >= 0) sc.items.firstOrNull { it.id == f.onItem && it.type.isBed && it.rot == 0f }?.let {
             drawScenery(listOf(it), sc.assets, f.timeSec, progress, false, 0.33f)
         }
     }

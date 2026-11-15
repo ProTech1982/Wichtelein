@@ -251,6 +251,7 @@ fun EditorScreen(
             doorRound = st.doorRound,
             script = st.script,
             scenery = st.scenery,
+            snowFromStart = st.snow,
             stopAfterScript = st.script.isNotEmpty(),
             aspect = info.aspect,
             sizeScale = settings.sizeScale,
@@ -520,6 +521,7 @@ fun EditorScreen(
                 FilterChip(selected = tool == Tool.OBJECTS, onClick = { selectTool(Tool.OBJECTS) }, label = { Text("🎄 Objekte (${st.scenery.size})") })
                 FilterChip(selected = tool == Tool.MUSIC, onClick = { selectTool(Tool.MUSIC) }, label = { Text("🎵 Musik") })
                 FilterChip(selected = tool == Tool.SCENE, onClick = { selectTool(Tool.SCENE) }, label = { Text("🎬 Szene") })
+                FilterChip(selected = st.snow, onClick = { commit(st.copy(snow = !st.snow)) }, label = { Text(if (st.snow) "❄ Schnee: an" else "❄ Schnee: aus") })
             }
 
             // Ausgewähltes: verschieben (Ziehen im Bild), Größe, Löschen
@@ -553,6 +555,20 @@ fun EditorScreen(
                                 modifier = Modifier.weight(1f),
                             )
                             OutlinedButton(onClick = { commit(EditOps.flipItem(st, s.id)) }) { Text("↔ Spiegeln", color = Color.White) }
+                        }
+                        // Drehen um den Fußpunkt
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Drehen ${item.rot.toInt()}°", color = Color.White, fontSize = 13.sp)
+                            OutlinedButton(onClick = { commit(EditOps.rotateItem(st, s.id, item.rot - 5f)) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)) { Text("⟲", color = Color.White) }
+                            Slider(
+                                value = item.rot,
+                                onValueChange = { slide(EditOps.rotateItem(st, s.id, it)) },
+                                onValueChangeFinished = { slideDone() },
+                                valueRange = -180f..180f,
+                                modifier = Modifier.weight(1f),
+                            )
+                            OutlinedButton(onClick = { commit(EditOps.rotateItem(st, s.id, item.rot + 5f)) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)) { Text("⟳", color = Color.White) }
+                            TextButton(onClick = { commit(EditOps.rotateItem(st, s.id, 0f)) }, enabled = item.rot != 0f) { Text("0°") }
                         }
                     }
                 }
