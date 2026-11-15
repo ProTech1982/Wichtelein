@@ -29,6 +29,8 @@ class VoiceInfo(
     val file: String?, // Name des Pakets bei k2-fsa; null = in der App eingebaut
     val sha256: String?,
     val moods: Boolean = false,
+    /** weibliche Stimme (sonst männlich); der Wichtel bekommt nur männliche, die Elfin nur weibliche Stimmen */
+    val female: Boolean = false,
 ) {
     val bundled get() = file == null
     val url get() = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/$file"
@@ -36,6 +38,7 @@ class VoiceInfo(
 
 object VoiceCatalog {
     const val DEFAULT_ID = "thorsten_emotional"
+    const val DEFAULT_ELFIN_ID = "ramona"
 
     val all = listOf(
         VoiceInfo(DEFAULT_ID, "Thorsten (mit Stimmungen)", "Eingebaut. Männlich, natürlich, fünf Stimmungen.", 76, null, null, moods = true),
@@ -44,26 +47,29 @@ object VoiceCatalog {
             "vits-piper-de_DE-thorsten-high.tar.bz2", "dd4ed1b0d42c30a1a4862fc2b243e8044d52b8889c9ff3d1e99e92028888bc4a",
         ),
         VoiceInfo(
-            "miro_high", "Miro (hohe Qualität)", "Hohe Qualität – einfach anhören.", 64,
+            "miro_high", "Miro (hohe Qualität)", "Hohe Qualität, vermutlich männlich – einfach anhören.", 64,
             "vits-piper-de_DE-miro-high.tar.bz2", "8226bb45d3684286981a55b3e0937e373f37673036a7eee27fc51def2d8c926d",
         ),
         VoiceInfo(
-            "dii_high", "Dii (hohe Qualität)", "Hohe Qualität – einfach anhören.", 64,
-            "vits-piper-de_DE-dii-high.tar.bz2", "64d46d39afb0f53a49871f5415259ffe474f443696148930b34a003612b69110",
+            "dii_high", "Dii (hohe Qualität)", "Weiblich, hohe Qualität.", 64,
+            "vits-piper-de_DE-dii-high.tar.bz2", "64d46d39afb0f53a49871f5415259ffe474f443696148930b34a003612b69110", female = true,
         ),
         VoiceInfo(
             "ramona", "Ramona", "Weiblich, heller – passt gut zu einem Wichtelkind.", 63,
-            "vits-piper-de_DE-ramona-low.tar.bz2", "79f985c10f86c4d58205b519abc488aa65eb713d54665ff729880a02e2625a42",
+            "vits-piper-de_DE-ramona-low.tar.bz2", "79f985c10f86c4d58205b519abc488aa65eb713d54665ff729880a02e2625a42", female = true,
         ),
         VoiceInfo(
             "kerstin", "Kerstin", "Weiblich.", 63,
-            "vits-piper-de_DE-kerstin-low.tar.bz2", "4bfe121d5f690a3b87acecd7ae1e70b48f4589ce6ae9f45a1809e6eb19fad97b",
+            "vits-piper-de_DE-kerstin-low.tar.bz2", "4bfe121d5f690a3b87acecd7ae1e70b48f4589ce6ae9f45a1809e6eb19fad97b", female = true,
         ),
         VoiceInfo(
             "karlsson", "Karlsson", "Männlich.", 63,
             "vits-piper-de_DE-karlsson-low.tar.bz2", "5ba231af059746ac2052c9b7d7eaf116e07003dc6948066ab4f40951dca260af",
         ),
     )
+
+    /** Stimmen für den Wichtel (männlich) bzw. die Elfin (weiblich) */
+    fun forActor(actor: Int): List<VoiceInfo> = all.filter { it.female == (actor == 1) }
 
     fun find(id: String): VoiceInfo = all.firstOrNull { it.id == id } ?: all.first()
 

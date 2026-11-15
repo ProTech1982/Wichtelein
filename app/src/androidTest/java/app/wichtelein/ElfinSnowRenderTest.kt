@@ -56,7 +56,7 @@ class ElfinSnowRenderTest {
     private fun isBackground(c: Int) = kotlin.math.abs(AColor.red(c) - 0x8F) + kotlin.math.abs(AColor.green(c) - 0xA6) + kotlin.math.abs(AColor.blue(c) - 0xB8) < 30
 
     @Test fun elfinDrawsInAllPosesAndColors() {
-        val settings = Settings(elfin = true)
+        val settings = Settings(cast = 1)
         val figure = ElfFigures.load(ctx, settings)
         assertTrue("Elfin-Figur gewählt", figure is ElfinFigure)
         val blue = ElfFigures.load(ctx, settings.copy(hatColor = 5, jacketColor = 6, legColor = 8))
@@ -128,7 +128,7 @@ class ElfinSnowRenderTest {
 
     @Test fun threeDElfinIsCompleteAndSelectable() {
         assertTrue("3D-Elfin fehlt in den Assets", Elf3D.available(ctx, "elfin3d"))
-        val s3 = Settings(elfin = true, figure3d = true)
+        val s3 = Settings(cast = 1, figure3d = true)
         assertTrue("3D-Elfin gewählt", ElfFigures.load(ctx, s3) is Elf3D)
         assertTrue("2D-Elfin bleibt wählbar", ElfFigures.load(ctx, s3.copy(figure3d = false)) is ElfinFigure)
         val f = Elf3D(ctx, ElfColors(), "elfin3d")
@@ -160,5 +160,58 @@ class ElfinSnowRenderTest {
             return n
         }
         assertTrue("blaue Mütze nach Umfärben", hatPixels(blue, 200f, 240f) > 200 && hatPixels(red, 200f, 240f) < 50)
+    }
+
+    private fun frameAt(x: Float, doorRot: Float = 0f, door: Boolean = false) = FrameState(
+        x = x, y = 0.85f, facing = 1, visible = true, pose = Pose(), bubble = null, mess = emptyList(), flying = null, particles = emptyList(),
+        doorPos = if (door) Pt(0.5f, 0.86f) else null, doorScale = 0.5f, doorOpen = if (door) 0.65f else 0f, doorHingeLeft = true, doorRound = 1f, doorRot = doorRot,
+    )
+
+    @Test fun bothFiguresAreDrawnSideBySide() {
+        val figure = ElfFigures.load(ctx, Settings(cast = 2))
+        assertTrue("Besetzung mit zwei Figuren", figure is CastFigure && figure.partner != null)
+        val f = frameAt(0.28f).also { it.partner = frameAt(0.72f) }
+        rule.setContent { Row(Modifier.background(bg)) { androidx.compose.foundation.layout.Box(Modifier.size(150.dp, 260.dp)) { ElfOverlay(f, figure, 0.3f, Modifier.size(150.dp, 260.dp)) } } }
+        rule.waitForIdle()
+        val b = rule.onAllNodes(isRoot()).onFirst().captureToImage().asAndroidBitmap()
+        File(File(ctx.filesDir, "shots").apply { mkdirs() }, "beide.png").outputStream().use { b.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        val d = ctx.resources.displayMetrics.density
+        val x0 = 0
+        val half = (75 * d).toInt()
+        fun filled(from: Int, to: Int): Int {
+            var n = 0
+            for (y in 0 until (260 * d).toInt() step 2) for (x in from until to step 2) if (!isBackground(b.getPixel(x, y))) n++
+            return n
+        }
+        val left = filled(x0, x0 + half)
+        val right = filled(x0 + half, x0 + 2 * half)
+        assertTrue("Wichtel links: $left", left > 400)
+        assertTrue("Elfin rechts: $right", right > 400)
+    }
+
+    @Test fun rotatedDoorMovesItsPixels() {
+        val figure = ElfFigures.load(ctx, Settings())
+        rule.setContent {
+            Row(Modifier.background(bg)) {
+                for (rot in listOf(0f, 40f)) androidx.compose.foundation.layout.Box(Modifier.size(150.dp, 260.dp)) { ElfOverlay(frameAt(0.2f, rot, door = true), figure, 0.3f, Modifier.size(150.dp, 260.dp)) }
+            }
+        }
+        rule.waitForIdle()
+        val b = rule.onAllNodes(isRoot()).onFirst().captureToImage().asAndroidBitmap()
+        File(File(ctx.filesDir, "shots").apply { mkdirs() }, "tuer-gedreht.png").outputStream().use { b.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        val d = ctx.resources.displayMetrics.density
+        val w = (150 * d).toInt()
+        fun centroidX(cell: Int): Float {
+            var sum = 0f
+            var n = 0
+            for (y in 0 until (260 * d).toInt() step 2) for (x in cell * w + (w * 0.45f).toInt() until (cell + 1) * w step 2) {
+                if (!isBackground(b.getPixel(x, y))) { sum += x - cell * w; n++ }
+            }
+            return if (n == 0) 0f else sum / n
+        }
+        val c0 = centroidX(0)
+        val c1 = centroidX(1)
+        assertTrue("Tür ist sichtbar", c0 > 0f && c1 > 0f)
+        assertTrue("gedrehte Tür liegt anders: $c0 → $c1", kotlin.math.abs(c0 - c1) > 4f * d)
     }
 }

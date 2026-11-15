@@ -162,7 +162,7 @@ private fun ArContent(activity: Activity, settings: Settings, onSettings: (Setti
         speaker.rate = settings.rate
         speaker.mood = settings.mood
         speaker.useElfVoice = settings.elfVoice
-        speaker.voiceId = settings.voiceId
+        speaker.voiceId = settings.voiceFor(if (settings.elfin) 1 else 0)
     }
 
     var snapshot by remember { mutableStateOf<ArSnapshot?>(null) }
@@ -225,22 +225,16 @@ private fun ArContent(activity: Activity, settings: Settings, onSettings: (Setti
         )
         perf = withContext(Dispatchers.Default) { Recorder.record(req) }
     }
-    LaunchedEffect(perf, settings.voiceId, settings.effect, settings.rate, settings.mood, settings.elfVoice, settings.speak) {
+    LaunchedEffect(perf, settings.voiceId, settings.elfinVoiceId, settings.cast, settings.effect, settings.rate, settings.mood, settings.elfVoice, settings.speak) {
         val p = perf ?: return@LaunchedEffect
         clips = emptyList()
         if (!settings.speak || !settings.elfVoice) {
             voiceStatus = null
             return@LaunchedEffect
         }
-        voiceStatus = "Wichtelstimme wird vorbereitet …"
-        val ok = withContext(Dispatchers.Default) { SpeechRender.awaitVoice(context, settings) }
-        if (!ok) {
-            voiceStatus = null
-            return@LaunchedEffect
-        }
-        val out = ArrayList<VoiceAudio?>()
-        for (ev in p.speech) out.add(withContext(Dispatchers.Default) { SpeechRender.render(settings, ev) })
-        clips = out
+        voiceStatus = "Stimme wird vorbereitet …"
+        val res = withContext(Dispatchers.Default) { SpeechRender.renderAll(context, settings, p.speech) }
+        clips = if (res.clips.all { it == null }) emptyList() else res.clips
         voiceStatus = null
     }
 

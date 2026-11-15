@@ -100,10 +100,11 @@ object ExportManager {
         var hasSpeech = false
         val clips: List<VoiceAudio?> = when {
             !settings.speak -> emptyList()
-            SpeechRender.awaitVoice(app, settings, 60_000) ->
-                withContext(Dispatchers.Default) { perf.speech.map { SpeechRender.render(settings, it) } }
-            // Systemstimme (oder Wichtelstimme nicht verfügbar): Sprache über synthesizeToFile erzeugen
-            else -> withContext(Dispatchers.Default) { SystemTtsRender.renderAll(app, settings, perf.speech) }
+            else -> withContext(Dispatchers.Default) {
+                val r = if (settings.elfVoice) SpeechRender.renderAll(app, settings, perf.speech, 60_000) else null
+                // Systemstimme (oder Wichtelstimme nicht verfügbar): Sprache über synthesizeToFile erzeugen
+                if (r != null && !r.missing) r.clips else SystemTtsRender.renderAll(app, settings, perf.speech)
+            }
         }
         val fxSounds = perf.sounds.filter { it.timeMs < total && settings.allowsFx(it.fx) }
         val musicPcm = if (settings.music != 0) withContext(Dispatchers.Default) { MusicLoader.load(app, settings, total) } else null

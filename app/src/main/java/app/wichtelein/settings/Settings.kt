@@ -48,8 +48,12 @@ data class Settings(
     val perspective: Float = 1f,
     /** 3D-Wichtel (in Blender gerendert, 360° drehbar) statt der 2D-Figur */
     val figure3d: Boolean = false,
-    /** die Wichtelfrau (Elfin) statt des Wichtels */
-    val elfin: Boolean = false,
+    /** Wer erscheint: 0 = Wichtel, 1 = Wichtelfrau (Elfin), 2 = beide zusammen */
+    val cast: Int = 0,
+    /** Name der Elfin ({wichtel} in ihren Sätzen) */
+    val elfinName: String = "Elfi",
+    /** Stimme der Elfin (nur weibliche Stimmen); die Stimme des Wichtels ist [voiceId] (nur männliche) */
+    val elfinVoiceId: String = VoiceCatalog.DEFAULT_ELFIN_ID,
     /** Weihnachtsgeräusche (Glöckchen, Tür, Besen, …) */
     val soundFx: Boolean = true,
     /** Abgeschaltete Szenen (Wichtelaktionen). */
@@ -57,6 +61,20 @@ data class Settings(
     /** Aussehen der App: 0 = wie das Handy (System), 1 = hell, 2 = dunkel */
     val themeMode: Int = 0,
 ) {
+    /** nur die Elfin tritt auf */
+    val elfin: Boolean get() = cast == 1
+
+    /** Wichtel und Elfin treten zusammen auf */
+    val both: Boolean get() = cast == 2
+
+    /** Stimme der Figur [actor] (0 = Wichtel, 1 = Elfin) */
+    fun voiceFor(actor: Int): String = if (actor == 1) elfinVoiceId else voiceId
+
+    fun nameFor(actor: Int): String = if (actor == 1) elfinName else elfName
+
+    /** Einstellungen für die Sprachausgabe der Figur [actor] (die Stimme der Figur steht dann in [voiceId]) */
+    fun forActor(actor: Int): Settings = copy(voiceId = voiceFor(actor))
+
     fun colors() = ElfColors(hatColor, jacketColor, legColor, bootColor).clamped()
 
     fun activeProfile(): Profile? = profiles.firstOrNull { it.id == activeProfileId } ?: profiles.firstOrNull()
@@ -114,7 +132,9 @@ object SettingsStore {
             mood = p.getInt("moodV2", d.mood),
             soundFx = p.getBoolean("soundFx", d.soundFx),
             figure3d = p.getBoolean("figure3d", d.figure3d),
-            elfin = p.getBoolean("elfin", d.elfin),
+            cast = if (p.contains("cast")) p.getInt("cast", 0).coerceIn(0, 2) else if (p.getBoolean("elfin", false)) 1 else 0,
+            elfinName = p.getString("elfinName", d.elfinName) ?: d.elfinName,
+            elfinVoiceId = p.getString("elfinVoiceId", d.elfinVoiceId) ?: d.elfinVoiceId,
             perspective = p.getFloat("perspective", d.perspective),
             bubble = app.wichtelein.anim.BubbleSpec(
                 show = p.getBoolean("bubbleShow", true),
@@ -151,7 +171,9 @@ object SettingsStore {
             .putInt("moodV2", s.mood)
             .putBoolean("soundFx", s.soundFx)
             .putBoolean("figure3d", s.figure3d)
-            .putBoolean("elfin", s.elfin)
+            .putInt("cast", s.cast)
+            .putString("elfinName", s.elfinName)
+            .putString("elfinVoiceId", s.elfinVoiceId)
             .putFloat("perspective", s.perspective)
             .putBoolean("bubbleShow", s.bubble.show)
             .putInt("bubbleShape", s.bubble.shape.ordinal)

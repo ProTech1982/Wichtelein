@@ -120,6 +120,8 @@ class ElfEngine(
     private val ticker: Ticker,
     /** Geräusch abspielen bzw. aufzeichnen (Art, Lautstärke 0..1) */
     private val fx: (Fx, Float) -> Unit = { _, _ -> },
+    /** Welche Figur: 0 = Wichtel, 1 = Elfin (Name und Stimme) */
+    private val actor: Int = 0,
 ) {
     var x = 0.5f
     var y = 0.8f
@@ -199,7 +201,7 @@ class ElfEngine(
         x, y, facing, visible, pose.copy(), bubble,
         mess.map { it.copy() }, flying?.copy(), particles.map { it.copy() },
         doorPos, doorScale, doorOpen, doorHingeLeft, doorRound, clock,
-        if (built.isEmpty()) emptyMap() else HashMap(built), bubbleSpec, onItem, snowLevel(),
+        if (built.isEmpty()) emptyMap() else HashMap(built), bubbleSpec, onItem, snowLevel(), doorRot,
     )
 
     // ---------------------------------------------------------------- Schnee
@@ -320,7 +322,7 @@ class ElfEngine(
     /** Zeigt die Sprechblase, lässt den Satz sprechen und liefert die Anzeigedauer. */
     fun say(template: String, mood: Int? = null): Long {
         val s = settings()
-        val text = fill(template, s.kidList().randomOrNull(rng) ?: "mein Freund", s.elfName)
+        val text = fill(template, s.kidList().randomOrNull(rng) ?: "mein Freund", s.nameFor(actor))
         bubble = text
         val ms = bubbleDurationMs(text)
         bubbleUntil = clock + ms / 1000f
@@ -1003,8 +1005,13 @@ class ElfEngine(
 
     // ---------------------------------------------------------------- Wichtelhaus mit Tür
 
-    fun configureDoor(p: Pt?, scale: Float, hingeLeft: Boolean = true, round: Float = 1f) {
+    /** Drehung der Tür um ihren Fußpunkt (Grad) */
+    var doorRot = 0f
+        private set
+
+    fun configureDoor(p: Pt?, scale: Float, hingeLeft: Boolean = true, round: Float = 1f, rot: Float = 0f) {
         doorPos = p
+        doorRot = rot
         doorScale = scale
         doorHingeLeft = hingeLeft
         doorRound = round.coerceIn(0f, 1f)
@@ -1242,6 +1249,10 @@ class ElfEngine(
      */
     suspend fun perform(req: PerfRequest, played: MutableList<String>) {
         appear(req.start)
+        if (req.idleOnly) {
+            // steht nur da (blinzelt, atmet), während die andere Figur ihr Drehbuch spielt
+            while (true) idle(800)
+        }
         greet()
         // die platzierten Gegenstände stellt der Wichtel nacheinander selbst auf
         if (req.autoBuild) for (item in items) doBuild(item)

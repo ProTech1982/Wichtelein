@@ -121,7 +121,7 @@ fun EditorScreen(
         speaker.rate = settings.rate
         speaker.mood = settings.mood
         speaker.useElfVoice = settings.elfVoice
-        speaker.voiceId = settings.voiceId
+        speaker.voiceId = settings.voiceFor(if (settings.elfin) 1 else 0)
     }
     val latestSettings by rememberUpdatedState(settings)
 
@@ -132,6 +132,9 @@ fun EditorScreen(
     var sel by remember { mutableStateOf<Sel?>(null) }
     var tool by remember { mutableStateOf(Tool.START) }
     var action by remember { mutableStateOf(ElfAction.SWEEP) }
+    // welche Figur eine neue Aktion macht (nur wichtig, wenn Wichtel und Elfin zusammen auftreten)
+    var who by remember { mutableIntStateOf(0) }
+    val whoNow = if (settings.both) who else 0
     var objType by remember { mutableStateOf(SceneryType.TREE_CLASSIC) }
     var sliderBase by remember { mutableStateOf<EditState?>(null) }
     var fine by remember { mutableStateOf(false) }
@@ -249,6 +252,7 @@ fun EditorScreen(
             doorScale = st.doorScale,
             doorHingeLeft = st.doorHingeLeft,
             doorRound = st.doorRound,
+            doorRot = st.doorRot,
             script = st.script,
             scenery = st.scenery,
             snowFromStart = st.snow,
@@ -266,26 +270,23 @@ fun EditorScreen(
     }
 
     // 2) Sprachclips für die Vorschau erzeugen
-    LaunchedEffect(perf, settings.voiceId, settings.effect, settings.rate, settings.mood, settings.elfVoice, settings.speak) {
+    LaunchedEffect(perf, settings.voiceId, settings.elfinVoiceId, settings.cast, settings.effect, settings.rate, settings.mood, settings.elfVoice, settings.speak) {
         val p = perf ?: return@LaunchedEffect
         clips = emptyList()
         if (!settings.speak || !settings.elfVoice) {
             voiceStatus = null
             return@LaunchedEffect
         }
-        voiceStatus = "Wichtelstimme wird vorbereitet …"
-        val ok = withContext(Dispatchers.Default) { SpeechRender.awaitVoice(context, settings) }
-        if (!ok) {
+        voiceStatus = "Stimme wird vorbereitet …"
+        val res = withContext(Dispatchers.Default) {
+            SpeechRender.renderAll(context, settings, p.speech) { n -> voiceStatus = "Stimme wird erzeugt ($n/${p.speech.size}) …" }
+        }
+        if (res.clips.all { it == null } && p.speech.isNotEmpty()) {
             voiceStatus = "Wichtelstimme nicht verfügbar – Systemstimme oder nur Text"
             return@LaunchedEffect
         }
-        val out = ArrayList<VoiceAudio?>()
-        for ((i, ev) in p.speech.withIndex()) {
-            voiceStatus = "Stimme wird erzeugt (${i + 1}/${p.speech.size}) …"
-            out.add(withContext(Dispatchers.Default) { SpeechRender.render(settings, ev) })
-        }
-        clips = out
-        voiceStatus = null
+        clips = res.clips
+        voiceStatus = if (res.missing) "Die Stimme einer Figur ist nicht geladen – bitte unter Einstellungen laden" else null
     }
 
     // 3) Wiedergabeposition verfolgen (Video oder Foto-Uhr) und Sprache und Geräusche zum richtigen Zeitpunkt abspielen
@@ -364,7 +365,7 @@ fun EditorScreen(
                 }
             }
             Tool.ACTION -> if (action.needsPoint) {
-                val n = EditOps.addStep(st, action, p)
+                val n = EditOps.addStep(st, action, p, whoNow)
                 if (n != st) {
                     commit(n)
                     sel = Sel.Step(n.script.lastIndex)
@@ -598,6 +599,13 @@ fun EditorScreen(
                         color = Hint,
                         fontSize = 12.sp,
                     )
+                    if (settings.both) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("Wer macht es?", color = Color.White, fontSize = 13.sp)
+                            FilterChip(selected = who == 0, onClick = { who = 0 }, label = { Text("🧙 ${settings.elfName.ifBlank { "Wichtel" }}") })
+                            FilterChip(selected = who == 1, onClick = { who = 1 }, label = { Text("🧝‍♀️ ${settings.elfinName.ifBlank { "Elfin" }}") })
+                        }
+                    }
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ElfAction.values().forEach { a ->
                             FilterChip(
@@ -605,7 +613,7 @@ fun EditorScreen(
                                 onClick = {
                                     action = a
                                     if (!a.needsPoint && (!a.needsDoor || st.door != null) && (!a.needsBed || st.scenery.any { it.type.isBed })) {
-                                        val n = EditOps.addStep(st, a, null)
+                                        val n = EditOps.addStep(st, a, null, whoNow)
                                         if (n != st) {
                                             commit(n)
                                             sel = null
@@ -640,7 +648,7 @@ fun EditorScreen(
                                 FilterChip(
                                     selected = sel == Sel.Step(i),
                                     onClick = { sel = if (step.at != null) Sel.Step(i) else null; if (step.at == null) commit(EditOps.remove(st, Sel.Step(i))) },
-                                    label = { Text("${i + 1}. ${step.action.emoji} ${step.action.label}") },
+                                    label = { Text("${i + 1}. ${if (settings.both) (if (step.who == 1) "🧝‍♀️ " else "🧙 ") else ""}${step.action.emoji} ${step.action.label}") },
                                 )
                             }
                             TextButton(onClick = { commit(st.copy(script = emptyList())); fixSelection() }) { Text("Alle löschen") }
@@ -666,6 +674,19 @@ fun EditorScreen(
                             Text("Öffnet nach", color = Color.White, fontSize = 13.sp)
                             FilterChip(selected = st.doorHingeLeft, onClick = { commit(st.copy(doorHingeLeft = true)) }, label = { Text("◀ links") })
                             FilterChip(selected = !st.doorHingeLeft, onClick = { commit(st.copy(doorHingeLeft = false)) }, label = { Text("rechts ▶") })
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Drehen ${st.doorRot.toInt()}°", color = Color.White, fontSize = 13.sp)
+                            OutlinedButton(onClick = { commit(st.copy(doorRot = EditOps.wrapDeg(st.doorRot - 5f))) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)) { Text("⟲", color = Color.White) }
+                            Slider(
+                                value = st.doorRot,
+                                onValueChange = { slide(st.copy(doorRot = it)) },
+                                onValueChangeFinished = { slideDone() },
+                                valueRange = -180f..180f,
+                                modifier = Modifier.weight(1f),
+                            )
+                            OutlinedButton(onClick = { commit(st.copy(doorRot = EditOps.wrapDeg(st.doorRot + 5f))) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)) { Text("⟳", color = Color.White) }
+                            TextButton(onClick = { commit(st.copy(doorRot = 0f)) }, enabled = st.doorRot != 0f) { Text("0°") }
                         }
                         Text("Form: eckig ↔ rund", color = Color.White, fontSize = 13.sp)
                         Slider(

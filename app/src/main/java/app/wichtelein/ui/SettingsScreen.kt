@@ -52,114 +52,171 @@ fun SettingsScreen(
     updateText: String?,
     onCheckUpdate: () -> Unit,
 ) {
+    // welche Bereiche aufgeklappt sind (anfangs alle zu, damit die Seite übersichtlich bleibt)
+    val open = remember { androidx.compose.runtime.mutableStateMapOf<String, Boolean>() }
+    val titles = listOf("🎭 Figuren", "👧 Kinder", "🗣 Sprache und Stimmen", "🎄 Gegenstände: Farbe und Licht", "💬 Sprechblase", "🔊 Geräusche und Musik", "✏ Eigene Sätze", "🎨 Aussehen der App", "🔒 Datenschutz", "ℹ App und Updates")
     Column(
         Modifier
             .safeDrawingPadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack) { Text("← Zurück") }
-            Text("Einstellungen", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text("Einstellungen", fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            val anyOpen = open.values.any { it }
+            TextButton(onClick = { titles.forEach { open[it] = !anyOpen } }) { Text(if (anyOpen) "Alle zuklappen" else "Alle aufklappen") }
         }
 
-        Section("Wichtel")
-        OutlinedTextField(
-            value = settings.elfName,
-            onValueChange = { onChange(settings.copy(elfName = it)) },
-            label = { Text("Name des Wichtels") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        ClothingEditor(settings, onChange)
-        Text("Standardgröße")
-        Slider(value = settings.sizeScale, onValueChange = { onChange(settings.copy(sizeScale = it)) }, valueRange = 0.12f..0.6f)
+        Fold("🎭 Figuren", open, "Wichtel, Elfin oder beide · Namen · Kleidung") {
+            Text("Wer erscheint?", fontWeight = FontWeight.Medium)
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.material3.FilterChip(selected = settings.cast == 0, onClick = { onChange(settings.copy(cast = 0)) }, label = { Text("🧙 Wichtel") })
+                androidx.compose.material3.FilterChip(selected = settings.cast == 1, onClick = { onChange(settings.copy(cast = 1)) }, label = { Text("🧝‍♀️ Elfin") })
+                androidx.compose.material3.FilterChip(selected = settings.cast == 2, onClick = { onChange(settings.copy(cast = 2)) }, label = { Text("🧙🧝‍♀️ Beide") })
+            }
+            if (settings.cast != 1) OutlinedTextField(
+                value = settings.elfName,
+                onValueChange = { onChange(settings.copy(elfName = it)) },
+                label = { Text("Name des Wichtels") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (settings.cast != 0) OutlinedTextField(
+                value = settings.elfinName,
+                onValueChange = { onChange(settings.copy(elfinName = it)) },
+                label = { Text("Name der Elfin") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (settings.both) Text("Beide treten zusammen auf. Im Editor legst du bei jeder Aktion fest, wer sie macht; ohne Aktionen machen beide ihr eigenes Ding.", fontSize = 12.sp, color = Color.Gray)
+            ClothingEditor(settings, onChange)
+            Text("Standardgröße")
+            Slider(value = settings.sizeScale, onValueChange = { onChange(settings.copy(sizeScale = it)) }, valueRange = 0.12f..0.6f)
+        }
 
-        Section("Kinder")
-        settings.profiles.forEach { pr ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(
-                    selected = settings.activeProfile()?.id == pr.id,
-                    onClick = { onChange(settings.copy(activeProfileId = pr.id)) },
-                )
-                OutlinedTextField(
-                    value = pr.name,
-                    onValueChange = { n -> onChange(settings.copy(profiles = settings.profiles.map { if (it.id == pr.id) it.copy(name = n) else it })) },
-                    label = { Text("Name (Geschwister mit Komma)") },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(onClick = {
-                    val rest = settings.profiles.filter { it.id != pr.id }
-                    onChange(settings.copy(profiles = rest, activeProfileId = if (settings.activeProfileId == pr.id) rest.firstOrNull()?.id ?: "" else settings.activeProfileId))
-                }) { Text("Löschen") }
+        Fold("👧 Kinder", open, "Namen der Kinder für die Sprüche") {
+            settings.profiles.forEach { pr ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(
+                        selected = settings.activeProfile()?.id == pr.id,
+                        onClick = { onChange(settings.copy(activeProfileId = pr.id)) },
+                    )
+                    OutlinedTextField(
+                        value = pr.name,
+                        onValueChange = { n -> onChange(settings.copy(profiles = settings.profiles.map { if (it.id == pr.id) it.copy(name = n) else it })) },
+                        label = { Text("Name (Geschwister mit Komma)") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = {
+                        val rest = settings.profiles.filter { it.id != pr.id }
+                        onChange(settings.copy(profiles = rest, activeProfileId = if (settings.activeProfileId == pr.id) rest.firstOrNull()?.id ?: "" else settings.activeProfileId))
+                    }) { Text("Löschen") }
+                }
+            }
+            OutlinedButton(onClick = { onChange(settings.withProfile("Kind ${settings.profiles.size + 1}")) }, modifier = Modifier.fillMaxWidth()) {
+                Text("➕ Kind hinzufügen")
+            }
+            Text("Der ausgewählte Punkt ist das aktive Kind. Im Editor lässt sich das Kind auch direkt wechseln.", fontSize = 12.sp, color = Color.Gray)
+        }
+
+        Fold("🗣 Sprache und Stimmen", open, "Sprechen an/aus · Stimme · Tempo · Effekt") {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(if (settings.cast == 0) "Wichtel spricht" else if (settings.cast == 1) "Elfin spricht" else "Wichtel und Elfin sprechen")
+                Switch(checked = settings.speak, onCheckedChange = { onChange(settings.copy(speak = it)) })
+            }
+            VoiceSettings(settings, onChange)
+        }
+
+        Fold("🎄 Gegenstände: Farbe und Licht", open, "Jeden Gegenstand umfärben, Licht an/aus") {
+            SceneryStyles(settings, onChange)
+        }
+
+        Fold("💬 Sprechblase", open, "Standard für alle Aktionen: Form und Größe") {
+            Text("Gilt für alle Aktionen. Im Editor lässt sich für jede Aktion eine eigene Blase einstellen.", fontSize = 12.sp, color = Color.Gray)
+            BubbleControls(settings.bubble, { onChange(settings.copy(bubble = it)) })
+        }
+
+        Fold("🔊 Geräusche und Musik", open, "Glöckchen, Summen, Brummen") {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Weihnachtsgeräusche (Glöckchen, Tür, Besen, Klopfen)", modifier = Modifier.weight(1f))
+                Switch(checked = settings.soundFx, onCheckedChange = { onChange(settings.copy(soundFx = it)) })
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Summen und Brummen", modifier = Modifier.weight(1f))
+                Switch(checked = settings.hum, onCheckedChange = { onChange(settings.copy(hum = it)) })
+            }
+            Text(
+                "Ist die Stimme aus, brummt die Figur statt zu sprechen. Ist sie an, summt sie in den Pausen kleine Weihnachtsmelodien dazu. " +
+                    "Beides lässt sich mit Stimme und Effekt kombinieren. Hintergrundmusik wählst du im Editor unter „🎵 Musik“.",
+                fontSize = 12.sp,
+                color = Color.Gray,
+            )
+        }
+
+        Fold("✏ Eigene Sätze", open, "Eigene Sprüche für die Figuren") {
+            OutlinedTextField(
+                value = settings.customLines,
+                onValueChange = { onChange(settings.copy(customLines = it)) },
+                label = { Text("Eigene Sätze (einer pro Zeile)") },
+                supportingText = { Text("Platzhalter: {name} = Name des Kindes, {wichtel} = Name der sprechenden Figur") },
+                minLines = 3,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+        Fold("🎨 Aussehen der App", open, "Wie das Handy, hell oder dunkel") {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("Wie das Handy", "Hell", "Dunkel").forEachIndexed { i, label ->
+                    androidx.compose.material3.FilterChip(selected = settings.themeMode == i, onClick = { onChange(settings.copy(themeMode = i)) }, label = { Text(label) })
+                }
             }
         }
-        OutlinedButton(onClick = { onChange(settings.withProfile("Kind ${settings.profiles.size + 1}")) }, modifier = Modifier.fillMaxWidth()) {
-            Text("➕ Kind hinzufügen")
+
+        Fold("🔒 Datenschutz", open, "Alles bleibt auf dem Gerät") {
+            Text(
+                "Alles bleibt auf diesem Gerät: Videos, Namen und Einstellungen. Es gibt kein Konto, keine Werbung und keine Tracker. " +
+                    "Das Internet wird nur benutzt, wenn du nach Updates suchst oder eine weitere Stimme lädst. " +
+                    "Die Kamera wird nur zum Filmen und Fotografieren gebraucht (ohne Ton).",
+                fontSize = 13.sp,
+            )
         }
-        Text("Der ausgewählte Punkt ist das aktive Kind. Im Editor lässt sich das Kind auch direkt wechseln.", fontSize = 12.sp, color = Color.Gray)
 
-        Section("Sprache")
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Wichtel spricht")
-            Switch(checked = settings.speak, onCheckedChange = { onChange(settings.copy(speak = it)) })
+        Fold("ℹ App und Updates", open, "Version und Update-Suche") {
+            Text("Build ${Updater.installedVersion(LocalContext.current)}", fontSize = 13.sp)
+            OutlinedButton(onClick = onCheckUpdate, Modifier.fillMaxWidth()) { Text("Nach Update suchen") }
+            if (updateText != null) Text(updateText)
         }
-        VoiceSettings(settings, onChange)
+    }
+}
 
-        Section("Gegenstände: Farbe und Licht")
-        SceneryStyles(settings, onChange)
-
-        Section("Sprechblase (Standard)")
-        Text("Gilt für alle Aktionen. Im Editor lässt sich für jede Aktion eine eigene Blase einstellen.", fontSize = 12.sp, color = Color.Gray)
-        BubbleControls(settings.bubble, { onChange(settings.copy(bubble = it)) })
-
-        Section("Geräusche")
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Weihnachtsgeräusche (Glöckchen, Tür, Besen, Klopfen)")
-            Switch(checked = settings.soundFx, onCheckedChange = { onChange(settings.copy(soundFx = it)) })
-        }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Summen und Brummen", modifier = Modifier.weight(1f))
-            Switch(checked = settings.hum, onCheckedChange = { onChange(settings.copy(hum = it)) })
-        }
-        Text(
-            "Ist die Stimme aus, brummt der Wichtel statt zu sprechen. Ist sie an, summt er in den Pausen kleine Weihnachtsmelodien dazu. " +
-                "Beides lässt sich mit Stimme und Effekt kombinieren.",
-            fontSize = 12.sp,
-            color = Color.Gray,
-        )
-
-        Section("Eigene Sätze")
-        OutlinedTextField(
-            value = settings.customLines,
-            onValueChange = { onChange(settings.copy(customLines = it)) },
-            label = { Text("Eigene Sätze (einer pro Zeile)") },
-            supportingText = { Text("Platzhalter: {name} = Name des Kindes, {wichtel} = Name des Wichtels") },
-            minLines = 3,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        Section("Aussehen der App")
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Wie das Handy", "Hell", "Dunkel").forEachIndexed { i, label ->
-                androidx.compose.material3.FilterChip(selected = settings.themeMode == i, onClick = { onChange(settings.copy(themeMode = i)) }, label = { Text(label) })
+/** Ein auf- und zuklappbarer Bereich der Einstellungen; [summary] steht unter dem Titel, solange er zu ist. */
+@Composable
+private fun Fold(
+    title: String,
+    open: androidx.compose.runtime.snapshots.SnapshotStateMap<String, Boolean>,
+    summary: String,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+) {
+    val isOpen = open[title] == true
+    androidx.compose.material3.Card(Modifier.fillMaxWidth()) {
+        Column {
+            Row(
+                Modifier.fillMaxWidth().clickable { open[title] = !isOpen }.padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(title, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    if (!isOpen) Text(summary, fontSize = 12.sp, color = Color.Gray)
+                }
+                Text(if (isOpen) "▾" else "▸", fontSize = 22.sp)
+            }
+            if (isOpen) {
+                Column(Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { content() }
             }
         }
-
-        Section("Datenschutz")
-        Text(
-            "Alles bleibt auf diesem Gerät: Videos, Namen und Einstellungen. Es gibt kein Konto, keine Werbung und keine Tracker. " +
-                "Das Internet wird nur benutzt, wenn du nach Updates suchst oder eine weitere Stimme lädst. " +
-                "Die Kamera wird nur zum Filmen und Fotografieren gebraucht (ohne Ton).",
-            fontSize = 13.sp,
-        )
-
-        Section("App")
-        Text("Build ${Updater.installedVersion(LocalContext.current)}", fontSize = 13.sp)
-        OutlinedButton(onClick = onCheckUpdate, Modifier.fillMaxWidth()) { Text("Nach Update suchen") }
-        if (updateText != null) Text(updateText)
     }
 }
 
@@ -175,30 +232,32 @@ private fun ClothingEditor(settings: Settings, onChange: (Settings) -> Unit) {
     val pose = remember { Pose().apply { armR = 12f; armL = 6f } }
     Canvas(Modifier.fillMaxWidth().height(200.dp)) {
         val eh = size.height * 0.93f
-        sprites.draw(this, pose, Offset(size.width / 2f, size.height * 0.97f), eh, 1)
+        val partner = (sprites as? CastFigure)?.partner
+        if (partner != null) {
+            (sprites as CastFigure).main.draw(this, pose, Offset(size.width * 0.35f, size.height * 0.97f), eh, 1)
+            partner.draw(this, pose, Offset(size.width * 0.65f, size.height * 0.97f), eh, 1)
+        } else {
+            sprites.draw(this, pose, Offset(size.width / 2f, size.height * 0.97f), eh, 1)
+        }
     }
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    Text("Wer erscheint?", fontWeight = FontWeight.Medium)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        androidx.compose.material3.FilterChip(selected = !settings.elfin, onClick = { onChange(settings.copy(elfin = false)) }, label = { Text("🧙 Wichtel") })
-        androidx.compose.material3.FilterChip(selected = settings.elfin, onClick = { onChange(settings.copy(elfin = true)) }, label = { Text("🧝‍♀️ Wichtelfrau (Elfin)") })
-    }
-    if (settings.elfin) Text("Die Elfin hat Mütze, Kleid, Strumpfhose und Stiefel zum Umfärben (Mantel = Kleid, Hose = Strumpfhose). Sie gibt es als gezeichnete 2D-Figur und als 3D-Figur, die sich dreht.", fontSize = 12.sp, color = Color.Gray)
-    if (Elf3D.available(ctx, if (settings.elfin) "elfin3d" else "elf3d")) {
-        Text("Figur", fontWeight = FontWeight.Medium)
+    if (settings.elfin || settings.both) Text("Die Elfin hat Mütze, Kleid, Strumpfhose und Stiefel zum Umfärben (Mantel = Kleid, Hose = Strumpfhose); die Farben gelten für beide Figuren.", fontSize = 12.sp, color = Color.Gray)
+    val has3d = if (settings.both) Elf3D.available(ctx) || Elf3D.available(ctx, "elfin3d") else Elf3D.available(ctx, if (settings.elfin) "elfin3d" else "elf3d")
+    if (has3d) {
+        Text("Darstellung", fontWeight = FontWeight.Medium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             androidx.compose.material3.FilterChip(
                 selected = !settings.figure3d,
                 onClick = { onChange(settings.copy(figure3d = false)) },
-                label = { Text(if (settings.elfin) "Elfin 2D (gezeichnet)" else "Wichtel 2D (Bild)") },
+                label = { Text("2D (gezeichnet)") },
             )
             androidx.compose.material3.FilterChip(
                 selected = settings.figure3d,
                 onClick = { onChange(settings.copy(figure3d = true)) },
-                label = { Text(if (settings.elfin) "Elfin 3D (dreht sich)" else "Wichtel 3D (dreht sich)") },
+                label = { Text("3D (dreht sich)") },
             )
         }
-        if (settings.figure3d) Text(if (settings.elfin) "Die 3D-Elfin hat Mützen- und Kleidfarbe (die roten Ringel der Strumpfhose folgen der Mützenfarbe)." else "Der 3D-Wichtel hat Mützen- und Mantelfarbe; Hose und Schuhe bleiben wie sie sind.", fontSize = 12.sp, color = Color.Gray)
+        if (settings.figure3d) Text("3D: Mützen- und Mantel- bzw. Kleidfarbe lassen sich ändern; Hose und Schuhe des Wichtels bleiben wie sie sind.", fontSize = 12.sp, color = Color.Gray)
     }
     Text("Kleidung", fontWeight = FontWeight.Medium)
     ColorRow("Mütze", ElfPalette.clothes, settings.hatColor) { onChange(settings.copy(hatColor = it)) }

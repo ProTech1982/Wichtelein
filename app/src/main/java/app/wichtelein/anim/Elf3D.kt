@@ -174,19 +174,28 @@ class Elf3D(private val context: Context, private val colors: ElfColors = ElfCol
     }
 }
 
-/** Wählt die Figur nach den Einstellungen (3D, wenn gewünscht und vorhanden, sonst die 2D-Puppe). */
+/** Die Besetzung: die Hauptfigur und, wenn beide auftreten, die zweite Figur ([partner]). Gezeichnet wird die Hauptfigur. */
+class CastFigure(val main: ElfFigure, val partner: ElfFigure?) : ElfFigure {
+    override fun draw(scope: DrawScope, pose: Pose, base: Offset, h: Float, facing: Int) = main.draw(scope, pose, base, h, facing)
+}
+
+/** Wählt die Figuren nach den Einstellungen (Wichtel und/oder Elfin, je 2D oder 3D, wenn vorhanden). */
 object ElfFigures {
-    fun load(context: Context, settings: Settings): ElfFigure =
-        when {
-            settings.elfin && settings.figure3d && Elf3D.available(context, "elfin3d") -> Elf3D(context, settings.colors(), "elfin3d")
-            settings.elfin -> ElfinFigure(settings.colors())
-            settings.figure3d && Elf3D.available(context) -> Elf3D(context, settings.colors())
-            else -> ElfSprites.load(context, settings.colors())
-        }
+    private fun wichtel(context: Context, settings: Settings): ElfFigure =
+        if (settings.figure3d && Elf3D.available(context)) Elf3D(context, settings.colors()) else ElfSprites.load(context, settings.colors())
+
+    private fun elfin(context: Context, settings: Settings): ElfFigure =
+        if (settings.figure3d && Elf3D.available(context, "elfin3d")) Elf3D(context, settings.colors(), "elfin3d") else ElfinFigure(settings.colors())
+
+    fun load(context: Context, settings: Settings): ElfFigure = when {
+        settings.both -> CastFigure(wichtel(context, settings), elfin(context, settings))
+        settings.elfin -> elfin(context, settings)
+        else -> wichtel(context, settings)
+    }
 }
 
 @Composable
 fun rememberElfFigure(settings: Settings): ElfFigure {
     val context = LocalContext.current
-    return remember(settings.colors(), settings.figure3d, settings.elfin) { ElfFigures.load(context, settings) }
+    return remember(settings.colors(), settings.figure3d, settings.cast) { ElfFigures.load(context, settings) }
 }

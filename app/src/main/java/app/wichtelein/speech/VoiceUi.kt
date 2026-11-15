@@ -48,8 +48,9 @@ fun VoiceSettings(settings: Settings, onChange: (Settings) -> Unit) {
         speaker.rate = settings.rate
         speaker.mood = settings.mood
         speaker.useElfVoice = settings.elfVoice
-        speaker.voiceId = settings.voiceId
+        speaker.voiceId = settings.voiceFor(if (settings.elfin) 1 else 0)
     }
+    val actors = when (settings.cast) { 1 -> listOf(1); 2 -> listOf(0, 1); else -> listOf(0) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Stimme", fontSize = 18.sp)
@@ -67,31 +68,39 @@ fun VoiceSettings(settings: Settings, onChange: (Settings) -> Unit) {
         }
 
         if (settings.elfVoice) {
-            VoiceCatalog.all.forEach { v ->
-                val installed = VoiceCatalog.isInstalled(context, v.id)
-                val dl = VoiceDownloads.states[v.id]
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(
-                        selected = settings.voiceId == v.id,
-                        enabled = installed,
-                        onClick = { onChange(settings.copy(voiceId = v.id)) },
-                    )
-                    Column(Modifier.weight(1f)) {
-                        Text(v.name, fontSize = 15.sp)
-                        Text("${v.note} (${v.sizeMb} MB)", fontSize = 12.sp, color = Color.Gray)
-                        if (dl != null && !dl.done && dl.error == null) {
-                            LinearProgressIndicator(progress = { dl.progress }, modifier = Modifier.fillMaxWidth())
+            // der Wichtel bekommt nur männliche, die Elfin nur weibliche Stimmen
+            for (actor in actors) {
+                val current = settings.voiceFor(actor)
+                if (actors.size > 1 || settings.elfin) Text(if (actor == 1) "🧝‍♀️ Stimme der Elfin (weiblich)" else "🧙 Stimme des Wichtels (männlich)", fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                VoiceCatalog.forActor(actor).forEach { v ->
+                    val installed = VoiceCatalog.isInstalled(context, v.id)
+                    val dl = VoiceDownloads.states[v.id]
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = current == v.id,
+                            enabled = installed,
+                            onClick = { onChange(if (actor == 1) settings.copy(elfinVoiceId = v.id) else settings.copy(voiceId = v.id)) },
+                        )
+                        Column(Modifier.weight(1f)) {
+                            Text(v.name, fontSize = 15.sp)
+                            Text("${v.note} (${v.sizeMb} MB)", fontSize = 12.sp, color = Color.Gray)
+                            if (dl != null && !dl.done && dl.error == null) {
+                                LinearProgressIndicator(progress = { dl.progress }, modifier = Modifier.fillMaxWidth())
+                            }
+                            if (dl?.error != null) Text(dl.error, fontSize = 12.sp, color = Color(0xFFB3261E))
                         }
-                        if (dl?.error != null) Text(dl.error, fontSize = 12.sp, color = Color(0xFFB3261E))
+                        if (!installed && (dl == null || dl.error != null)) {
+                            OutlinedButton(onClick = { scope.launch { VoiceDownloads.download(context, v) } }) { Text("Laden") }
+                        }
                     }
-                    if (!installed && (dl == null || dl.error != null)) {
-                        OutlinedButton(onClick = { scope.launch { VoiceDownloads.download(context, v) } }) { Text("Laden") }
-                    }
+                }
+                if (!VoiceCatalog.isInstalled(context, current)) {
+                    Text("Diese Stimme ist noch nicht geladen – bitte oben „Laden“ tippen. Bis dahin spricht die Systemstimme.", fontSize = 12.sp, color = Color(0xFFB3261E))
                 }
             }
             val active = VoiceCatalog.find(settings.voiceId)
-            if (active.moods) {
-                Text("Stimmung")
+            if (active.moods && settings.cast != 1) {
+                Text("Stimmung (Wichtel)")
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Mood.choices.forEach { (label, id) ->
                         FilterChip(
@@ -111,13 +120,16 @@ fun VoiceSettings(settings: Settings, onChange: (Settings) -> Unit) {
         Text("Sprechtempo: langsam ↔ schnell")
         Slider(value = settings.rate, onValueChange = { onChange(settings.copy(rate = it)) }, valueRange = 0.7f..1.4f)
 
-        Button(
-            onClick = {
-                val kid = settings.kidList().firstOrNull() ?: "mein Freund"
-                speaker.speak(fill("Hallo {name}! Ich bin {wichtel}, dein Wichtel. Heute habe ich wieder etwas angestellt!", kid, settings.elfName))
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text("🔊  Stimme anhören") }
+        for (actor in actors) {
+            Button(
+                onClick = {
+                    val kid = settings.kidList().firstOrNull() ?: "mein Freund"
+                    speaker.voiceId = settings.voiceFor(actor)
+                    speaker.speak(fill("Hallo {name}! Ich bin {wichtel}, dein Wichtel. Heute habe ich wieder etwas angestellt!", kid, settings.nameFor(actor)))
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(if (actors.size > 1) (if (actor == 1) "🔊  Elfin anhören" else "🔊  Wichtel anhören") else "🔊  Stimme anhören") }
+        }
         Text("Status: ${speaker.statusText}", fontSize = 12.sp, color = Color.Gray)
     }
 }

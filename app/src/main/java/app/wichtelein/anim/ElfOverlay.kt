@@ -110,52 +110,78 @@ fun DrawScope.drawWichtelFrame(
     fun pos(x: Float, y: Float): Offset? = if (projection != null) projection.position(x, y) else Offset(x * w, y * h)
     fun eh(x: Float, y: Float): Float = if (projection != null) projection.elfHeight(x, y) else h * sizeScale * depth(y, perspective)
 
-    if (projection == null) drawDoorBack(f, w, h)
+    // zweite Figur (nur im normalen Bild, nicht im AR-Modus)
+    val partner = if (projection == null) f.partner else null
+    val partnerFigure = (sprites as? CastFigure)?.partner
+    val actors = ArrayList<Pair<FrameState, ElfFigure>>()
+    actors.add(f to ((sprites as? CastFigure)?.main ?: sprites))
+    if (partner != null && partnerFigure != null) actors.add(partner to partnerFigure)
 
-    for (item in f.mess.sortedBy { it.y }) {
+    // Tür: gedreht um ihren Fußpunkt
+    fun withDoorRot(block: DrawScope.() -> Unit) {
+        val d = f.doorPos
+        if (d == null || f.doorRot == 0f) block() else withTransform({ rotate(f.doorRot, Offset(d.x * w, d.y * h)) }) { block() }
+    }
+    if (projection == null) withDoorRot { drawDoorBack(f, w, h) }
+
+    for (item in actors.flatMap { it.first.mess }.sortedBy { it.y }) {
         val o = pos(item.x, item.y) ?: continue
         drawItem(item.kind, o, eh(item.x, item.y) * 0.14f, item.rot)
     }
 
-    // Gegenstände, die weiter hinten stehen als der Wichtel, kommen vor ihm
+    // Gegenstände und Figuren von hinten nach vorn: was weiter hinten steht als eine Figur, kommt vor ihr
     val sc = if (projection == null) scenery else null
     val progress = { it: SceneryItem -> f.built[it.id] ?: 0f }
-    if (sc != null) drawScenery(sc.items.filter { it.at.y <= f.y || it.id == f.onItem }.sortedBy { it.at.y }, sc.assets, f.timeSec, progress, showUnbuilt)
-
-    val elfPos = pos(f.x, f.y)
-    val elfH = eh(f.x, f.y)
-    if (f.visible && elfPos != null) {
-        sprites.draw(this, f.pose, elfPos, elfH, f.facing)
-        // im Bett: die vordere Bettkante liegt über dem Wichtel (er liegt „im“ Bett)
-        if (sc != null && f.onItem >= 0) sc.items.firstOrNull { it.id == f.onItem && it.type.isBed && it.rot == 0f }?.let {
-            drawScenery(listOf(it), sc.assets, f.timeSec, progress, false, 0.33f)
+    var remaining = sc?.items?.sortedBy { it.at.y } ?: emptyList()
+    for ((frame, figure) in actors.sortedBy { it.first.y }) {
+        if (sc != null) {
+            val before = remaining.filter { it.at.y <= frame.y || it.id == frame.onItem }
+            remaining = remaining - before.toSet()
+            drawScenery(before, sc.assets, f.timeSec, progress, showUnbuilt)
+        }
+        val elfPos = pos(frame.x, frame.y)
+        val elfH = eh(frame.x, frame.y)
+        if (frame.visible && elfPos != null) {
+            figure.draw(this, frame.pose, elfPos, elfH, frame.facing)
+            // im Bett: die vordere Bettkante liegt über dem Wichtel (er liegt „im“ Bett)
+            if (sc != null && frame.onItem >= 0) sc.items.firstOrNull { it.id == frame.onItem && it.type.isBed && it.rot == 0f }?.let {
+                drawScenery(listOf(it), sc.assets, f.timeSec, progress, false, 0.33f)
+            }
         }
     }
-    if (sc != null) drawScenery(sc.items.filter { it.at.y > f.y && it.id != f.onItem }.sortedBy { it.at.y }, sc.assets, f.timeSec, progress, showUnbuilt)
+    if (sc != null) drawScenery(remaining, sc.assets, f.timeSec, progress, showUnbuilt)
 
-    f.flying?.let { fl ->
-        val o = pos(fl.x, fl.y)
-        if (o != null) drawItem(fl.kind, o, eh(fl.x, fl.y) * 0.14f, fl.rot)
+    for ((frame, _) in actors) {
+        frame.flying?.let { fl ->
+            val o = pos(fl.x, fl.y)
+            if (o != null) drawItem(fl.kind, o, eh(fl.x, fl.y) * 0.14f, fl.rot)
+        }
     }
 
-    if (projection == null) drawDoorLeaf(f, w, h)
+    if (projection == null) withDoorRot { drawDoorLeaf(f, w, h) }
 
-    for (p in f.particles) {
-        val o = pos(p.x, p.y) ?: continue
-        drawParticle(p, o, eh(p.x, p.y) * 0.04f, h, measurer)
+    for ((frame, _) in actors) {
+        for (p in frame.particles) {
+            val o = pos(p.x, p.y) ?: continue
+            drawParticle(p, o, eh(p.x, p.y) * 0.04f, h, measurer)
+        }
     }
 
     if (f.snow > 0.01f) drawSnow(f.snow, f.timeSec)
 
-    val text = f.bubble
-    if (text != null && f.bubbleSpec.show && f.visible && f.pose.scale > 0.5f && elfPos != null) {
-        val spec = f.bubbleSpec
-        val style = TextStyle(fontSize = (h * 0.027f * spec.size).toSp(), color = Color(0xFF222222), fontWeight = FontWeight.Medium)
-        // runde Formen brauchen Rand: der Text bekommt weniger Breite
-        val shapeK = if (spec.shape == BubbleShape.ROUNDED || spec.shape == BubbleShape.RECT) 1f else 0.7f
-        val maxW = (w * 0.62f * spec.size.coerceAtMost(1.3f) * shapeK).toInt().coerceIn(40, (w * 0.9f).toInt().coerceAtLeast(41))
-        val layout = measurer.measure(text, style, constraints = Constraints(maxWidth = maxW))
-        drawBubble(layout, spec, elfPos.x, elfPos.y - elfH * 1.12f, w, h)
+    for ((frame, _) in actors) {
+        val text = frame.bubble
+        val elfPos = pos(frame.x, frame.y)
+        val elfH = eh(frame.x, frame.y)
+        if (text != null && frame.bubbleSpec.show && frame.visible && frame.pose.scale > 0.5f && elfPos != null) {
+            val spec = frame.bubbleSpec
+            val style = TextStyle(fontSize = (h * 0.027f * spec.size).toSp(), color = Color(0xFF222222), fontWeight = FontWeight.Medium)
+            // runde Formen brauchen Rand: der Text bekommt weniger Breite
+            val shapeK = if (spec.shape == BubbleShape.ROUNDED || spec.shape == BubbleShape.RECT) 1f else 0.7f
+            val maxW = (w * 0.62f * spec.size.coerceAtMost(1.3f) * shapeK).toInt().coerceIn(40, (w * 0.9f).toInt().coerceAtLeast(41))
+            val layout = measurer.measure(text, style, constraints = Constraints(maxWidth = maxW))
+            drawBubble(layout, spec, elfPos.x, elfPos.y - elfH * 1.12f, w, h)
+        }
     }
 }
 

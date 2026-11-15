@@ -49,7 +49,8 @@ enum class ElfAction(val label: String, val emoji: String, val needsDoor: Boolea
 
 /** Ein Aktionspunkt im Bild: [action] wird an der Stelle [at] ausgeführt (bei Türaktionen ohne Stelle). */
 /** [bubble] = eigene Sprechblase für diese Aktion (null = die Standardeinstellung). */
-data class ScriptStep(val action: ElfAction, val at: Pt? = null, val bubble: BubbleSpec? = null)
+/** [who] = welche Figur die Aktion macht, wenn beide auftreten (0 = Wichtel, 1 = Elfin); bei nur einer Figur egal. */
+data class ScriptStep(val action: ElfAction, val at: Pt? = null, val bubble: BubbleSpec? = null, val who: Int = 0)
 
 /** Liefert der Engine den Takt. Beim Aufnehmen ist das eine virtuelle Uhr, kein echter Bildschirm-Takt. */
 interface Ticker {
@@ -72,7 +73,8 @@ class ManualTicker : Ticker {
 }
 
 /** Ein Satz, der zu einem Zeitpunkt der Aufführung gesprochen wird. */
-class SpeechEvent(val timeMs: Long, val text: String, val mood: Int?)
+/** [actor] = wer spricht (0 = Wichtel, 1 = Elfin); bestimmt die Stimme. */
+class SpeechEvent(val timeMs: Long, val text: String, val mood: Int?, val actor: Int = 0)
 
 /** Alles, was zu einem Zeitpunkt zu sehen ist (unabhängige Kopie, damit Zeitleisten stabil bleiben). */
 class FrameState(
@@ -102,7 +104,12 @@ class FrameState(
     val onItem: Int = -1,
     /** Stärke des Schneefalls 0..1 (0 = kein Schnee) */
     val snow: Float = 0f,
-)
+    /** Drehung der Tür um ihren Fußpunkt in Grad */
+    val doorRot: Float = 0f,
+) {
+    /** Die zweite Figur im gleichen Moment, wenn Wichtel und Elfin zusammen auftreten */
+    var partner: FrameState? = null
+}
 
 /** Eine fertig aufgenommene Wichtel-Aufführung: Bilder mit festem Takt plus Sprach-Ereignisse. */
 class Performance(
@@ -143,6 +150,7 @@ class PerfRequest(
     val doorScale: Float = 0.2f,
     val doorHingeLeft: Boolean = true,
     val doorRound: Float = 1f,
+    val doorRot: Float = 0f,
     /** Aktionspunkte: Wenn gesetzt, spielt der Wichtel genau diese Schritte der Reihe nach (statt zufälliger Szenen). */
     val script: List<ScriptStep> = emptyList(),
     /** Aufnahme endet kurz nach dem letzten Aktionspunkt (Foto-Film), sonst nach [durationMs] */
@@ -156,50 +164,97 @@ class PerfRequest(
     val confineToPoints: Boolean = true,
     /** Es schneit von Anfang an */
     val snowFromStart: Boolean = false,
-)
+    /** Die Figur steht nur da (zweite Figur, wenn die erste ein Drehbuch spielt und diese keine Aktionen hat) */
+    val idleOnly: Boolean = false,
+) {
+    /** Dieselbe Anfrage mit anderem Drehbuch, Startpunkt und Zufall (für die zweite Figur). */
+    fun derive(script: List<ScriptStep>, start: Pt, seed: Long, autoBuild: Boolean, sceneId: String?, idleOnly: Boolean = false) = PerfRequest(
+        start, path, sizeScale, category, sceneId, seed, durationMs, enabledScenes, settings, fps, door, doorScale, doorHingeLeft, doorRound, doorRot,
+        script, stopAfterScript, aspect, scenery, autoBuild, confineToPoints, snowFromStart, idleOnly,
+    )
+}
 
 /** Nachlauf nach dem letzten Aktionspunkt im Foto-Film */
 const val TAIL_MS = 2500L
 
 object Recorder {
-    /** Nimmt die Aufführung deterministisch auf (gleiche Eingaben ergeben die gleiche Zeitleiste). */
+    private class Actor(val engine: ElfEngine, val ticker: ManualTicker, val req: PerfRequest, val actor: Int) {
+        lateinit var job: kotlinx.coroutines.Job
+    }
+
+    /** Nimmt die Aufführung deterministisch auf (gleiche Eingaben ergeben die gleiche Zeitleiste). Bei zwei Figuren laufen beide gleichzeitig. */
     fun record(req: PerfRequest): Performance {
-        val ticker = ManualTicker()
         val speech = ArrayList<SpeechEvent>()
         val played = ArrayList<String>()
         val sounds = ArrayList<SoundEvent>()
-        lateinit var engine: ElfEngine
-        engine = ElfEngine(
-            settings = { req.settings },
-            speak = { text, mood -> speech.add(SpeechEvent(engine.timeMs, text, mood)) },
-            rng = Random(req.seed),
-            ticker = ticker,
-            fx = { f: Fx, gain: Float -> sounds.add(SoundEvent(engine.timeMs, f, gain)) },
-        )
-        engine.configureDoor(req.door, req.doorScale, req.doorHingeLeft, req.doorRound)
-        engine.configureScenery(req.scenery)
-        engine.configureSnow(req.snowFromStart)
-        engine.configureRoute(if (req.confineToPoints) listOf(req.start) + req.path else emptyList())
-        engine.configureRoam(
-            if (req.confineToPoints) listOf(req.start) + req.path + req.script.mapNotNull { it.at } else emptyList(),
-            req.aspect,
-        )
+        val both = req.settings.both
+        val first = if (both) 0 else if (req.settings.elfin) 1 else 0
+
+        fun build(r: PerfRequest, actor: Int, seed: Long): Actor {
+            val ticker = ManualTicker()
+            lateinit var engine: ElfEngine
+            engine = ElfEngine(
+                settings = { req.settings },
+                speak = { text, mood -> speech.add(SpeechEvent(engine.timeMs, text, mood, actor)) },
+                rng = Random(seed),
+                ticker = ticker,
+                fx = { f: Fx, gain: Float -> sounds.add(SoundEvent(engine.timeMs, f, gain)) },
+                actor = actor,
+            )
+            engine.configureDoor(r.door, r.doorScale, r.doorHingeLeft, r.doorRound, r.doorRot)
+            engine.configureScenery(r.scenery)
+            engine.configureSnow(r.snowFromStart)
+            engine.configureRoute(if (r.confineToPoints) listOf(r.start) + r.path else emptyList())
+            engine.configureRoam(
+                if (r.confineToPoints) listOf(r.start) + r.path + r.script.mapNotNull { it.at } else emptyList(),
+                r.aspect,
+            )
+            return Actor(engine, ticker, r, actor)
+        }
+
+        val a: Actor
+        val b: Actor?
+        if (both) {
+            val scripted = req.script.isNotEmpty()
+            val stepsA = req.script.filter { it.who != 1 }
+            val stepsB = req.script.filter { it.who == 1 }
+            val reqA = req.derive(stepsA, req.start, req.seed, req.autoBuild, req.sceneId, idleOnly = scripted && stepsA.isEmpty())
+            val startB = Pt((req.start.x + 0.13f).coerceAtMost(0.95f).let { if (it - req.start.x < 0.05f) (req.start.x - 0.13f).coerceAtLeast(0.05f) else it }, req.start.y)
+            val reqB = req.derive(stepsB, startB, req.seed + 101L, false, null, idleOnly = scripted && stepsB.isEmpty())
+            a = build(reqA, 0, req.seed)
+            b = build(reqB, 1, req.seed + 101L)
+        } else {
+            a = build(req, first, req.seed)
+            b = null
+        }
+
         val scope = CoroutineScope(Dispatchers.Unconfined)
-        val job = scope.launch { engine.perform(req, played) }
+        a.job = scope.launch { a.engine.perform(a.req, played) }
+        if (b != null) b.job = scope.launch { b.engine.perform(b.req, ArrayList()) }
         val frames = ArrayList<FrameState>()
-        frames.add(engine.snapshot())
+        fun snap(): FrameState = a.engine.snapshot().also { f -> f.partner = b?.engine?.snapshot() }
+        frames.add(snap())
         val total = (req.durationMs * req.fps / 1000L).toInt()
         val dt = 1_000_000_000L / req.fps
         var scriptEnd = -1L
         for (i in 0 until total) {
-            ticker.tick(dt)
-            frames.add(engine.snapshot())
-            if (req.script.isNotEmpty() && engine.scriptDoneMs >= 0) {
-                scriptEnd = engine.scriptDoneMs
-                if (req.stopAfterScript && engine.timeMs >= scriptEnd + TAIL_MS) break
+            a.ticker.tick(dt)
+            b?.ticker?.tick(dt)
+            frames.add(snap())
+            if (req.script.isNotEmpty()) {
+                val doneA = a.req.script.isEmpty() || a.engine.scriptDoneMs >= 0
+                val doneB = b == null || b.req.script.isEmpty() || b.engine.scriptDoneMs >= 0
+                if (doneA && doneB) {
+                    scriptEnd = maxOf(a.engine.scriptDoneMs, b?.engine?.scriptDoneMs ?: -1L)
+                    if (scriptEnd >= 0 && req.stopAfterScript && a.engine.timeMs >= scriptEnd + TAIL_MS) break
+                }
             }
         }
-        job.cancel()
-        return Performance(req.fps, frames, speech, played, sounds, scriptEnd)
+        a.job.cancel()
+        b?.job?.cancel()
+        // Sprache und Geräusche beider Figuren in zeitlicher Reihenfolge
+        val speechSorted = speech.sortedBy { it.timeMs }
+        val soundsSorted = sounds.sortedBy { it.timeMs }
+        return Performance(req.fps, frames, speechSorted, played, soundsSorted, scriptEnd)
     }
 }

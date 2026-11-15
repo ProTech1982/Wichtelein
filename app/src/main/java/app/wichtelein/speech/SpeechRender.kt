@@ -53,6 +53,31 @@ object SpeechRender {
         return audio
     }
 
+    /** Ergebnis von [renderAll]: ein Clip je Ereignis (null = keiner) und ob die Stimme einer Figur gefehlt hat. */
+    class Result(val clips: List<VoiceAudio?>, val missing: Boolean)
+
+    /**
+     * Erzeugt die Clips aller Ereignisse; jede Figur mit ihrer eigenen Stimme (Wichtel männlich, Elfin weiblich). Spricht nur eine Figur,
+     * wird nur ihre Stimme geladen; bei zwei Figuren wird die Stimme nacheinander gewechselt. Blockiert.
+     */
+    fun renderAll(context: Context, s: Settings, events: List<SpeechEvent>, timeoutMs: Long = 120_000, onProgress: (Int) -> Unit = {}): Result {
+        val out = arrayOfNulls<VoiceAudio>(events.size)
+        var missing = false
+        var done = 0
+        for (actor in events.map { it.actor }.distinct().sorted()) {
+            val sa = s.forActor(actor)
+            if (!awaitVoice(context, sa, timeoutMs)) {
+                missing = true
+                continue
+            }
+            for ((i, ev) in events.withIndex()) if (ev.actor == actor) {
+                out[i] = render(sa, ev)
+                onProgress(++done)
+            }
+        }
+        return Result(out.toList(), missing)
+    }
+
     /** Wartet (höchstens [timeoutMs]), bis die gewünschte Stimme geladen ist. */
     fun awaitVoice(context: Context, s: Settings, timeoutMs: Long = 120_000): Boolean {
         if (!s.speak || !s.elfVoice) return false

@@ -14,6 +14,8 @@ data class EditState(
     val doorScale: Float = 0.2f,
     val doorHingeLeft: Boolean = true,
     val doorRound: Float = 1f,
+    /** Drehung der Tür um ihren Fußpunkt in Grad */
+    val doorRot: Float = 0f,
     val scenery: List<SceneryItem> = emptyList(),
     val nextId: Int = 1,
     /** Es schneit von Anfang an (die Aktionen „Es schneit“ / „Schnee hört auf“ gehen zusätzlich) */
@@ -100,8 +102,9 @@ object EditOps {
     fun addPath(s: EditState, p: Pt): EditState =
         if (s.path.size >= MAX_WAYPOINTS) s else s.copy(path = s.path + clamp(p))
 
-    fun addStep(s: EditState, action: ElfAction, p: Pt?): EditState =
-        if (s.script.size >= MAX_STEPS) s else s.copy(script = s.script + ScriptStep(action, p?.let { clamp(it) }))
+    /** [who] = welche Figur die Aktion macht (0 = Wichtel, 1 = Elfin); zählt nur, wenn beide auftreten. */
+    fun addStep(s: EditState, action: ElfAction, p: Pt?, who: Int = 0): EditState =
+        if (s.script.size >= MAX_STEPS) s else s.copy(script = s.script + ScriptStep(action, p?.let { clamp(it) }, who = who))
 
     fun addItem(s: EditState, item: SceneryItem): EditState =
         if (s.scenery.size >= MAX_ITEMS) s else s.copy(scenery = s.scenery + item.copy(id = s.nextId, at = clamp(item.at)), nextId = s.nextId + 1)
@@ -109,13 +112,17 @@ object EditOps {
     fun resizeItem(s: EditState, id: Int, scale: Float): EditState =
         s.copy(scenery = s.scenery.map { if (it.id == id) it.copy(scale = scale.coerceIn(0.05f, 0.9f)) else it })
 
-    /** Dreht einen Gegenstand um den Fußpunkt auf [deg] Grad (−180..180). */
-    fun rotateItem(s: EditState, id: Int, deg: Float): EditState {
+    /** Winkel auf −180..180 Grad bringen. */
+    fun wrapDeg(deg: Float): Float {
         var d = deg % 360f
         if (d > 180f) d -= 360f
         if (d < -180f) d += 360f
-        return s.copy(scenery = s.scenery.map { if (it.id == id) it.copy(rot = d) else it })
+        return d
     }
+
+    /** Dreht einen Gegenstand um den Fußpunkt auf [deg] Grad (−180..180). */
+    fun rotateItem(s: EditState, id: Int, deg: Float): EditState =
+        s.copy(scenery = s.scenery.map { if (it.id == id) it.copy(rot = wrapDeg(deg)) else it })
 
     fun flipItem(s: EditState, id: Int): EditState =
         s.copy(scenery = s.scenery.map { if (it.id == id) it.copy(flip = !it.flip) else it })
@@ -159,7 +166,7 @@ object EditOps {
     fun label(s: EditState, sel: Sel): String = when (sel) {
         Sel.Start -> "Startpunkt"
         is Sel.Path -> "Wegpunkt ${sel.index + 1}"
-        is Sel.Step -> "Aktion ${sel.index + 1}: " + (s.script.getOrNull(sel.index)?.action?.label ?: "")
+        is Sel.Step -> "Aktion ${sel.index + 1}: " + (if (s.script.getOrNull(sel.index)?.who == 1) "🧝‍♀️ " else "") + (s.script.getOrNull(sel.index)?.action?.label ?: "")
         Sel.Door -> "Tür"
         is Sel.Item -> s.scenery.firstOrNull { it.id == sel.id }?.type?.label ?: "Gegenstand"
     }
