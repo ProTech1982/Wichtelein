@@ -6,6 +6,7 @@ import app.wichtelein.scene.*
 import app.wichtelein.speech.*
 import app.wichtelein.videoexport.*
 import app.wichtelein.settings.*
+import app.wichtelein.CrashLog
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
