@@ -306,7 +306,7 @@ class ElfEngine(
 
     /** Stellt einen Gegenstand auf: hingehen, hämmern und werkeln, der Gegenstand wächst von unten nach oben. */
     suspend fun doBuild(item: SceneryItem) {
-        walkTo(standBeside(item))
+        walkRoute(standBeside(item))
         val toRight = item.at.x > x
         facing = if (toRight) 1 else -1
         turnTo(if (toRight) 90f else 270f)
@@ -344,7 +344,7 @@ class ElfEngine(
             return
         }
         val stand = standBeside(bed)
-        walkTo(stand)
+        walkRoute(stand)
         val toRight = bed.at.x > x
         facing = if (toRight) 1 else -1
         turnTo(if (toRight) 90f else 270f)
@@ -399,6 +399,45 @@ class ElfEngine(
         pose.spin = 0f
         onItem = -1
         pose.relax()
+    }
+
+    /** Der vom Nutzer gezeichnete Weg (Start + Wegpunkte): Wege zu Zielen führen, wenn möglich, entlang dieses Weges (z. B. die Treppe hoch). */
+    private var route: List<Pt> = emptyList()
+
+    fun configureRoute(points: List<Pt>) {
+        route = points
+    }
+
+    private fun dist(a: Pt, b: Pt): Float {
+        val dx = (a.x - b.x) * aspect
+        val dy = a.y - b.y
+        return kotlin.math.sqrt(dx * dx + dy * dy)
+    }
+
+    /**
+     * Geht zu [target]. Gibt es einen gezeichneten Weg, läuft der Wichtel zum nächsten Wegpunkt, folgt dem Weg bis zum Wegpunkt
+     * nahe am Ziel und geht von dort weiter – statt in gerader Linie durch Wände oder über Treppen zu schweben.
+     */
+    suspend fun walkRoute(target: Pt, speed: Float = 0.30f) {
+        if (route.size < 2) {
+            walkTo(target, speed)
+            return
+        }
+        val here = Pt(x, y)
+        val a = route.indices.minByOrNull { dist(route[it], here) } ?: 0
+        val b = route.indices.minByOrNull { dist(route[it], target) } ?: 0
+        if (a == b) {
+            walkTo(target, speed)
+            return
+        }
+        if (dist(route[a], here) > 0.03f) walkTo(route[a], speed)
+        val step = if (b > a) 1 else -1
+        var i = a
+        while (i != b) {
+            i += step
+            walkTo(route[i], speed)
+        }
+        walkTo(target, speed)
     }
 
     fun configureRoam(points: List<Pt>, aspect: Float) {
@@ -912,7 +951,7 @@ class ElfEngine(
 
     /** Geht zur Tür, öffnet sie, tritt ein und schließt sie von innen. Danach ist der Wichtel im Haus (unsichtbar). */
     suspend fun doEnterHouse(fast: Boolean = false) {
-        walkTo(frontOfDoor())
+        walkRoute(frontOfDoor())
         turnTo(180f) // mit dem Rücken zum Betrachter zur Tür
         say(Lines.doorHome.random(rng))
         openDoor(if (fast) 350 else 900)
@@ -982,7 +1021,7 @@ class ElfEngine(
         if (a == ElfAction.ENTER && inHouse) return
         if (a == ElfAction.EXIT && !inHouse) return
         if (inHouse && a != ElfAction.EXIT) doExitHouse()
-        if (a.needsPoint && step.at != null && a != ElfAction.GIFT) walkTo(step.at)
+        if (a.needsPoint && step.at != null && a != ElfAction.GIFT) walkRoute(step.at)
         when (a) {
             ElfAction.WALK -> Unit
             ElfAction.SWEEP -> {
@@ -1003,7 +1042,7 @@ class ElfEngine(
             ElfAction.BOW -> doBow()
             ElfAction.BED -> doBed(findBed())
             ElfAction.KNOCK -> {
-                walkTo(frontOfDoor())
+                walkRoute(frontOfDoor())
                 doKnock()
             }
             ElfAction.ENTER -> doEnterHouse()

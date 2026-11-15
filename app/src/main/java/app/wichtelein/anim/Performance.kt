@@ -167,6 +167,7 @@ object Recorder {
         )
         engine.configureDoor(req.door, req.doorScale, req.doorHingeLeft, req.doorRound)
         engine.configureScenery(req.scenery)
+        engine.configureRoute(if (req.confineToPoints) listOf(req.start) + req.path else emptyList())
         engine.configureRoam(
             if (req.confineToPoints) listOf(req.start) + req.path + req.script.mapNotNull { it.at } else emptyList(),
             req.aspect,
