@@ -142,27 +142,14 @@ fun DrawScope.drawWichtelFrame(
     }
 
     val text = f.bubble
-    if (text != null && f.visible && f.pose.scale > 0.5f && elfPos != null) {
-        val style = TextStyle(fontSize = (h * 0.027f).toSp(), color = Color(0xFF222222), fontWeight = FontWeight.Medium)
-        val layout = measurer.measure(text, style, constraints = Constraints(maxWidth = (w * 0.62f).toInt().coerceAtLeast(40)))
-        val pad = h * 0.02f
-        val bw = layout.size.width + pad * 2
-        val bh = layout.size.height + pad * 2
-        val elfX = elfPos.x
-        val left = (elfX - bw / 2).coerceIn(8f, (w - bw - 8f).coerceAtLeast(8f))
-        val top = (elfPos.y - elfH * 1.12f - bh - h * 0.015f).coerceAtLeast(8f)
-        val corner = CornerRadius(h * 0.03f)
-        drawRoundRect(Color.White.copy(alpha = 0.96f), Offset(left, top), Size(bw, bh), corner)
-        drawRoundRect(Color(0xFF999999), Offset(left, top), Size(bw, bh), corner, style = Stroke(h * 0.003f))
-        val tailX = elfX.coerceIn(left + 24f, (left + bw - 24f).coerceAtLeast(left + 24f))
-        val tail = Path().apply {
-            moveTo(tailX - h * 0.018f, top + bh - 1f)
-            lineTo(tailX + h * 0.018f, top + bh - 1f)
-            lineTo(elfX.coerceIn(tailX - 30f, tailX + 30f), top + bh + h * 0.022f)
-            close()
-        }
-        drawPath(tail, Color.White.copy(alpha = 0.96f))
-        drawText(layout, topLeft = Offset(left + pad, top + pad))
+    if (text != null && f.bubbleSpec.show && f.visible && f.pose.scale > 0.5f && elfPos != null) {
+        val spec = f.bubbleSpec
+        val style = TextStyle(fontSize = (h * 0.027f * spec.size).toSp(), color = Color(0xFF222222), fontWeight = FontWeight.Medium)
+        // runde Formen brauchen Rand: der Text bekommt weniger Breite
+        val shapeK = if (spec.shape == BubbleShape.ROUNDED || spec.shape == BubbleShape.RECT) 1f else 0.7f
+        val maxW = (w * 0.62f * spec.size.coerceAtMost(1.3f) * shapeK).toInt().coerceIn(40, (w * 0.9f).toInt().coerceAtLeast(41))
+        val layout = measurer.measure(text, style, constraints = Constraints(maxWidth = maxW))
+        drawBubble(layout, spec, elfPos.x, elfPos.y - elfH * 1.12f, w, h)
     }
 }
 

@@ -2,6 +2,7 @@ package app.wichtelein.videoexport
 
 import app.wichtelein.camera.*
 import app.wichtelein.anim.*
+import app.wichtelein.sound.allowsFx
 import app.wichtelein.scene.*
 import app.wichtelein.speech.*
 import app.wichtelein.settings.*
@@ -99,9 +100,10 @@ object ExportManager {
             // Systemstimme (oder Wichtelstimme nicht verfügbar): Sprache über synthesizeToFile erzeugen
             else -> withContext(Dispatchers.Default) { SystemTtsRender.renderAll(app, settings, perf.speech) }
         }
-        val fxSounds = if (settings.soundFx) perf.sounds.filter { it.timeMs < info.durationMs } else emptyList()
-        if (clips.any { it != null } || fxSounds.isNotEmpty()) {
-            val pcm = SpeechMixer.mix(perf.speech, clips, info.durationMs, fxSounds)
+        val fxSounds = perf.sounds.filter { it.timeMs < info.durationMs && settings.allowsFx(it.fx) }
+        val musicPcm = if (settings.music != 0) withContext(Dispatchers.Default) { app.wichtelein.sound.MusicLoader.load(app, settings, info.durationMs) } else null
+        if (clips.any { it != null } || fxSounds.isNotEmpty() || musicPcm != null) {
+            val pcm = SpeechMixer.mix(perf.speech, clips, info.durationMs, fxSounds, musicPcm, settings.musicVolume)
             wav = File(app.cacheDir, "wichtel-sprache.wav").also { it.writeBytes(SpeechMixer.toWav(pcm)) }
             hasSpeech = clips.any { it != null }
         }

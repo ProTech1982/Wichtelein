@@ -165,6 +165,18 @@ class ElfEngine(
     var onItem = -1
         private set
 
+    /** Sprechblase der gerade laufenden Aktion (null = Standard aus den Einstellungen) */
+    private var stepBubble: BubbleSpec? = null
+    private val bubbleSpec: BubbleSpec get() = stepBubble ?: settings().bubble
+
+    /** Geräusche, die zu einem späteren Zeitpunkt gespielt werden (Zeitpunkt der Engine-Uhr, Art, Lautstärke) */
+    private val due = ArrayList<Triple<Float, Fx, Float>>()
+    private var humUntil = 0f
+
+    private fun scheduleFx(delaySec: Float, f: Fx, gain: Float) {
+        due.add(Triple(clock + delaySec, f, gain))
+    }
+
     private var bubbleUntil = 0f
     private var lastAction = -1
     private var lastNanos = 0L
@@ -184,7 +196,7 @@ class ElfEngine(
         x, y, facing, visible, pose.copy(), bubble,
         mess.map { it.copy() }, flying?.copy(), particles.map { it.copy() },
         doorPos, doorScale, doorOpen, doorHingeLeft, doorRound, clock,
-        if (built.isEmpty()) emptyMap() else HashMap(built), onItem,
+        if (built.isEmpty()) emptyMap() else HashMap(built), bubbleSpec, onItem,
     )
 
     // ---------------------------------------------------------------- Takt
@@ -194,6 +206,16 @@ class ElfEngine(
         val dt = if (lastNanos == 0L) 0.033f else ((now - lastNanos) / 1_000_000_000f).coerceIn(0.001f, 0.05f)
         lastNanos = now
         clock += dt
+        if (due.isNotEmpty()) {
+            val it = due.iterator()
+            while (it.hasNext()) {
+                val d = it.next()
+                if (clock >= d.first) {
+                    sfx(d.second, d.third)
+                    it.remove()
+                }
+            }
+        }
         if (bubble != null && clock > bubbleUntil) bubble = null
         pose.talk = if (bubble != null) 0.35f + 0.65f * abs(sin(clock * 14f)) else 0f
         pose.nod = if (bubble != null) 3f * sin(clock * 7f) else 0f
@@ -229,7 +251,15 @@ class ElfEngine(
         }
     }
 
-    suspend fun idle(ms: Long) = anim(ms) { pose.bob = 0.006f * sin(clock * 3f) }
+    suspend fun idle(ms: Long) {
+        // Summen: in längeren Pausen summt der Wichtel eine kleine Weihnachtsmelodie vor sich hin
+        if (settings().hum && ms >= 1800L && clock >= humUntil && rng.nextFloat() < 0.45f) {
+            val tune = listOf(Fx.HUM_TANNE, Fx.HUM_JINGLE, Fx.HUM_NACHT)[rng.nextInt(3)]
+            scheduleFx(0.2f, tune, 0.5f)
+            humUntil = clock + 7f
+        }
+        anim(ms) { pose.bob = 0.006f * sin(clock * 3f) }
+    }
 
     // ---------------------------------------------------------------- Sprechen
 
@@ -244,6 +274,13 @@ class ElfEngine(
         val spoken = SpeechText.prepare(text)
         if (spoken.hiss) sfx(Fx.PSST, 0.35f)
         if (spoken.text.isNotBlank()) speak(spoken.text, mood)
+        // Stimme aus, aber „Summen und Brummen“ an: statt der Sprache brummt der Wichtel eine Silbe pro Wort
+        if (s.hum && !s.speak) {
+            val words = text.split(' ').filter { it.isNotBlank() }.size.coerceIn(1, 14)
+            for (i in 0 until words) {
+                scheduleFx(ms / 1000f * 0.85f * i / words, listOf(Fx.MUMBLE1, Fx.MUMBLE2, Fx.MUMBLE3)[rng.nextInt(3)], 0.7f)
+            }
+        }
         return ms
     }
 
@@ -1031,6 +1068,15 @@ class ElfEngine(
 
     /** Führt einen Aktionspunkt aus: erst hingehen, dann die Aktion. */
     suspend fun runStep(step: ScriptStep) {
+        stepBubble = step.bubble
+        try {
+            runStepInner(step)
+        } finally {
+            stepBubble = null
+        }
+    }
+
+    private suspend fun runStepInner(step: ScriptStep) {
         val a = step.action
         if (inHouse && a != ElfAction.EXIT) doExitHouse()
         if (a.needsPoint && step.at != null && a != ElfAction.GIFT) walkRoute(step.at)

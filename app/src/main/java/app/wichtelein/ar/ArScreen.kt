@@ -58,6 +58,7 @@ import app.wichtelein.anim.Pt
 import app.wichtelein.anim.Recorder
 import app.wichtelein.anim.drawWichtelFrame
 import app.wichtelein.anim.rememberElfFigure
+import app.wichtelein.sound.allowsFx
 import app.wichtelein.scene.Category
 import app.wichtelein.settings.Settings
 import app.wichtelein.speech.Speaker
@@ -156,7 +157,7 @@ private fun ArContent(activity: Activity, settings: Settings, onSettings: (Setti
     DisposableEffect(Unit) { onDispose { speaker.shutdown() } }
     SideEffect {
         speaker.enabled = settings.speak
-        fxPlayer.enabled = settings.soundFx
+        fxPlayer.enabled = settings.soundFx || settings.hum
         speaker.effect = settings.effect
         speaker.rate = settings.rate
         speaker.mood = settings.mood
@@ -276,7 +277,7 @@ private fun ArContent(activity: Activity, settings: Settings, onSettings: (Setti
                 }
             }
             for (fe in p.sounds) {
-                if (fe.timeMs > last && fe.timeMs <= inLoop) fxPlayer.play(fe.fx, fe.gain)
+                if (fe.timeMs > last && fe.timeMs <= inLoop && latest.allowsFx(fe.fx)) fxPlayer.play(fe.fx, fe.gain)
             }
             last = inLoop
             elapsedMs = inLoop

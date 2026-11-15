@@ -79,10 +79,13 @@ object SpeechMixer {
         clips: List<VoiceAudio?>,
         durationMs: Long,
         sounds: List<app.wichtelein.sound.SoundEvent> = emptyList(),
+        music: FloatArray? = null,
+        musicVolume: Float = 0.35f,
     ): ShortArray {
         val total = (durationMs * SAMPLE_RATE / 1000L).toInt()
         val acc = FloatArray(total)
         app.wichtelein.sound.SoundMixer.mixInto(acc, sounds, FX_VOLUME)
+        if (music != null) app.wichtelein.sound.MusicMixer.mixInto(acc, music, musicVolume)
         for ((i, ev) in events.withIndex()) {
             val clip = clips.getOrNull(i) ?: continue
             val start = (ev.timeMs * SAMPLE_RATE / 1000L).toInt()

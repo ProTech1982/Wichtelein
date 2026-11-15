@@ -44,7 +44,8 @@ enum class ElfAction(val label: String, val emoji: String, val needsDoor: Boolea
 }
 
 /** Ein Aktionspunkt im Bild: [action] wird an der Stelle [at] ausgeführt (bei Türaktionen ohne Stelle). */
-data class ScriptStep(val action: ElfAction, val at: Pt? = null)
+/** [bubble] = eigene Sprechblase für diese Aktion (null = die Standardeinstellung). */
+data class ScriptStep(val action: ElfAction, val at: Pt? = null, val bubble: BubbleSpec? = null)
 
 /** Liefert der Engine den Takt. Beim Aufnehmen ist das eine virtuelle Uhr, kein echter Bildschirm-Takt. */
 interface Ticker {
@@ -91,6 +92,8 @@ class FrameState(
     val timeSec: Float = 0f,
     /** Aufbaufortschritt (0..1) der Gegenstände nach Nummer; fehlt eine Nummer, steht der Gegenstand noch nicht */
     val built: Map<Int, Float> = emptyMap(),
+    /** Form, Größe und Sichtbarkeit der Sprechblase in diesem Moment */
+    val bubbleSpec: BubbleSpec = BubbleSpec(),
     /** Gegenstand, auf dem der Wichtel gerade liegt (er wird dann hinter ihm gezeichnet), sonst -1 */
     val onItem: Int = -1,
 )

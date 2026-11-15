@@ -111,11 +111,25 @@ fun SettingsScreen(
         Section("Gegenstände: Farbe und Licht")
         SceneryStyles(settings, onChange)
 
+        Section("Sprechblase (Standard)")
+        Text("Gilt für alle Aktionen. Im Editor lässt sich für jede Aktion eine eigene Blase einstellen.", fontSize = 12.sp, color = Color.Gray)
+        BubbleControls(settings.bubble, { onChange(settings.copy(bubble = it)) })
+
         Section("Geräusche")
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Text("Weihnachtsgeräusche (Glöckchen, Tür, Besen, Klopfen)")
             Switch(checked = settings.soundFx, onCheckedChange = { onChange(settings.copy(soundFx = it)) })
         }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Summen und Brummen", modifier = Modifier.weight(1f))
+            Switch(checked = settings.hum, onCheckedChange = { onChange(settings.copy(hum = it)) })
+        }
+        Text(
+            "Ist die Stimme aus, brummt der Wichtel statt zu sprechen. Ist sie an, summt er in den Pausen kleine Weihnachtsmelodien dazu. " +
+                "Beides lässt sich mit Stimme und Effekt kombinieren.",
+            fontSize = 12.sp,
+            color = Color.Gray,
+        )
 
         Section("Eigene Sätze")
         OutlinedTextField(

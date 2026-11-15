@@ -91,6 +91,10 @@ object EditOps {
         is Sel.Item -> s.scenery.firstOrNull { it.id == sel.id }?.at
     }
 
+    /** Eigene Sprechblase für die Aktion Nummer [index] (null = Standard). */
+    fun setBubble(s: EditState, index: Int, spec: app.wichtelein.anim.BubbleSpec?): EditState =
+        if (index !in s.script.indices) s else s.copy(script = s.script.toMutableList().also { it[index] = it[index].copy(bubble = spec) })
+
     fun addPath(s: EditState, p: Pt): EditState =
         if (s.path.size >= MAX_WAYPOINTS) s else s.copy(path = s.path + clamp(p))
 

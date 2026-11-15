@@ -11,7 +11,7 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 /** Geräusche, die der Wichtel macht. Alle werden selbst erzeugt (keine fremden Klangdateien, keine Lizenzfragen). */
-enum class Fx(val label: String) {
+enum class Fx(val label: String, val voiceLike: Boolean = false) {
     /** Glöckchen an der Mütze: kurzes Klingeln */
     JINGLE("Glöckchen"),
     /** einzelner heller Glockenton */
@@ -46,9 +46,20 @@ enum class Fx(val label: String) {
     SNORE("Schnarchen"),
     /** „Psst“: kurzes Zischen */
     PSST("Psst"),
+    /** Brummen statt Sprechen: drei verschiedene Silben */
+    MUMBLE1("Brummen 1", true),
+    MUMBLE2("Brummen 2", true),
+    MUMBLE3("Brummen 3", true),
+    /** Summen kleiner Weihnachtsmelodien */
+    HUM_TANNE("Summen: O Tannenbaum", true),
+    HUM_JINGLE("Summen: Jingle Bells", true),
+    HUM_NACHT("Summen: Stille Nacht", true),
 }
 
 class SoundEvent(val timeMs: Long, val fx: Fx, val gain: Float = 1f)
+
+/** Darf dieses Geräusch gespielt werden? Weihnachtsgeräusche mit „Geräusche“, Brummen und Summen mit „Summen und Brummen“. */
+fun app.wichtelein.settings.Settings.allowsFx(fx: Fx): Boolean = soundFx || (hum && fx.voiceLike)
 
 /** Erzeugt die Geräusche als Rohdaten (Mono, [SAMPLE_RATE] Hz, Werte -1..1). Gleiche Eingabe ergibt gleiche Klänge. */
 object SoundSynth {
@@ -108,6 +119,44 @@ object SoundSynth {
             val t = i.toFloat() / SAMPLE_RATE
             out[s0 + i] += amp * sin(2.0 * PI * freq * t).toFloat() * exp(-decay * t)
         }
+    }
+
+    /** Eine gebrummte Silbe: tiefer, leicht fallender Ton mit Obertönen und Zittern („brumm“). */
+    private fun mumble(out: FloatArray, f0: Float, durSec: Float, rng: Random) {
+        val len = n(durSec)
+        var ph = 0.0
+        for (i in 0 until min(len, out.size)) {
+            val u = i.toFloat() / len
+            val f = f0 * (1.08f - 0.22f * u) * (1f + 0.012f * sin(2.0 * PI * 24.0 * i / SAMPLE_RATE).toFloat())
+            ph += 2.0 * PI * f / SAMPLE_RATE
+            val v = sin(ph).toFloat() + 0.55f * sin(2 * ph).toFloat() + 0.3f * sin(3 * ph).toFloat()
+            val env = min(1f, u * 14f) * (1f - u).coerceAtLeast(0f).pow(0.8f)
+            out[i] += 0.35f * env * v * (0.75f + 0.25f * sin(2.0 * PI * 30.0 * i / SAMPLE_RATE).toFloat())
+        }
+    }
+
+    /** Gesummte Melodie: weicher Ton mit leichtem Vibrato, Länge je Note in Schlägen. */
+    private fun humTune(freqs: FloatArray, beats: FloatArray, beatSec: Float): FloatArray {
+        val total = beats.sum() * beatSec + 0.25f
+        val out = FloatArray(n(total))
+        var t = 0f
+        for (k in freqs.indices) {
+            val dur = beats[k] * beatSec
+            val s0 = n(t)
+            val len = min(n(dur * 0.97f + 0.06f), out.size - s0)
+            var ph = 0.0
+            for (i in 0 until len) {
+                val tt = i.toFloat() / SAMPLE_RATE
+                val f = freqs[k] * (1f + 0.009f * sin(2.0 * PI * 5.2 * tt).toFloat())
+                ph += 2.0 * PI * f / SAMPLE_RATE
+                val v = sin(ph).toFloat() + 0.32f * sin(2 * ph).toFloat() + 0.1f * sin(3 * ph).toFloat()
+                val attack = min(1f, tt / 0.05f)
+                val release = min(1f, ((len - i).toFloat() / SAMPLE_RATE) / 0.08f)
+                out[s0 + i] += 0.3f * attack * release * v
+            }
+            t += dur
+        }
+        return out
     }
 
     private fun render(fx: Fx): FloatArray {
@@ -195,6 +244,12 @@ object SoundSynth {
                     o[s0 + i] += 0.5f * env * saw * (0.65f + 0.35f * sin(u * 120f)) + 0.15f * env * (rng.nextFloat() * 2f - 1f)
                 }
             }
+            Fx.MUMBLE1 -> FloatArray(n(0.4f)).also { o -> mumble(o, 118f, 0.26f, rng) }
+            Fx.MUMBLE2 -> FloatArray(n(0.45f)).also { o -> mumble(o, 148f, 0.30f, rng) }
+            Fx.MUMBLE3 -> FloatArray(n(0.5f)).also { o -> mumble(o, 98f, 0.34f, rng) }
+            Fx.HUM_TANNE -> humTune(floatArrayOf(293.7f, 392f, 392f, 392f, 440f, 493.9f, 493.9f, 493.9f, 440f, 392f), floatArrayOf(0.5f, 0.75f, 0.25f, 1f, 0.5f, 0.75f, 0.25f, 1f, 0.5f, 1.5f), 0.3f)
+            Fx.HUM_JINGLE -> humTune(floatArrayOf(329.6f, 329.6f, 329.6f, 329.6f, 329.6f, 329.6f, 329.6f, 392f, 261.6f, 293.7f, 329.6f), floatArrayOf(0.5f, 0.5f, 1f, 0.5f, 0.5f, 1f, 0.5f, 0.5f, 0.75f, 0.25f, 2f), 0.26f)
+            Fx.HUM_NACHT -> humTune(floatArrayOf(392f, 440f, 392f, 329.6f, 392f, 440f, 392f, 329.6f, 587.3f, 587.3f, 493.9f), floatArrayOf(0.75f, 0.25f, 0.5f, 1.5f, 0.75f, 0.25f, 0.5f, 1.5f, 1f, 0.5f, 1.5f), 0.4f)
             Fx.PSST -> FloatArray(n(0.7f)).also { o ->
                 // leises, weiches Zischen (geflüstert): sanft ein- und ausblenden
                 noise(o, 0.02f, 0.58f, 0.32f, 0.3f, rng) { u -> (sin(u * PI).toFloat()).pow(1.1f) }

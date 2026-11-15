@@ -7,6 +7,7 @@ import app.wichtelein.speech.*
 import app.wichtelein.videoexport.*
 import app.wichtelein.settings.*
 import app.wichtelein.sound.SoundPlayer
+import app.wichtelein.sound.allowsFx
 
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -79,7 +80,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Werkzeuge des Editors: was ein Tippen ins Bild bewirkt. */
-enum class Tool { START, PATH, ACTION, DOOR, OBJECTS, SCENE }
+enum class Tool { START, PATH, ACTION, DOOR, OBJECTS, MUSIC, SCENE }
 
 private val Hint = Color(0xFFCCCCCC)
 private val Warn = Color(0xFFFFE08A)
@@ -115,7 +116,7 @@ fun EditorScreen(
     DisposableEffect(Unit) { onDispose { speaker.shutdown() } }
     SideEffect {
         speaker.enabled = settings.speak
-        fxPlayer.enabled = settings.soundFx
+        fxPlayer.enabled = settings.soundFx || settings.hum
         speaker.effect = settings.effect
         speaker.rate = settings.rate
         speaker.mood = settings.mood
@@ -134,6 +135,44 @@ fun EditorScreen(
     var objType by remember { mutableStateOf(SceneryType.TREE) }
     var sliderBase by remember { mutableStateOf<EditState?>(null) }
     var fine by remember { mutableStateOf(false) }
+
+    // Hintergrundmusik: eingebaute Melodien oder eigene Datei (MP3 …); läuft in der Vorschau als Schleife, im Video mit Ausblenden am Ende
+    val musicPlayer = remember { app.wichtelein.sound.MusicPlayer() }
+    DisposableEffect(Unit) { onDispose { musicPlayer.stop() } }
+    var musicVersion by remember { mutableIntStateOf(0) }
+    LaunchedEffect(settings.music, musicVersion) {
+        if (settings.music == 0) {
+            musicPlayer.stop()
+        } else {
+            val pcm = withContext(Dispatchers.Default) { app.wichtelein.sound.MusicLoader.load(context, latestSettings, 90_000L) }
+            if (pcm != null) musicPlayer.play(pcm, latestSettings.musicVolume) else musicPlayer.stop()
+        }
+    }
+    LaunchedEffect(settings.musicVolume) { musicPlayer.setVolume(settings.musicVolume) }
+    val musicPicker = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            scope.launch {
+                var name = "Eigene Musik"
+                val ok = withContext(Dispatchers.IO) {
+                    try {
+                        context.contentResolver.query(uri, null, null, null, null)?.use { c ->
+                            val i = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                            if (i >= 0 && c.moveToFirst()) name = c.getString(i) ?: name
+                        }
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            app.wichtelein.sound.MusicLoader.customFile(context).outputStream().use { input.copyTo(it) }
+                        } != null
+                    } catch (_: Exception) {
+                        false
+                    }
+                }
+                if (ok) {
+                    musicVersion++
+                    onSettings(latestSettings.copy(music = app.wichtelein.sound.MusicChoice.CUSTOM, musicName = name))
+                }
+            }
+        }
+    }
 
     fun commit(n: EditState) {
         if (n != st) {
@@ -261,10 +300,8 @@ fun EditorScreen(
             posMs = pos
             val p = perf ?: continue
             if (pos < last - 400) last = -1L
-            if (latestSettings.soundFx) {
-                for (fe in p.sounds) {
-                    if (fe.timeMs > last && fe.timeMs <= pos) fxPlayer.play(fe.fx, fe.gain)
-                }
+            for (fe in p.sounds) {
+                if (fe.timeMs > last && fe.timeMs <= pos && latestSettings.allowsFx(fe.fx)) fxPlayer.play(fe.fx, fe.gain)
             }
             for ((i, ev) in p.speech.withIndex()) {
                 if (ev.timeMs > last && ev.timeMs <= pos) {
@@ -293,6 +330,7 @@ fun EditorScreen(
         Tool.ACTION -> setOf(SelKind.STEP)
         Tool.DOOR -> setOf(SelKind.DOOR)
         Tool.OBJECTS -> setOf(SelKind.ITEM)
+        Tool.MUSIC -> emptySet()
         Tool.SCENE -> emptySet()
     }
 
@@ -342,7 +380,7 @@ fun EditorScreen(
                     sel = Sel.Item(n.nextId - 1)
                 }
             }
-            Tool.SCENE -> sel = null
+            Tool.SCENE, Tool.MUSIC -> sel = null
         }
     }
 
@@ -480,6 +518,7 @@ fun EditorScreen(
                 FilterChip(selected = tool == Tool.ACTION, onClick = { selectTool(Tool.ACTION) }, label = { Text("🎯 Aktionen (${st.script.size})") })
                 FilterChip(selected = tool == Tool.DOOR, onClick = { selectTool(Tool.DOOR) }, label = { Text(if (st.door == null) "🚪 Tür" else "🚪 Tür ✓") })
                 FilterChip(selected = tool == Tool.OBJECTS, onClick = { selectTool(Tool.OBJECTS) }, label = { Text("🎄 Objekte (${st.scenery.size})") })
+                FilterChip(selected = tool == Tool.MUSIC, onClick = { selectTool(Tool.MUSIC) }, label = { Text("🎵 Musik") })
                 FilterChip(selected = tool == Tool.SCENE, onClick = { selectTool(Tool.SCENE) }, label = { Text("🎬 Szene") })
             }
 
@@ -567,6 +606,18 @@ fun EditorScreen(
                     if (action.needsDoor && st.door == null) {
                         Text("Setze zuerst die Tür (Chip „🚪 Tür“), dann lässt sich diese Aktion hinzufügen.", color = Warn, fontSize = 12.sp)
                     }
+                    // Sprechblase der ausgewählten Aktion
+                    val selStep = (sel as? Sel.Step)?.index?.takeIf { it in st.script.indices }
+                    if (selStep != null) {
+                        val own = st.script[selStep].bubble
+                        Text("Sprechblase dieser Aktion${if (own == null) " (Standard)" else ""}", color = Color(0xFF80D8FF), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        BubbleControls(
+                            spec = own ?: settings.bubble,
+                            onChange = { commit(EditOps.setBubble(st, selStep, it)) },
+                            light = true,
+                            onReset = if (own != null) ({ commit(EditOps.setBubble(st, selStep, null)) }) else null,
+                        )
+                    }
                     if (st.script.isNotEmpty()) {
                         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             st.script.forEachIndexed { i, step ->
@@ -629,6 +680,31 @@ fun EditorScreen(
                                 FilterChip(selected = sel == Sel.Item(it2.id), onClick = { sel = Sel.Item(it2.id) }, label = { Text("${it2.type.emoji} ${it2.type.label}") })
                             }
                             TextButton(onClick = { commit(st.copy(scenery = emptyList())); fixSelection() }) { Text("Alle entfernen") }
+                        }
+                    }
+                }
+                Tool.MUSIC -> {
+                    Text(
+                        "Hintergrundmusik für das Video: eine der kleinen Melodien oder eine eigene Datei (z. B. MP3). Sie läuft hier in der Vorschau, " +
+                            "wiederholt sich im Video und wird am Ende ausgeblendet.",
+                        color = Hint,
+                        fontSize = 12.sp,
+                    )
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = settings.music == 0, onClick = { onSettings(settings.copy(music = 0)) }, label = { Text("🔇 Aus") })
+                        app.wichtelein.sound.MusicTrack.values().forEachIndexed { i, t ->
+                            FilterChip(selected = settings.music == i + 1, onClick = { onSettings(settings.copy(music = i + 1)) }, label = { Text("🎶 ${t.label}") })
+                        }
+                        FilterChip(
+                            selected = settings.music == app.wichtelein.sound.MusicChoice.CUSTOM,
+                            onClick = { musicPicker.launch("audio/*") },
+                            label = { Text(if (settings.music == app.wichtelein.sound.MusicChoice.CUSTOM && settings.musicName.isNotBlank()) "📂 ${settings.musicName}" else "📂 Eigene Datei …") },
+                        )
+                    }
+                    if (settings.music != 0) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Lautstärke ${(settings.musicVolume * 100).toInt()} %", color = Color.White, fontSize = 13.sp)
+                            Slider(value = settings.musicVolume, onValueChange = { onSettings(settings.copy(musicVolume = it)) }, valueRange = 0f..1f, modifier = Modifier.weight(1f))
                         }
                     }
                 }

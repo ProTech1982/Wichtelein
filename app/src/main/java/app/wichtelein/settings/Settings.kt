@@ -33,6 +33,15 @@ data class Settings(
     val elfVoice: Boolean = true,
     val rate: Float = 1.0f,
     val mood: Int = Mood.NEUTRAL,
+    /** Standard-Sprechblase (Anzeigen, Form, Größe); einzelne Aktionen können eine eigene haben */
+    val bubble: app.wichtelein.anim.BubbleSpec = app.wichtelein.anim.BubbleSpec(),
+    /** Hintergrundmusik: 0 = aus, 1..4 = eingebaute Melodie, 5 = eigene Datei */
+    val music: Int = 0,
+    val musicVolume: Float = 0.35f,
+    /** Anzeigename der eigenen Musikdatei */
+    val musicName: String = "",
+    /** Summen und Brummen: statt der Stimme (Stimme aus) oder zusätzlich (kleine Weihnachtsmelodien in Pausen) */
+    val hum: Boolean = false,
     /** Farbe und Licht je Art von Gegenstand (Schlüssel = SceneryType.id) */
     val sceneryStyles: Map<String, app.wichtelein.anim.SceneryStyle> = emptyMap(),
     /** Perspektive im Bild: 1 = weiter oben kleiner, 0 = überall gleich groß */
@@ -102,6 +111,15 @@ object SettingsStore {
             soundFx = p.getBoolean("soundFx", d.soundFx),
             figure3d = p.getBoolean("figure3d", d.figure3d),
             perspective = p.getFloat("perspective", d.perspective),
+            bubble = app.wichtelein.anim.BubbleSpec(
+                show = p.getBoolean("bubbleShow", true),
+                shape = app.wichtelein.anim.BubbleShape.values().getOrElse(p.getInt("bubbleShape", 0)) { app.wichtelein.anim.BubbleShape.ROUNDED },
+                size = p.getFloat("bubbleSize", 1f).coerceIn(app.wichtelein.anim.BubbleSpec.MIN_SIZE, app.wichtelein.anim.BubbleSpec.MAX_SIZE),
+            ),
+            hum = p.getBoolean("hum", d.hum),
+            music = p.getInt("music", d.music),
+            musicVolume = p.getFloat("musicVolume", d.musicVolume).coerceIn(0f, 1f),
+            musicName = p.getString("musicName", "") ?: "",
             sceneryStyles = app.wichtelein.anim.SceneryPalette.decode(p.getString("sceneryStyles", "")),
             disabledScenes = (p.getStringSet("disabledScenes", emptySet()) ?: emptySet()).toSet(),
         )
@@ -128,6 +146,13 @@ object SettingsStore {
             .putBoolean("soundFx", s.soundFx)
             .putBoolean("figure3d", s.figure3d)
             .putFloat("perspective", s.perspective)
+            .putBoolean("bubbleShow", s.bubble.show)
+            .putInt("bubbleShape", s.bubble.shape.ordinal)
+            .putFloat("bubbleSize", s.bubble.size)
+            .putBoolean("hum", s.hum)
+            .putInt("music", s.music)
+            .putFloat("musicVolume", s.musicVolume)
+            .putString("musicName", s.musicName)
             .putString("sceneryStyles", app.wichtelein.anim.SceneryPalette.encode(s.sceneryStyles))
             .putStringSet("disabledScenes", s.disabledScenes)
             .apply()

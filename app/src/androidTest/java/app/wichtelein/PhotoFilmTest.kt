@@ -187,4 +187,36 @@ class PhotoFilmTest {
         val d = readVideoInfo(files[0]).durationMs
         assertTrue("Länge ergibt sich aus den Aktionspunkten: $d", d in 6_000L..59_000L)
     }
+
+    /** Nur Musik (keine Stimme, keine Geräusche): das Video hat trotzdem eine Tonspur; die Datei lässt sich zurücklesen und als „eigene Musik“ benutzen. */
+    @Test fun photoFilmWithOnlyMusicHasAnAudioTrackAndTheDecoderReadsIt() {
+        val photo = makePhoto(640, 360, "musik_foto.jpg")
+        ExportManager.exportsDir(ctx).listFiles()?.forEach { it.delete() }
+        val settings = Settings(elfName = "Pippo", onboarded = true, speak = false, soundFx = false, music = 2, musicVolume = 0.5f).withProfile("Max")
+        val perf = Recorder.record(
+            PerfRequest(
+                start = Pt(0.5f, 0.8f), sizeScale = 0.4f, seed = 3L, durationMs = 60_000L, settings = settings,
+                script = listOf(ScriptStep(ElfAction.WAVE, Pt(0.5f, 0.8f))), stopAfterScript = true,
+            ),
+        )
+        val info = VideoInfo(640, 360, perf.durationMs)
+        val out = runBlocking { ExportManager.export(ctx, photo, info, perf, settings, isPhoto = true, onProgress = {}) }.file
+        val ex = MediaExtractor()
+        ex.setDataSource(out.absolutePath)
+        val mimes = (0 until ex.trackCount).map { ex.getTrackFormat(it).getString(android.media.MediaFormat.KEY_MIME) ?: "" }
+        ex.release()
+        assertTrue("keine Tonspur durch die Musik: $mimes", mimes.any { it.startsWith("audio/") })
+
+        // Der Decoder liest die Tonspur (AAC) als Mono-Rohdaten
+        val pcm = app.wichtelein.sound.AudioDecoder.decode(out.absolutePath, 30)
+        assertTrue("Decoder liefert nichts", pcm != null && pcm.size > 2 * 44100)
+        assertTrue("Musik zu leise: ${pcm!!.maxOf { abs(it) }}", pcm.maxOf { abs(it) } > 0.02f)
+
+        // …und als eigene Musik nutzbar (MP3/AAC-Datei kopiert)
+        out.copyTo(app.wichtelein.sound.MusicLoader.customFile(ctx), overwrite = true)
+        val custom = app.wichtelein.sound.MusicLoader.load(ctx, settings.copy(music = app.wichtelein.sound.MusicChoice.CUSTOM), 20_000L)
+        assertTrue("eigene Musik nicht geladen", custom != null && custom.size > 44100)
+        app.wichtelein.sound.MusicLoader.customFile(ctx).delete()
+        assertTrue(app.wichtelein.sound.MusicLoader.load(ctx, settings.copy(music = app.wichtelein.sound.MusicChoice.CUSTOM), 20_000L) == null)
+    }
 }
