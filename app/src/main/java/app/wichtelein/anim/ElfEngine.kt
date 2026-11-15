@@ -174,7 +174,7 @@ class ElfEngine(
     fun snapshot() = FrameState(
         x, y, facing, visible, pose.copy(), bubble,
         mess.map { it.copy() }, flying?.copy(), particles.map { it.copy() },
-        doorPos, doorScale, doorOpen, doorHingeLeft, doorRound,
+        doorPos, doorScale, doorOpen, doorHingeLeft, doorRound, clock,
     )
 
     // ---------------------------------------------------------------- Takt

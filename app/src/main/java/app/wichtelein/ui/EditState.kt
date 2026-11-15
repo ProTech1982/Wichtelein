@@ -1,0 +1,165 @@
+package app.wichtelein.ui
+
+import app.wichtelein.anim.ElfAction
+import app.wichtelein.anim.Pt
+import app.wichtelein.anim.SceneryItem
+import app.wichtelein.anim.ScriptStep
+
+/** Alles, was man im Editor platzieren kann (ohne die Auswahl der Szene): Start, Weg, Aktionspunkte, Tür, Gegenstände. */
+data class EditState(
+    val start: Pt? = null,
+    val path: List<Pt> = emptyList(),
+    val script: List<ScriptStep> = emptyList(),
+    val door: Pt? = null,
+    val doorScale: Float = 0.2f,
+    val doorHingeLeft: Boolean = true,
+    val doorRound: Float = 1f,
+    val scenery: List<SceneryItem> = emptyList(),
+    val nextId: Int = 1,
+)
+
+/** Was gerade ausgewählt ist (zum Verschieben, Löschen, Größe ändern). */
+sealed interface Sel {
+    object Start : Sel
+    data class Path(val index: Int) : Sel
+    data class Step(val index: Int) : Sel
+    object Door : Sel
+    data class Item(val id: Int) : Sel
+}
+
+object EditOps {
+    const val MAX_WAYPOINTS = 12
+    const val MAX_STEPS = 24
+    const val MAX_ITEMS = 24
+    const val MIN_Y = 0.4f
+
+    fun clamp(p: Pt) = Pt(p.x.coerceIn(0.03f, 0.97f), p.y.coerceIn(MIN_Y, 0.96f))
+
+    fun contains(s: EditState, sel: Sel): Boolean = when (sel) {
+        Sel.Start -> s.start != null
+        is Sel.Path -> sel.index in s.path.indices
+        is Sel.Step -> sel.index in s.script.indices && s.script[sel.index].at != null
+        Sel.Door -> s.door != null
+        is Sel.Item -> s.scenery.any { it.id == sel.id }
+    }
+
+    /** Verschiebt den ausgewählten Punkt an die neue Stelle [p]. */
+    fun move(s: EditState, sel: Sel, p: Pt): EditState {
+        val q = clamp(p)
+        return when (sel) {
+            Sel.Start -> s.copy(start = q)
+            is Sel.Path -> if (sel.index in s.path.indices) s.copy(path = s.path.toMutableList().also { it[sel.index] = q }) else s
+            is Sel.Step -> if (contains(s, sel)) s.copy(script = s.script.toMutableList().also { it[sel.index] = it[sel.index].copy(at = q) }) else s
+            Sel.Door -> if (s.door != null) s.copy(door = q) else s
+            is Sel.Item -> s.copy(scenery = s.scenery.map { if (it.id == sel.id) it.copy(at = q) else it })
+        }
+    }
+
+    /** Entfernt den ausgewählten Punkt oder Gegenstand. */
+    fun remove(s: EditState, sel: Sel): EditState = when (sel) {
+        Sel.Start -> s.copy(start = null)
+        is Sel.Path -> if (sel.index in s.path.indices) s.copy(path = s.path.filterIndexed { i, _ -> i != sel.index }) else s
+        is Sel.Step -> if (sel.index in s.script.indices) s.copy(script = s.script.filterIndexed { i, _ -> i != sel.index }) else s
+        Sel.Door -> s.copy(door = null)
+        is Sel.Item -> s.copy(scenery = s.scenery.filter { it.id != sel.id })
+    }
+
+    /** Aktuelle Stelle des Ausgewählten. */
+    fun position(s: EditState, sel: Sel): Pt? = when (sel) {
+        Sel.Start -> s.start
+        is Sel.Path -> s.path.getOrNull(sel.index)
+        is Sel.Step -> s.script.getOrNull(sel.index)?.at
+        Sel.Door -> s.door
+        is Sel.Item -> s.scenery.firstOrNull { it.id == sel.id }?.at
+    }
+
+    fun addPath(s: EditState, p: Pt): EditState =
+        if (s.path.size >= MAX_WAYPOINTS) s else s.copy(path = s.path + clamp(p))
+
+    fun addStep(s: EditState, action: ElfAction, p: Pt?): EditState =
+        if (s.script.size >= MAX_STEPS) s else s.copy(script = s.script + ScriptStep(action, p?.let { clamp(it) }))
+
+    fun addItem(s: EditState, item: SceneryItem): EditState =
+        if (s.scenery.size >= MAX_ITEMS) s else s.copy(scenery = s.scenery + item.copy(id = s.nextId, at = clamp(item.at)), nextId = s.nextId + 1)
+
+    fun resizeItem(s: EditState, id: Int, scale: Float): EditState =
+        s.copy(scenery = s.scenery.map { if (it.id == id) it.copy(scale = scale.coerceIn(0.05f, 0.9f)) else it })
+
+    fun flipItem(s: EditState, id: Int): EditState =
+        s.copy(scenery = s.scenery.map { if (it.id == id) it.copy(flip = !it.flip) else it })
+
+    /**
+     * Was liegt an der Stelle ([x], [y] relativ zum Bild)? Punkte haben den Fangradius ([rx], [ry]); Gegenstände und die Tür
+     * werden über ihr Rechteck getroffen ([itemBox] liefert Breite und Höhe relativ zum Bild, [doorBox] ebenso). Kleine Dinge
+     * (Aktionspunkte, Wegpunkte, Start) gehen vor Gegenständen, damit man sie auch vor einem großen Baum noch anfassen kann.
+     */
+    fun hit(
+        s: EditState,
+        x: Float,
+        y: Float,
+        rx: Float,
+        ry: Float,
+        itemBox: (SceneryItem) -> Pair<Float, Float>,
+        doorBox: Pair<Float, Float>?,
+    ): Sel? {
+        fun near(p: Pt): Boolean {
+            val dx = (p.x - x) / rx
+            val dy = (p.y - y) / ry
+            return dx * dx + dy * dy <= 1f
+        }
+        for (i in s.script.indices.reversed()) if (s.script[i].at?.let { near(it) } == true) return Sel.Step(i)
+        for (i in s.path.indices.reversed()) if (near(s.path[i])) return Sel.Path(i)
+        s.start?.let { if (near(it)) return Sel.Start }
+        for (item in s.scenery.reversed()) {
+            val (w, h) = itemBox(item)
+            if (x >= item.at.x - w / 2 && x <= item.at.x + w / 2 && y >= item.at.y - h && y <= item.at.y + 0.02f) return Sel.Item(item.id)
+        }
+        val d = s.door
+        if (d != null && doorBox != null) {
+            val (w, h) = doorBox
+            if (x >= d.x - w / 2 && x <= d.x + w / 2 && y >= d.y - h && y <= d.y + 0.02f) return Sel.Door
+        }
+        return null
+    }
+
+    fun label(s: EditState, sel: Sel): String = when (sel) {
+        Sel.Start -> "Startpunkt"
+        is Sel.Path -> "Wegpunkt ${sel.index + 1}"
+        is Sel.Step -> "Aktion ${sel.index + 1}: " + (s.script.getOrNull(sel.index)?.action?.label ?: "")
+        Sel.Door -> "Tür"
+        is Sel.Item -> s.scenery.firstOrNull { it.id == sel.id }?.type?.label ?: "Gegenstand"
+    }
+}
+
+/** Rückgängig / Wiederholen für den Editor. */
+class EditHistory(private val limit: Int = 80) {
+    private val undoStack = ArrayList<EditState>()
+    private val redoStack = ArrayList<EditState>()
+
+    val canUndo: Boolean get() = undoStack.isNotEmpty()
+    val canRedo: Boolean get() = redoStack.isNotEmpty()
+
+    /** Merkt [old] als Stand, zu dem „Rückgängig“ zurückkehrt; löscht die Wiederholen-Liste. */
+    fun push(old: EditState) {
+        undoStack.add(old)
+        if (undoStack.size > limit) undoStack.removeAt(0)
+        redoStack.clear()
+    }
+
+    /** Nimmt den zuletzt gemerkten Stand wieder weg (z. B. wenn ein Ziehen nichts verändert hat). */
+    fun discardLast() {
+        if (undoStack.isNotEmpty()) undoStack.removeAt(undoStack.lastIndex)
+    }
+
+    fun undo(current: EditState): EditState? {
+        if (undoStack.isEmpty()) return null
+        redoStack.add(current)
+        return undoStack.removeAt(undoStack.lastIndex)
+    }
+
+    fun redo(current: EditState): EditState? {
+        if (redoStack.isEmpty()) return null
+        undoStack.add(current)
+        return redoStack.removeAt(redoStack.lastIndex)
+    }
+}

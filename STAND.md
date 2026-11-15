@@ -4,7 +4,13 @@ Auftrag: Wichtelein fertig bauen wie in `Prompt.txt` (Downloads, gehört zu eine
 Gebaut wird nur in GitHub Actions (kein Android-SDK lokal). Release = Push auf main (android.yml, Tag build-N).
 Entwicklungszweige per `gh workflow run ci.yml --ref <zweig>` testen (ci.yml hat workflow_dispatch). Emulator-Job flackert gelegentlich (Boot-Timeout -> neu starten).
 
-## Version 0.4.0
+## Version 0.5.0
+- Editor neu (`ui/EditorScreen.kt`, Logik `ui/EditState.kt`): Auswahl, Ziehen, Löschen je Punkt, Rückgängig/Wiederholen (`EditHistory`), Werkzeug-Chips.
+- Gegenstände (`anim/Scenery.kt`, Bilder `assets/scenery/`, erzeugt mit `blender/szene3d.py`): Tannenbaum, Bett, Zaun, Laterne, Lichterkette, Neonschild; additive Lichter, Tiefensortierung vor/hinter dem Wichtel, im Export enthalten (`ExportManager.export(scenery=…)`).
+- Update-Fenster (`ui/UpdateDialog.kt`) mit Änderungsprotokoll; Download erst nach „Jetzt updaten“.
+- 3D-Wichtel neu modelliert (Haarsträhnen, Zwergenproportionen), Bilder neu gerendert.
+
+## Version 0.4.0 (Kurzfassung)
 - Laufweg: Wichtel bleibt in der Nähe von Start/Weg/Aktionspunkten (`roam` in der Engine, `PerfRequest.confineToPoints`, AR ausgenommen); Wegpunkte als Rundgang (`Stops`).
 - 3D-Wichtel (`blender/wichtel3d.py` -> `pack3d.py` -> `app/src/main/assets/elf3d/`, 264 Bilder, 15 MB): Stehen/Laufen/Fegen/Winken aus 16 bzw. 8 Richtungen. `Elf3D.kt` wählt das Bild aus `Pose.heading`/`stepPhase`; Einstellung `figure3d` (Einstellungen -> Figur). 2D-Wichtel bleibt.
 - Engine: `Pose.heading`, `turnTo()` (nur bei 3D animiert), Fegen seitlich + Staubwolken, Haus: Drehung mit Rücken zum Betrachter.

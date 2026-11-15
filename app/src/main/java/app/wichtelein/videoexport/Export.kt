@@ -81,6 +81,7 @@ object ExportManager {
         settings: Settings,
         /** [video] ist ein Foto (JPEG): daraus entsteht ein Film der Länge [info].durationMs */
         isPhoto: Boolean = false,
+        scenery: List<SceneryItem> = emptyList(),
         onProgress: (Float) -> Unit,
     ): ExportResultInfo {
         val app = context.applicationContext
@@ -108,13 +109,14 @@ object ExportManager {
         // 2) Overlay: pro Videobild die passende Szene der Aufführung
         val w = info.width
         val h = info.height
+        val layer = if (scenery.isEmpty()) null else SceneryLayer(scenery, SceneryAssets.load(app))
         val measurer = TextMeasurer(createFontFamilyResolver(app), Density(1f), LayoutDirection.Ltr)
         val overlay = object : BitmapOverlay() {
             override fun getBitmap(presentationTimeUs: Long): Bitmap {
                 val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
                 val canvas = Canvas(bmp.asImageBitmap())
                 CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, canvas, Size(w.toFloat(), h.toFloat())) {
-                    drawWichtelFrame(perf.frameAt(presentationTimeUs / 1000L), sprites, settings.sizeScale, measurer)
+                    drawWichtelFrame(perf.frameAt(presentationTimeUs / 1000L), sprites, settings.sizeScale, measurer, scenery = layer)
                 }
                 return bmp
             }

@@ -27,7 +27,7 @@ Namen, Sprüche, Stimme, Farbe und die erlaubten Szenen sind frei einstellbar, d
 
 ## Was fertig ist, was nur Prototyp ist, was fehlt
 
-**Umgesetzt und im Android-Emulator der CI geprüft** (19 Emulator-Tests und Unit-Tests, siehe unten):
+**Umgesetzt und im Android-Emulator der CI geprüft** (21 Emulator-Tests und Unit-Tests, siehe unten):
 - Startseite mit den fünf Bereichen, Namensabfrage beim ersten Start, Kinderprofile, Einstellungen, Wichtelaktionen,
   Meine Wichtelvideos (Darstellung), Editor mit Startpunkt, Größe, Weg, Szene und Würfeln.
 - **Der Wichtel** (seit 0.3.0): ein Wichtel mit roter Zipfelmütze, weißem Bart und grünem Mantel, aus dem Bild `Wichtel_bild1` (vom Nutzer mit ChatGPT erzeugt,
@@ -37,6 +37,15 @@ Namen, Sprüche, Stimme, Farbe und die erlaubten Szenen sind frei einstellbar, d
   Richtungen gerendert. Er dreht sich beim Laufen in Laufrichtung (auf den Betrachter zu, seitlich, vom Betrachter weg), steht beim Fegen seitlich (mit Staubwolken
   am Ende jedes Besenstrichs) und dreht sich zum Haus um 360° mit dem Rücken zum Betrachter, bevor er die Tür öffnet und hineingeht. Winken, Fegen und Laufen
   sind echte Bilder aus der jeweiligen Richtung; Hinsetzen, Purzelbaum, Schlafen u. Ä. entstehen aus dem Stehbild. Farben: Mütze und Mantel.
+- **Editor (neu in 0.5.0):** Alles Gesetzte (Start, Wegpunkte, Aktionen, Tür, Gegenstände) lässt sich antippen (auswählen), mit dem Finger verschieben und einzeln löschen;
+  „↶ Rückgängig / ↷“ nimmt jeden Schritt zurück. Werkzeuge als Karten: Start, Weg, Aktionen, Tür, Objekte, Szene.
+- **Gegenstände im Bild (Cyberpunk-Weihnacht, Neonlicht):** Tannenbaum mit LED-Kette, Kugeln und Stern, Bett, Zaun, Laterne mit Kranz, Lichterkette, Neonschild.
+  Jeder einzeln wählbar, platzierbar, in der Größe änderbar, spiegelbar; der Wichtel läuft davor und dahinter vorbei. In Blender gerendert
+  (`blender/szene3d.py`); die Lichter leuchten und blinken in der Vorschau und im exportierten Video (additive Leuchthöfe, Bodenschein).
+- **Update-Fenster:** Die Update-Suche startet den Download nicht mehr sofort, sondern zeigt „Neues Update verfügbar“ bzw. „Du hast die neueste Version“ mit
+  dem Änderungsprotokoll; der Download beginnt erst mit „Jetzt updaten“ (sonst „Abbrechen“).
+- **3D-Wichtel überarbeitet:** gedrungener Zwerg mit Gürtel, großer Nase und Augenbrauen; Bart, Schnurrbart und Haar bestehen aus über 2000 einzelnen Strähnen,
+  Mütze mit Faltenwurf, Stoffmuster aus dem Referenzbild.
 - **Laufweg:** Der Wichtel bleibt in der Nähe der gesetzten Punkte (Start, Weg, Aktionspunkte) statt im ganzen Bild herumzuspringen; die Wegpunkte läuft er als
   Rundgang ab.
 - **Besen** aus dem Besenfoto (`wichtel-besen-1`), freigestellt und in der Hand des Wichtels; beim Fegen schwingt er mit dem Arm.

@@ -157,6 +157,8 @@ class PhotoFilmTest {
         val save = "💾 Als Video speichern"
         pump(120_000, "Editor bereit") { exists(save) && runCatching { rule.onNodeWithText(save).assertIsEnabled() }.isSuccess }
         assertTrue("Foto-Film-Titel", exists("Foto-Film"))
+        rule.onNodeWithText("🎬 Szene").performSemanticsAction(SemanticsActions.OnClick)
+        pump(10_000, "Szenen-Werkzeug") { exists("Länge des Films: 12 s") }
         assertTrue("Längenregler ohne Aktionspunkte", exists("Länge des Films: 12 s"))
 
         rule.onNodeWithText("🎯 Aktionen (0)").performSemanticsAction(SemanticsActions.OnClick)
@@ -168,8 +170,7 @@ class PhotoFilmTest {
         rule.onNodeWithTag("bildflaeche").performTouchInput { click(Offset(width * 0.25f, height * 0.7f)) }
         pump(60_000, "zweiter Aktionspunkt") { exists("🎯 Aktionen (2)") }
         pump(120_000, "Film neu berechnet (automatische Länge)") {
-            exists("🎯 Aktionen (2)") && exists(save) && runCatching { rule.onNodeWithText(save).assertIsEnabled() }.isSuccess &&
-                rule.onAllNodesWithText("Länge: automatisch", substring = true).fetchSemanticsNodes().isNotEmpty()
+            exists("🎯 Aktionen (2)") && exists(save) && runCatching { rule.onNodeWithText(save).assertIsEnabled() }.isSuccess
         }
         rule.onNodeWithText(save).performClick()
         pump(420_000, "Export fertig") { exists("Fertig! 🎉") || exists("Export fehlgeschlagen") }

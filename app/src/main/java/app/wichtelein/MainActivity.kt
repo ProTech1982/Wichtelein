@@ -147,24 +147,34 @@ fun WichtelApp() {
     }
 
     var updateText by remember { mutableStateOf<String?>(null) }
+    var updateDialog by remember { mutableStateOf<UpdateDialogState?>(null) }
     fun checkUpdate() {
         updateText = "Suche nach Updates …"
+        updateDialog = UpdateDialogState.Checking
         scope.launch {
             val r = Updater.check(context)
             updateText = when {
                 r.error != null -> r.error
-                r.available -> "Neue Version gefunden: ${r.version}. Der Download startet im Browser."
+                r.available -> "Neue Version gefunden: ${r.version}."
                 else -> "Du hast die neueste Version."
             }
-            if (r.available && r.downloadUrl != null) {
-                try {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(r.downloadUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                } catch (e: Exception) {
-                    updateText = "Kein Browser zum Öffnen des Downloads gefunden."
-                }
-            }
+            // der Download startet erst, wenn der Nutzer im Fenster „Jetzt updaten“ tippt
+            if (updateDialog != null) updateDialog = updateDialogFrom(r)
         }
     }
+
+    UpdateDialog(
+        state = updateDialog,
+        onUpdate = { url ->
+            updateDialog = null
+            try {
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (e: Exception) {
+                updateText = "Kein Browser zum Öffnen des Downloads gefunden."
+            }
+        },
+        onDismiss = { updateDialog = null },
+    )
 
     BackHandler(enabled = screen != Screen.HOME) {
         if (screen == Screen.VIDEOS) videoCount = listExports(context).size

@@ -86,6 +86,8 @@ class FrameState(
     /** Türanschlag (true = links angeschlagen, öffnet nach links) und Rundung oben (0 = eckig, 1 = Rundbogen). */
     val doorHingeLeft: Boolean = true,
     val doorRound: Float = 1f,
+    /** Zeit in Sekunden (für blinkende Lichter der Gegenstände) */
+    val timeSec: Float = 0f,
 )
 
 /** Eine fertig aufgenommene Wichtel-Aufführung: Bilder mit festem Takt plus Sprach-Ereignisse. */
