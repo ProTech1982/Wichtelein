@@ -29,12 +29,12 @@ data class Settings(
     val jacketColor: Int = 0,
     val legColor: Int = 0,
     val bootColor: Int = 0,
-    /** Figur: 0 = Foto-Puppe, 1 = 3D (in Blender gerendert) */
-    val elfStyle: Int = 0,
     val sizeScale: Float = 0.30f,
     val elfVoice: Boolean = true,
     val rate: Float = 1.0f,
     val mood: Int = Mood.NEUTRAL,
+    /** Weihnachtsgeräusche (Glöckchen, Tür, Besen, …) */
+    val soundFx: Boolean = true,
     /** Abgeschaltete Szenen (Wichtelaktionen). */
     val disabledScenes: Set<String> = emptySet(),
 ) {
@@ -89,11 +89,11 @@ object SettingsStore {
             jacketColor = p.getInt("jacketColor", legacyColor),
             legColor = p.getInt("legColor", legacyColor),
             bootColor = p.getInt("bootColor", d.bootColor),
-            elfStyle = p.getInt("elfStyle", d.elfStyle),
             sizeScale = p.getFloat("sizeScale", d.sizeScale),
             elfVoice = p.getBoolean("elfVoice", d.elfVoice),
             rate = p.getFloat("rate", d.rate),
             mood = p.getInt("moodV2", d.mood),
+            soundFx = p.getBoolean("soundFx", d.soundFx),
             disabledScenes = (p.getStringSet("disabledScenes", emptySet()) ?: emptySet()).toSet(),
         )
     }
@@ -112,11 +112,11 @@ object SettingsStore {
             .putInt("jacketColor", s.jacketColor)
             .putInt("legColor", s.legColor)
             .putInt("bootColor", s.bootColor)
-            .putInt("elfStyle", s.elfStyle)
             .putFloat("sizeScale", s.sizeScale)
             .putBoolean("elfVoice", s.elfVoice)
             .putFloat("rate", s.rate)
             .putInt("moodV2", s.mood)
+            .putBoolean("soundFx", s.soundFx)
             .putStringSet("disabledScenes", s.disabledScenes)
             .apply()
     }

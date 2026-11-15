@@ -18,10 +18,10 @@ data class ElfColors(val hat: Int = 0, val jacket: Int = 0, val legs: Int = 0, v
 }
 
 object ElfPalette {
-    /** Für Mütze, Jacke und Strumpfhose (das Original ist grün). */
+    /** Für Mütze, Jacke und Hose (das Original: rote Mütze, grüner Mantel, braune Hose). */
     val clothes = listOf(
-        ColorChoice("Original (grün)", Color(0xFF2E9E4F), null),
-        ColorChoice("Rot", Color(0xFFD93A3A), 355f),
+        ColorChoice("Original", Color(0xFF9A9A9A), null),
+        ColorChoice("Rot", Color(0xFFD93A3A), 0f),
         ColorChoice("Orange", Color(0xFFF08A24), 28f),
         ColorChoice("Gelb", Color(0xFFF2C94C), 48f),
         ColorChoice("Hellblau", Color(0xFF5BB5F0), 200f, 0.8f, 1.1f),
@@ -35,7 +35,7 @@ object ElfPalette {
 
     /** Für die Schuhe (das Original ist rotbraun). */
     val boots = listOf(
-        ColorChoice("Original (rotbraun)", Color(0xFF8A2B1E), null),
+        ColorChoice("Original (braun)", Color(0xFF6B4423), null),
         ColorChoice("Schwarz", Color(0xFF2A2A2A), 0f, 0.12f, 0.45f),
         ColorChoice("Braun", Color(0xFF6B4423), 28f, 0.7f, 0.75f),
         ColorChoice("Rot", Color(0xFFD93A3A), 0f, 1.0f, 1.25f),
@@ -56,23 +56,40 @@ object Recolor {
         return d
     }
 
-    fun isGreen(h: Float, s: Float, v: Float) = h in 60f..180f && s > 0.30f && v > 0.08f
+    /** Mittlere Farbtöne der Originalteile (Grad). */
+    const val HAT_HUE = 0f
+    const val COAT_HUE = 160f
+    const val TROUSER_HUE = 36f
+    const val BOOT_HUE = 24f
 
-    /** Rotbraune Schuhe (Rot/Orange/Braun). */
-    fun isBootRed(h: Float, s: Float, v: Float) = (h <= 28f || h >= 335f) && s > 0.35f && v > 0.12f
+    /** Rote Mütze samt Band (kräftiges Rot; Nase und Wangen sind blasser und bleiben unberührt). */
+    fun isHatRed(h: Float, s: Float, v: Float) = (h <= 14f || h >= 340f) && s > 0.66f && v > 0.2f
+
+    /** Grüner Mantel. */
+    fun isCoat(h: Float, s: Float, v: Float) = h in 90f..200f && s > 0.22f && v > 0.08f
+
+    /** Braune Hose (heller, blasser als die Stiefel). */
+    fun isTrousers(h: Float, s: Float, v: Float) = h in 12f..70f && s > 0.12f && v > 0.12f
+
+    /** Braune Stiefel. */
+    fun isBoot(h: Float, s: Float, v: Float) = h in 0f..45f && s > 0.3f && v > 0.1f
 
     /**
      * Färbt alle Pixel um, auf die [match] zutrifft (und deren Zeile [rowFrom] oder tiefer liegt).
      * [refHue] ist der Mittelton des Originals (Grün 120, Rotbraun 0).
      */
-    fun apply(src: Bitmap, choice: ColorChoice, refHue: Float, rowFrom: Int = 0, match: (Float, Float, Float) -> Boolean): Bitmap {
+    fun apply(src: Bitmap, choice: ColorChoice, refHue: Float, rowFrom: Int = 0, match: (Float, Float, Float) -> Boolean): Bitmap =
+        applyRows(src, choice, refHue, rowFrom, src.height, match)
+
+    /** Wie [apply], aber nur für die Zeilen [rowFrom] bis [rowTo] (ausschließlich). */
+    fun applyRows(src: Bitmap, choice: ColorChoice, refHue: Float, rowFrom: Int, rowTo: Int, match: (Float, Float, Float) -> Boolean): Bitmap {
         val target = choice.hue ?: return src
         val w = src.width
         val h = src.height
         val px = IntArray(w * h)
         src.getPixels(px, 0, w, 0, 0, w, h)
         val hsv = FloatArray(3)
-        for (y in rowFrom until h) {
+        for (y in rowFrom until minOf(rowTo, h)) {
             for (x in 0 until w) {
                 val c = px[y * w + x]
                 val a = AColor.alpha(c)

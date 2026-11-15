@@ -41,9 +41,12 @@ import androidx.compose.ui.unit.sp
 fun HomeScreen(
     settings: Settings,
     hasRoom: Boolean,
+    roomIsPhoto: Boolean = false,
     videoCount: Int,
     onFilm: () -> Unit,
     onPick: () -> Unit,
+    onPhoto: () -> Unit = {},
+    onPickPhoto: () -> Unit = {},
     onVideos: () -> Unit,
     onActions: () -> Unit,
     onSettings: () -> Unit,
@@ -65,16 +68,18 @@ fun HomeScreen(
                 (if (kid != null) " zu $kid" else "") + " und macht Unsinn oder räumt auf!",
         )
 
-        val sprites = rememberElfSprites(settings.colors(), settings.elfStyle)
+        val sprites = rememberElfSprites(settings.colors())
         val pose = remember { Pose().apply { armR = 150f } }
         Canvas(Modifier.fillMaxWidth().height(170.dp)) {
             val eh = size.height * 0.92f
             drawElf(pose, sprites, Offset(size.width / 2f, size.height * 0.97f), eh, 1)
         }
 
+        BigButton("📸", "Foto-Film", "Fotografiere z. B. sein Wichtelhaus – der Wichtel spielt darin eine Geschichte", onPhoto)
+        BigButton("🖼", "Foto auswählen", "Ein vorhandenes Foto aus der Galerie für den Foto-Film", onPickPhoto)
         BigButton("🎥", "Video aufnehmen", "Den Raum filmen, 5 bis 10 Sekunden", onFilm)
-        BigButton("🖼", "Video auswählen", "Ein vorhandenes Video aus der Galerie", onPick)
-        if (hasRoom) BigButton("✏️", "Letztes Video weiter bearbeiten", "Das zuletzt benutzte Video noch einmal öffnen", onUseLast)
+        BigButton("📂", "Video auswählen", "Ein vorhandenes Video aus der Galerie", onPick)
+        if (hasRoom) BigButton("✏️", if (roomIsPhoto) "Letztes Foto weiter bearbeiten" else "Letztes Video weiter bearbeiten", "Das zuletzt benutzte Bild noch einmal öffnen", onUseLast)
         BigButton("🌍", "AR-Wichtel", "Der Wichtel steht live in deinem echten Raum (ARCore)", onAr)
         BigButton("🎞", "Meine Wichtelvideos", if (videoCount == 0) "Noch keine fertigen Videos" else "$videoCount fertige Videos", onVideos)
         BigButton("🎭", "Wichtelaktionen", "Brav, frech oder Überraschung – was darf er tun?", onActions)

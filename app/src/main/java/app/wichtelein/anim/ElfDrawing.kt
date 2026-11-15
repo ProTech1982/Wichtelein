@@ -44,42 +44,39 @@ interface ElfFigure {
 /** Position eines Bildteils (linke obere Ecke) im Layout. */
 class PartPos(val x: Float, val y: Float)
 
+/** Der Besen aus dem Foto: Höhe in Figur-Pixeln, Seitenverhältnis, Griffhöhe (von unten) und Lage des Stiels im Bild. */
+class BroomLayout(val h: Float, val aspect: Float, val gripFromBottom: Float, val handleX: Float)
+
 /**
- * Wo sitzt was? Die Zeichenroutine kennt nur dieses Layout: Teilepositionen, Gelenke, Gesicht und Hand. So funktionieren
- * die Foto-Puppe und der in Blender gerenderte 3D-Wichtel mit derselben Animation.
+ * Wo sitzt was? Die Zeichenroutine kennt nur dieses Layout: Teilepositionen, Gelenke, Gesicht und Hand. Es wird mit den
+ * Bildteilen zusammen aus `elf_layout.json` geladen (erzeugt von `tools/asset/make_parts.py`).
  */
 class ElfLayout(
     val feet: Offset,
     val height: Float,
     val head: PartPos, val torso: PartPos, val armL: PartPos, val armR: PartPos, val legL: PartPos, val legR: PartPos,
     val pivHead: Offset, val pivArmL: Offset, val pivArmR: Offset, val pivHipL: Offset, val pivHipR: Offset, val pivBody: Offset,
-    /** Mittelpunkte der Augen sowie Breite/Höhe der Lider */
+    /** Mittelpunkte der Augen sowie Breite/Höhe der Lider (leer, wenn die Figur keine sichtbaren Augen hat) */
     val eyes: List<Offset>, val eyeW: Float, val eyeH: Float,
-    /** Oberkante Mitte des Mundes und Breite */
+    /** Oberkante Mitte des Mundes und Breite (0 = Mund unter dem Bart, wird nicht gezeichnet) */
     val mouth: Offset, val mouthW: Float,
-    /** Hand (rechts) und Maßstab der Gegenstände relativ zur Foto-Puppe */
+    /** Hand (rechts) und Maßstab der Gegenstände */
     val hand: Offset, val propK: Float,
     /** ab dieser Bildzeile (in den Beinteilen) beginnen die Schuhe */
     val bootRow: Int,
     val skin: Color,
+    /** Breite des Schattens in Figurhöhen */
+    val shadowW: Float,
+    val broom: BroomLayout,
 ) {
     companion object {
-        /** Foto-Puppe (Referenzbild, 614 x 807): Füße bei y = 800, Mütze oben bei y = 31. */
-        val PHOTO = ElfLayout(
-            Offset(352f, 800f), 769f,
-            PartPos(200f, 31f), PartPos(228f, 263f), PartPos(164f, 336f), PartPos(400f, 300f), PartPos(181f, 540f), PartPos(352f, 540f),
-            Offset(345f, 285f), Offset(250f, 360f), Offset(440f, 350f), Offset(300f, 555f), Offset(435f, 555f), Offset(352f, 500f),
-            listOf(Offset(318f, 183f), Offset(377f, 183f)), 54f, 46f,
-            Offset(352f, 232f), 62f,
-            Offset(495f, 535f), 1f, 110, Color(0xFFF1C3A3),
-        )
-
         fun fromJson(json: String): ElfLayout {
             val o = JSONObject(json)
             fun pt(a: JSONArray) = Offset(a.getDouble(0).toFloat(), a.getDouble(1).toFloat())
             fun pp(k: String) = o.getJSONObject("parts").getJSONArray(k).let { PartPos(it.getDouble(0).toFloat(), it.getDouble(1).toFloat()) }
             val piv = o.getJSONObject("piv")
             val eyes = o.getJSONArray("eyes")
+            val br = o.getJSONObject("broom")
             return ElfLayout(
                 pt(o.getJSONArray("feet")), o.getDouble("height").toFloat(),
                 pp("head"), pp("torso"), pp("arml"), pp("armr"), pp("legl"), pp("legr"),
@@ -89,13 +86,15 @@ class ElfLayout(
                 pt(o.getJSONArray("mouth")), o.getDouble("mouthW").toFloat(),
                 pt(o.getJSONArray("hand")), o.getDouble("propK").toFloat(), o.getInt("bootRow"),
                 Color(0xFF000000L or o.getString("skin").removePrefix("#").toLong(16)),
+                o.optDouble("shadowW", 0.39).toFloat(),
+                BroomLayout(br.getDouble("h").toFloat(), br.getDouble("aspect").toFloat(), br.getDouble("gripFromBottom").toFloat(), br.getDouble("handleX").toFloat()),
             )
         }
     }
 }
 
-/** Die Einzelteile des Wichtels (Kopf mit Mütze, Körper, Arme, Beine mit Schuhen) als Bilder samt [layout]. */
-class ElfSprites(private val images: Map<String, ImageBitmap>, val layout: ElfLayout = ElfLayout.PHOTO) : ElfFigure {
+/** Die Einzelteile des Wichtels (Kopf mit Mütze, Körper, Arme, Beine mit Schuhen) als Bilder samt [layout] und der Besen. */
+class ElfSprites(private val images: Map<String, ImageBitmap>, val layout: ElfLayout, val broom: ImageBitmap? = null) : ElfFigure {
     fun image(name: String): ImageBitmap = images.getValue(name)
 
     override fun draw(scope: DrawScope, pose: Pose, base: Offset, h: Float, facing: Int) {
@@ -104,49 +103,46 @@ class ElfSprites(private val images: Map<String, ImageBitmap>, val layout: ElfLa
 
     companion object {
         val partNames = listOf("head", "torso", "arml", "armr", "legl", "legr")
-        const val STYLE_PHOTO = 0
-        const val STYLE_3D = 1
 
-        /** Gibt es die Bilder für diesen Stil in der App? */
-        fun hasStyle(context: Context, style: Int): Boolean =
-            style == STYLE_PHOTO || context.resources.getIdentifier("elf3d_head", "drawable", context.packageName) != 0
-
-        /** Lädt die Bildteile und färbt Mütze, Jacke, Strumpfhose und Schuhe nach [colors] um. */
-        fun load(context: Context, colors: ElfColors = ElfColors(), style: Int = STYLE_PHOTO): ElfSprites {
+        /** Lädt die Bildteile und färbt Mütze, Jacke, Hose und Schuhe nach [colors] um. */
+        fun load(context: Context, colors: ElfColors = ElfColors()): ElfSprites {
             val res = context.resources
             val c = colors.clamped()
-            val use3d = style == STYLE_3D && hasStyle(context, STYLE_3D)
-            val prefix = if (use3d) "elf3d" else "elf0"
-            val layout = if (use3d) {
-                val id = res.getIdentifier("elf3d_layout", "raw", context.packageName)
-                ElfLayout.fromJson(res.openRawResource(id).bufferedReader().use { it.readText() })
-            } else ElfLayout.PHOTO
+            val layoutId = res.getIdentifier("elf_layout", "raw", context.packageName)
+            require(layoutId != 0) { "elf_layout fehlt" }
+            val layout = ElfLayout.fromJson(res.openRawResource(layoutId).bufferedReader().use { it.readText() })
             val opts = BitmapFactory.Options().apply { inScaled = false }
             val map = partNames.associateWith { n ->
-                val id = res.getIdentifier("${prefix}_$n", "drawable", context.packageName)
-                require(id != 0) { "Bild ${prefix}_$n fehlt" }
+                val id = res.getIdentifier("elf_$n", "drawable", context.packageName)
+                require(id != 0) { "Bild elf_$n fehlt" }
                 val src = BitmapFactory.decodeResource(res, id, opts)
                 val colored = when (n) {
-                    "head" -> Recolor.apply(src, ElfPalette.clothes[c.hat], 120f, 0, Recolor::isGreen)
-                    "torso", "arml", "armr" -> Recolor.apply(src, ElfPalette.clothes[c.jacket], 120f, 0, Recolor::isGreen)
-                    "legl", "legr" -> {
-                        // erst die Schuhe (rotbraun, unterer Teil), dann die grüne Strumpfhose
-                        val shoes = Recolor.apply(src, ElfPalette.boots[c.boots], 0f, layout.bootRow, Recolor::isBootRed)
-                        Recolor.apply(shoes, ElfPalette.clothes[c.legs], 120f, 0, Recolor::isGreen)
+                    "head" -> Recolor.apply(src, ElfPalette.clothes[c.hat], Recolor.HAT_HUE, 0, Recolor::isHatRed)
+                    "torso" -> Recolor.apply(src, ElfPalette.clothes[c.jacket], Recolor.COAT_HUE, 0, Recolor::isCoat)
+                    // Arme: grüner Ärmel in Mantelfarbe, rote Manschetten und Fäustlinge in Mützenfarbe
+                    "arml", "armr" -> Recolor.apply(
+                        Recolor.apply(src, ElfPalette.clothes[c.jacket], Recolor.COAT_HUE, 0, Recolor::isCoat),
+                        ElfPalette.clothes[c.hat], Recolor.HAT_HUE, 0, Recolor::isHatRed,
+                    )
+                    else -> {
+                        // erst die Schuhe (unterer Teil), dann die Hose darüber
+                        val shoes = Recolor.apply(src, ElfPalette.boots[c.boots], Recolor.BOOT_HUE, layout.bootRow, Recolor::isBoot)
+                        Recolor.applyRows(shoes, ElfPalette.clothes[c.legs], Recolor.TROUSER_HUE, 0, layout.bootRow, Recolor::isTrousers)
                     }
-                    else -> src
                 }
                 colored.asImageBitmap()
             }
-            return ElfSprites(map, layout)
+            val broomId = res.getIdentifier("prop_broom", "drawable", context.packageName)
+            val broom = if (broomId != 0) BitmapFactory.decodeResource(res, broomId, opts)?.asImageBitmap() else null
+            return ElfSprites(map, layout, broom)
         }
     }
 }
 
 @Composable
-fun rememberElfSprites(colors: ElfColors = ElfColors(), style: Int = ElfSprites.STYLE_PHOTO): ElfSprites {
+fun rememberElfSprites(colors: ElfColors = ElfColors()): ElfSprites {
     val context = LocalContext.current
-    return remember(colors, style) { ElfSprites.load(context, colors, style) }
+    return remember(colors) { ElfSprites.load(context, colors) }
 }
 
 private val Ink = Color(0xFF3A2A20)
@@ -166,7 +162,7 @@ fun DrawScope.drawElf(p: Pose, sprites: ElfSprites, base: Offset, h: Float, faci
         translate(-L.feet.x, -L.feet.y)
     }) {
         // Schatten
-        drawOval(Color.Black.copy(alpha = 0.25f), Offset(L.feet.x - L.height * 0.195f, L.feet.y - L.height * 0.029f), Size(L.height * 0.39f, L.height * 0.057f))
+        drawOval(Color.Black.copy(alpha = 0.25f), Offset(L.feet.x - L.height * L.shadowW / 2f, L.feet.y - L.height * 0.029f), Size(L.height * L.shadowW, L.height * 0.057f))
         withTransform({
             translate(0f, -p.bob * L.height)
             scale(1f + p.squash, 1f - p.squash, L.feet)
@@ -182,11 +178,14 @@ fun DrawScope.drawElf(p: Pose, sprites: ElfSprites, base: Offset, h: Float, faci
                         translate(L.hand.x, L.hand.y)
                         scale(L.propK, L.propK, Offset.Zero)
                         translate(-495f, -535f)
-                    }) { drawProp(p.prop) }
+                    }) { drawProp(p.prop, sprites) }
                 }
                 drawPart(sprites, L.armR, "armr")
             }
-            withTransform({ rotate(p.hatTilt * 150f + p.nod, L.pivHead) }) {
+            withTransform({
+                rotate(p.hatTilt * 150f + p.nod, L.pivHead)
+                scale(1f, 1f - 0.018f * p.talk, L.pivHead)
+            }) {
                 drawPart(sprites, L.head, "head")
                 drawFace(p, L)
             }
@@ -214,7 +213,7 @@ private fun DrawScope.drawLimb(sprites: ElfSprites, pos: PartPos, name: String, 
 /** Mund (beim Sprechen/Kauen offen) und Lider (beim Schlafen/Blinzeln). */
 private fun DrawScope.drawFace(p: Pose, L: ElfLayout) {
     val open = max(p.mouth, p.talk)
-    if (open > 0.05f) {
+    if (L.mouthW > 0f && open > 0.05f) {
         val k = L.mouthW / 62f
         val mw = L.mouthW
         val mh = (10f + 40f * open) * k
@@ -237,20 +236,24 @@ private fun DrawScope.drawFace(p: Pose, L: ElfLayout) {
 }
 
 /** Gegenstand in der rechten Hand (Koordinaten im Originalbild, Hand bei etwa (495, 535)). */
-private fun DrawScope.drawProp(prop: Prop) {
+private fun DrawScope.drawProp(prop: Prop, sprites: ElfSprites) {
     when (prop) {
         Prop.BROOM -> {
-            drawLine(Color(0xFF8A5A2B), Offset(497f, 330f), Offset(497f, 770f), 16f, StrokeCap.Round)
-            val bristles = Path().apply {
-                moveTo(470f, 735f)
-                lineTo(524f, 735f)
-                lineTo(566f, 805f)
-                lineTo(430f, 805f)
-                close()
+            val img = sprites.broom
+            if (img != null) {
+                // Besen aus dem Foto: Griff in der Hand, Borsten am Boden
+                val b = sprites.layout.broom
+                val hh = b.h / sprites.layout.propK
+                val ww = hh * b.aspect
+                drawImage(
+                    img,
+                    srcOffset = IntOffset.Zero,
+                    srcSize = IntSize(img.width, img.height),
+                    dstOffset = IntOffset((495f - b.handleX * ww).toInt(), (535f - (1f - b.gripFromBottom) * hh).toInt()),
+                    dstSize = IntSize(ww.toInt(), hh.toInt()),
+                    filterQuality = FilterQuality.High,
+                )
             }
-            drawPath(bristles, Color(0xFFD9B35B))
-            drawLine(Color(0xFFA9822F), Offset(462f, 758f), Offset(532f, 758f), 8f)
-            drawLine(Color(0xFFA9822F), Offset(450f, 782f), Offset(546f, 782f), 8f)
         }
         Prop.COOKIE -> {
             drawCircle(Color(0xFFD9A05B), 46f, Offset(500f, 520f))

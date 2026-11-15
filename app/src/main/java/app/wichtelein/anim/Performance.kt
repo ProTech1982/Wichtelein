@@ -7,6 +7,8 @@ import app.wichtelein.videoexport.*
 import app.wichtelein.settings.*
 import app.wichtelein.ui.*
 
+import app.wichtelein.sound.Fx
+import app.wichtelein.sound.SoundEvent
 import kotlin.coroutines.resume
 import kotlin.random.Random
 import kotlinx.coroutines.CancellableContinuation
@@ -17,6 +19,31 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 
 /** Punkt im Video, relativ (0..1). */
 data class Pt(val x: Float, val y: Float)
+
+/** Was der Wichtel an einem Aktionspunkt tut. [needsPoint] = er läuft vorher dorthin; [needsDoor] = braucht die Tür des Wichtelhauses. */
+enum class ElfAction(val label: String, val emoji: String, val needsDoor: Boolean = false, val needsPoint: Boolean = true) {
+    WALK("Hingehen", "🚶"),
+    SWEEP("Fegen", "🧹"),
+    WAVE("Winken", "👋"),
+    DANCE("Tanzen", "💃"),
+    SIT("Hinsetzen", "🪑"),
+    SLEEP("Schlafen", "😴"),
+    SNACK("Keks naschen", "🍪"),
+    GIFT("Geschenk bringen", "🎁"),
+    MAGIC("Zaubern", "✨"),
+    TUMBLE("Purzelbaum", "🤸"),
+    TRIP("Stolpern", "💥"),
+    CHAOS("Chaos machen", "🧸"),
+    HIDE("Verstecken", "🙈"),
+    BOW("Verbeugen", "🙇"),
+    KNOCK("Anklopfen", "✊", needsDoor = true, needsPoint = false),
+    ENTER("Ins Haus gehen", "🏠", needsDoor = true, needsPoint = false),
+    EXIT("Aus dem Haus kommen", "🚪", needsDoor = true, needsPoint = false),
+    DOOR_SWEEP("Vor der Tür fegen", "🧹", needsDoor = true, needsPoint = false),
+}
+
+/** Ein Aktionspunkt im Bild: [action] wird an der Stelle [at] ausgeführt (bei Türaktionen ohne Stelle). */
+data class ScriptStep(val action: ElfAction, val at: Pt? = null)
 
 /** Liefert der Engine den Takt. Beim Aufnehmen ist das eine virtuelle Uhr, kein echter Bildschirm-Takt. */
 interface Ticker {
@@ -62,7 +89,16 @@ class FrameState(
 )
 
 /** Eine fertig aufgenommene Wichtel-Aufführung: Bilder mit festem Takt plus Sprach-Ereignisse. */
-class Performance(val fps: Int, val frames: List<FrameState>, val speech: List<SpeechEvent>, val sceneNames: List<String>) {
+class Performance(
+    val fps: Int,
+    val frames: List<FrameState>,
+    val speech: List<SpeechEvent>,
+    val sceneNames: List<String>,
+    /** Geräusche mit Zeitpunkt (Glöckchen, Tür, Besen, …) */
+    val sounds: List<SoundEvent> = emptyList(),
+    /** Zeitpunkt, an dem alle Aktionspunkte abgespielt waren (-1 = kein Drehbuch oder noch nicht fertig) */
+    val scriptEndMs: Long = -1L,
+) {
     val durationMs: Long get() = (frames.size - 1).coerceAtLeast(0) * 1000L / fps
 
     fun frameAt(ms: Long): FrameState {
@@ -91,7 +127,14 @@ class PerfRequest(
     val doorScale: Float = 0.2f,
     val doorHingeLeft: Boolean = true,
     val doorRound: Float = 1f,
+    /** Aktionspunkte: Wenn gesetzt, spielt der Wichtel genau diese Schritte der Reihe nach (statt zufälliger Szenen). */
+    val script: List<ScriptStep> = emptyList(),
+    /** Aufnahme endet kurz nach dem letzten Aktionspunkt (Foto-Film), sonst nach [durationMs] */
+    val stopAfterScript: Boolean = false,
 )
+
+/** Nachlauf nach dem letzten Aktionspunkt im Foto-Film */
+const val TAIL_MS = 2500L
 
 object Recorder {
     /** Nimmt die Aufführung deterministisch auf (gleiche Eingaben ergeben die gleiche Zeitleiste). */
@@ -99,12 +142,14 @@ object Recorder {
         val ticker = ManualTicker()
         val speech = ArrayList<SpeechEvent>()
         val played = ArrayList<String>()
+        val sounds = ArrayList<SoundEvent>()
         lateinit var engine: ElfEngine
         engine = ElfEngine(
             settings = { req.settings },
             speak = { text, mood -> speech.add(SpeechEvent(engine.timeMs, text, mood)) },
             rng = Random(req.seed),
             ticker = ticker,
+            fx = { f: Fx, gain: Float -> sounds.add(SoundEvent(engine.timeMs, f, gain)) },
         )
         engine.configureDoor(req.door, req.doorScale, req.doorHingeLeft, req.doorRound)
         val scope = CoroutineScope(Dispatchers.Unconfined)
@@ -113,11 +158,16 @@ object Recorder {
         frames.add(engine.snapshot())
         val total = (req.durationMs * req.fps / 1000L).toInt()
         val dt = 1_000_000_000L / req.fps
-        repeat(total) {
+        var scriptEnd = -1L
+        for (i in 0 until total) {
             ticker.tick(dt)
             frames.add(engine.snapshot())
+            if (req.script.isNotEmpty() && engine.scriptDoneMs >= 0) {
+                scriptEnd = engine.scriptDoneMs
+                if (req.stopAfterScript && engine.timeMs >= scriptEnd + TAIL_MS) break
+            }
         }
         job.cancel()
-        return Performance(req.fps, frames, speech, played)
+        return Performance(req.fps, frames, speech, played, sounds, scriptEnd)
     }
 }

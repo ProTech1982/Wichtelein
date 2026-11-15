@@ -14,6 +14,7 @@ import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
+import app.wichtelein.sound.Fx
 
 private const val PIf = Math.PI.toFloat()
 
@@ -104,6 +105,8 @@ class ElfEngine(
     private val speak: (String, Int?) -> Unit,
     private val rng: Random,
     private val ticker: Ticker,
+    /** Geräusch abspielen bzw. aufzeichnen (Art, Lautstärke 0..1) */
+    private val fx: (Fx, Float) -> Unit = { _, _ -> },
 ) {
     var x = 0.5f
     var y = 0.8f
@@ -128,6 +131,14 @@ class ElfEngine(
     var doorRound = 1f
         private set
 
+    /** Wichtel ist im Haus (unsichtbar hinter der Tür) */
+    var inHouse = false
+        private set
+
+    /** Zeitpunkt, zu dem das Drehbuch (Aktionspunkte) abgespielt war, sonst -1 */
+    var scriptDoneMs = -1L
+        private set
+
     private var bubbleUntil = 0f
     private var lastAction = -1
     private var lastNanos = 0L
@@ -137,6 +148,8 @@ class ElfEngine(
 
     /** Vergangene Zeit der Aufführung in Millisekunden. */
     val timeMs: Long get() = (clock * 1000f).toLong()
+
+    private fun sfx(f: Fx, g: Float = 1f) = fx(f, g)
 
     /** Höhe des Wichtels in Videohöhen (für Partikel-Positionen). */
     private val hNorm: Float get() = settings().sizeScale * (0.55f + 0.6f * y)
@@ -249,6 +262,7 @@ class ElfEngine(
 
     /** Legt Spielzeug in die Szene (taucht mit kleinen Wölkchen auf). */
     fun spawnMess(n: Int) {
+        sfx(Fx.POOF, 0.6f)
         repeat(n) {
             val p = randomPoint()
             if (mess.size >= 14) mess.removeAt(0)
@@ -267,6 +281,8 @@ class ElfEngine(
         pose.scale = 0f
         visible = true
         burst(x, y - hNorm * 0.4f, 12, PK.POOF, 0.18f, 0.8f, 1.3f)
+        sfx(Fx.POOF)
+        sfx(Fx.JINGLE, 0.7f)
         anim(500) { t -> pose.scale = easeOutBack(t).coerceAtLeast(0f) }
         pose.scale = 1f
     }
@@ -282,12 +298,19 @@ class ElfEngine(
         val dur = dist / speed
         var t = 0f
         var phase = 0f
+        var lastStep = 0
         while (t < 1f) {
             val dt = step()
             t = min(1f, t + dt / dur)
             x = sx + (tx - sx) * t
             y = sy + (ty - sy) * t
             phase += dt * 11f
+            val stepNo = (phase / PIf).toInt()
+            if (stepNo != lastStep) {
+                lastStep = stepNo
+                sfx(Fx.STEP, 0.3f)
+                if (stepNo % 3 == 0) sfx(Fx.TINKLE, 0.5f)
+            }
             val s = sin(phase)
             pose.legL = 30f * s
             pose.legR = -30f * s
@@ -303,12 +326,14 @@ class ElfEngine(
 
     suspend fun greet() {
         val ms = say(Lines.greet.random(rng))
+        sfx(Fx.JINGLE, 0.6f)
         anim(ms) { pose.armR = 150f + 25f * sin(clock * 10f) }
         pose.relax()
     }
 
     suspend fun doWave() {
         val ms = say(Lines.wave.random(rng))
+        sfx(Fx.JINGLE, 0.5f)
         anim(ms) { pose.armR = 150f + 25f * sin(clock * 10f) }
         pose.relax()
     }
@@ -324,6 +349,7 @@ class ElfEngine(
                 pose.lean = 12f * s
             }
             mess.remove(item)
+            sfx(Fx.TINKLE, 0.8f)
             burst(item.x, item.y - 0.02f, 5, PK.SPARK, 0.12f, 0.6f)
             pose.relax()
         }
@@ -333,8 +359,14 @@ class ElfEngine(
     suspend fun doSweep(ms: Long = 2800) {
         pose.prop = Prop.BROOM
         var dustTimer = 0f
+        var stroke = -1
         anim(ms) {
             val s = sin(clock * 7f)
+            val strokeNo = (clock * 7f / PIf).toInt()
+            if (strokeNo != stroke) {
+                stroke = strokeNo
+                sfx(Fx.SWEEP, 0.8f)
+            }
             pose.armR = 28f + 18f * s
             pose.armL = 12f
             pose.lean = 6f * s
@@ -356,8 +388,8 @@ class ElfEngine(
         sayWait(Lines.tidyDone.random(rng))
     }
 
-    suspend fun doChaos() {
-        walkTo(randomPoint())
+    suspend fun doChaos(walk: Boolean = true) {
+        if (walk) walkTo(randomPoint())
         say(Lines.chaos.random(rng))
         repeat(rng.nextInt(3, 6)) {
             val kind = rng.nextInt(4)
@@ -371,6 +403,7 @@ class ElfEngine(
                 pose.lean = -6f * t
             }
             val item = MessItem(kind, sx, sy, rng.nextFloat() * 360f)
+            sfx(Fx.WHOOSH, 0.7f)
             flying = item
             val rot0 = item.rot
             anim(600) { t ->
@@ -384,6 +417,7 @@ class ElfEngine(
             flying = null
             if (mess.size >= 14) mess.removeAt(0)
             mess.add(MessItem(kind, tx, ty, item.rot))
+            sfx(Fx.THUD, 0.5f)
             burst(tx, ty, 3, PK.DUST, 0.05f, 0.4f)
             pose.relax()
         }
@@ -391,7 +425,11 @@ class ElfEngine(
 
     suspend fun doDance(withConfetti: Boolean = false) {
         val ms = say(Lines.dance.random(rng))
-        if (withConfetti) confetti(x, y - hNorm * 0.8f)
+        sfx(Fx.TUNE, 0.8f)
+        if (withConfetti) {
+            confetti(x, y - hNorm * 0.8f)
+            sfx(Fx.JINGLE, 0.6f)
+        }
         var confettiTimer = 0f
         anim(maxOf(ms, 3200L)) {
             val s = sin(clock * 10f)
@@ -406,6 +444,7 @@ class ElfEngine(
             if (withConfetti && confettiTimer > 1.0f) {
                 confettiTimer = 0f
                 confetti(x, y - hNorm * 0.8f, 25)
+                sfx(Fx.JINGLE, 0.5f)
             }
         }
         pose.relax()
@@ -420,6 +459,7 @@ class ElfEngine(
 
     suspend fun doTumble() {
         say(Lines.tumble.random(rng), Mood.SURPRISED)
+        sfx(Fx.WHOOSH)
         anim(1000) { t ->
             pose.spin = 360f * t
             pose.bob = 0.28f * sin(t * PIf)
@@ -427,6 +467,7 @@ class ElfEngine(
             pose.armR = 120f
         }
         pose.relax()
+        sfx(Fx.THUD, 0.5f)
         say(Lines.dizzy.random(rng), Mood.SLEEPY)
         anim(1800) {
             pose.lean = 9f * sin(clock * 12f)
@@ -443,6 +484,7 @@ class ElfEngine(
             pose.armR = 110f * t
         }
         say(Lines.trip.random(rng), Mood.SURPRISED)
+        sfx(Fx.THUD)
         anim(420) { t ->
             pose.lean = 22f + 0f * t
             pose.spin = 90f * t
@@ -470,6 +512,7 @@ class ElfEngine(
             pose.armL = 15f * t
             pose.armR = 15f * t
         }
+        sfx(Fx.THUD, 0.4f)
         say(Lines.sit.random(rng))
         idle(holdMs)
         anim(350) { t ->
@@ -517,6 +560,7 @@ class ElfEngine(
             crumbTimer += 0.033f
             if (crumbTimer > 0.25f && s > 0.8f) {
                 crumbTimer = 0f
+                sfx(Fx.CRUNCH, 0.8f)
                 burst(x, y - hNorm * 0.5f, 2, PK.CRUMB, 0.05f, 0.7f)
             }
         }
@@ -524,14 +568,17 @@ class ElfEngine(
         pose.relax()
     }
 
-    suspend fun doHide() {
+    suspend fun doHide(reappear: Pt? = null) {
         say(Lines.hide.random(rng), Mood.WHISPER)
         anim(300) { t -> pose.scale = 1f - t }
         burst(x, y - hNorm * 0.4f, 10, PK.POOF, 0.16f, 0.7f, 1.2f)
+        sfx(Fx.POOF)
         idle(1800)
-        x = rnd(0.15f, 0.85f)
-        y = rnd(0.6f, 0.9f)
+        x = reappear?.x ?: rnd(0.15f, 0.85f)
+        y = reappear?.y ?: rnd(0.6f, 0.9f)
         burst(x, y - hNorm * 0.4f, 10, PK.POOF, 0.16f, 0.7f, 1.2f)
+        sfx(Fx.POOF)
+        sfx(Fx.TINKLE, 0.6f)
         anim(450) { t -> pose.scale = easeOutBack(t).coerceAtLeast(0f) }
         pose.scale = 1f
         sayWait(Lines.hideFound.random(rng), Mood.SURPRISED)
@@ -574,6 +621,7 @@ class ElfEngine(
         pose.prop = Prop.NONE
         if (mess.size >= 14) mess.removeAt(0)
         mess.add(MessItem(MessItem.GIFT, x + 0.05f * facing, y, 0f))
+        sfx(Fx.GIFT)
         burst(x + 0.05f * facing, y - 0.03f, 6, PK.SPARK, 0.1f, 0.7f)
         pose.relax()
         sayWait(Lines.giftPlaced.random(rng))
@@ -586,6 +634,8 @@ class ElfEngine(
         if (mess.size >= 14) mess.removeAt(0)
         mess.add(MessItem(MessItem.GIFT, gx, y, 0f))
         burst(gx, y - 0.04f, 14, PK.POOF, 0.15f, 0.8f, 1.2f)
+        sfx(Fx.POOF)
+        sfx(Fx.GIFT)
         confetti(gx, y - 0.05f, 50)
         say(Lines.giftPop.random(rng), Mood.SURPRISED)
         idle(1800)
@@ -595,6 +645,7 @@ class ElfEngine(
     /** Zauberspruch: Funken fliegen, Spielzeug erscheint aus dem Nichts. */
     suspend fun doMagic() {
         say(Lines.magic.random(rng), Mood.AMUSED)
+        sfx(Fx.SPARKLE)
         anim(1500) {
             pose.armR = 150f + 20f * sin(clock * 12f)
             pose.hatTilt = 0.04f * sin(clock * 6f)
@@ -602,6 +653,7 @@ class ElfEngine(
         }
         pose.relax()
         spawnMess(3)
+        sfx(Fx.JINGLE, 0.7f)
         confetti(x, y - hNorm * 0.8f, 25)
         sayWait(Lines.surprised.random(rng), Mood.SURPRISED)
     }
@@ -621,6 +673,7 @@ class ElfEngine(
     private fun frontOfDoor() = Pt(door.x, (door.y + 0.02f).coerceAtMost(0.95f))
 
     suspend fun openDoor(ms: Long = 900) {
+        sfx(Fx.DOOR_OPEN, 0.8f)
         val from = doorOpen
         anim(ms) { t -> doorOpen = from + (1f - from) * t }
         doorOpen = 1f
@@ -630,13 +683,16 @@ class ElfEngine(
         val from = doorOpen
         anim(ms) { t -> doorOpen = from * (1f - t) }
         doorOpen = 0f
+        sfx(Fx.DOOR_CLOSE)
     }
 
     /** Klopft an die Tür. */
     suspend fun doKnock(times: Int = 3) {
         say(Lines.doorKnock.random(rng))
         repeat(times) {
-            anim(300) { t -> pose.armR = 120f * sin(t * PIf) }
+            anim(150) { t -> pose.armR = 120f * t }
+            sfx(Fx.KNOCK)
+            anim(150) { t -> pose.armR = 120f * (1f - t) }
         }
         pose.relax()
     }
@@ -660,6 +716,7 @@ class ElfEngine(
         }
         pose.relax()
         pose.scale = 0f
+        inHouse = true
         closeDoor(if (fast) 250 else 700)
     }
 
@@ -671,6 +728,7 @@ class ElfEngine(
         pose.relax()
         pose.scale = 0f
         visible = true
+        inHouse = false
         pose.prop = if (carryGift) Prop.GIFT else Prop.NONE
         openDoor(if (fast) 300 else 900)
         val sy = y
@@ -703,6 +761,41 @@ class ElfEngine(
 
     // ---------------------------------------------------------------- Ablauf
 
+    /** Führt einen Aktionspunkt aus: erst hingehen, dann die Aktion. */
+    suspend fun runStep(step: ScriptStep) {
+        val a = step.action
+        if (a == ElfAction.ENTER && inHouse) return
+        if (a == ElfAction.EXIT && !inHouse) return
+        if (inHouse && a != ElfAction.EXIT) doExitHouse()
+        if (a.needsPoint && step.at != null && a != ElfAction.GIFT) walkTo(step.at)
+        when (a) {
+            ElfAction.WALK -> Unit
+            ElfAction.SWEEP -> {
+                doSweep()
+                sayFrom(Lines.tidyDone)
+            }
+            ElfAction.WAVE -> doWave()
+            ElfAction.DANCE -> doDance(withConfetti = true)
+            ElfAction.SIT -> doSit(2000)
+            ElfAction.SLEEP -> doSleep()
+            ElfAction.SNACK -> doSnack()
+            ElfAction.GIFT -> doGiftCarry(step.at ?: Pt(x, y))
+            ElfAction.MAGIC -> doMagic()
+            ElfAction.TUMBLE -> doTumble()
+            ElfAction.TRIP -> doTrip()
+            ElfAction.CHAOS -> doChaos(walk = false)
+            ElfAction.HIDE -> doHide(Pt((x + rnd(-0.2f, 0.2f)).coerceIn(0.1f, 0.9f), y))
+            ElfAction.BOW -> doBow()
+            ElfAction.KNOCK -> {
+                walkTo(frontOfDoor())
+                doKnock()
+            }
+            ElfAction.ENTER -> doEnterHouse()
+            ElfAction.EXIT -> doExitHouse()
+            ElfAction.DOOR_SWEEP -> doDoorSweep()
+        }
+    }
+
     /**
      * Die gesamte Aufführung: erscheint am Startpunkt, begrüßt, spielt dann nacheinander Szenen (zuerst die
      * gewählte, danach zufällige aus der Kategorie) und folgt dabei dem Weg. Endet erst, wenn die Aufnahme abbricht.
@@ -710,6 +803,17 @@ class ElfEngine(
     suspend fun perform(req: PerfRequest, played: MutableList<String>) {
         appear(req.start)
         greet()
+        if (req.script.isNotEmpty()) {
+            // Drehbuch: die Aktionspunkte der Reihe nach abarbeiten, danach verbeugen und stehen bleiben
+            for (st in req.script) {
+                played.add(st.action.label)
+                runStep(st)
+                idle(rng.nextLong(300, 700))
+            }
+            if (!inHouse) doBow()
+            scriptDoneMs = timeMs
+            while (true) idle(800)
+        }
         val stops = Stops(req.path, this)
         var last: SceneDef? = null
         var first = req.sceneId?.let { Scenes.find(it) }

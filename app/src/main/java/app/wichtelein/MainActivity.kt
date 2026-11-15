@@ -38,7 +38,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-enum class Screen { HOME, CAMERA, EDITOR, VIDEOS, ACTIONS, SETTINGS, AR }
+enum class Screen { HOME, CAMERA, PHOTO_CAMERA, EDITOR, VIDEOS, ACTIONS, SETTINGS, AR }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,10 +67,13 @@ fun WichtelApp() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val roomFile = remember { File(context.filesDir, "room.mp4") }
+    val photoFile = remember { File(context.filesDir, "room.jpg") }
 
     var screen by remember { mutableStateOf(Screen.HOME) }
     var settings by remember { mutableStateOf(SettingsStore.load(context)) }
-    var roomVersion by remember { mutableIntStateOf(if (roomFile.exists()) 1 else 0) }
+    var roomVersion by remember { mutableIntStateOf(if (roomFile.exists() || photoFile.exists()) 1 else 0) }
+    // zuletzt benutzt: Foto oder Video?
+    var roomIsPhoto by remember { mutableStateOf(photoFile.exists() && (!roomFile.exists() || photoFile.lastModified() >= roomFile.lastModified())) }
     var videoCount by remember { mutableIntStateOf(listExports(context).size) }
 
     fun update(s: Settings) {
@@ -82,10 +85,45 @@ fun WichtelApp() {
         try {
             src.copyTo(roomFile, overwrite = true)
             src.delete()
+            roomIsPhoto = false
             roomVersion++
             screen = Screen.EDITOR
         } catch (e: Exception) {
             Toast.makeText(context, "Video konnte nicht gespeichert werden: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    /** Übernimmt ein Foto (Kamera oder Galerie): drehen, verkleinern, als Hintergrund des Foto-Films speichern. */
+    fun adoptPhoto(src: File) {
+        scope.launch {
+            val ok = withContext(Dispatchers.IO) { normalizePhoto(src, photoFile) }
+            src.delete()
+            if (ok) {
+                roomIsPhoto = true
+                roomVersion++
+                screen = Screen.EDITOR
+            } else {
+                Toast.makeText(context, "Das Foto konnte nicht gelesen werden.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            scope.launch {
+                val tmp = File(context.cacheDir, "import_foto.jpg")
+                val ok = withContext(Dispatchers.IO) {
+                    try {
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            tmp.outputStream().use { input.copyTo(it) }
+                        } != null
+                    } catch (_: Exception) {
+                        false
+                    }
+                }
+                if (ok) adoptPhoto(tmp)
+                else Toast.makeText(context, "Das Foto konnte nicht gelesen werden.", Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -137,9 +175,12 @@ fun WichtelApp() {
         Screen.HOME -> HomeScreen(
             settings = settings,
             hasRoom = roomVersion > 0,
+            roomIsPhoto = roomIsPhoto,
             videoCount = videoCount,
             onFilm = { screen = Screen.CAMERA },
             onPick = { picker.launch("video/*") },
+            onPhoto = { screen = Screen.PHOTO_CAMERA },
+            onPickPhoto = { photoPicker.launch("image/*") },
             onVideos = { videoCount = listExports(context).size; screen = Screen.VIDEOS },
             onActions = { screen = Screen.ACTIONS },
             onSettings = { screen = Screen.SETTINGS },
@@ -154,8 +195,13 @@ fun WichtelApp() {
             onRecorded = { adoptRoom(it) },
             onBack = { screen = Screen.HOME },
         )
+        Screen.PHOTO_CAMERA -> PhotoCameraScreen(
+            onCaptured = { adoptPhoto(it) },
+            onBack = { screen = Screen.HOME },
+        )
         Screen.EDITOR -> EditorScreen(
-            file = roomFile,
+            file = if (roomIsPhoto) photoFile else roomFile,
+            isPhoto = roomIsPhoto,
             settings = settings,
             onSettings = ::update,
             onBack = { videoCount = listExports(context).size; screen = Screen.HOME },

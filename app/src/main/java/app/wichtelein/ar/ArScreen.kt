@@ -149,12 +149,14 @@ private fun Message(text: String, onBack: () -> Unit, extra: @Composable () -> U
 private fun ArContent(activity: Activity, settings: Settings, onSettings: (Settings) -> Unit, onBack: () -> Unit) {
     val context = LocalContext.current
     val latest by rememberUpdatedState(settings)
-    val sprites = rememberElfSprites(settings.colors(), settings.elfStyle)
+    val sprites = rememberElfSprites(settings.colors())
     val measurer = rememberTextMeasurer()
     val speaker = remember { Speaker(context) }
+    val fxPlayer = remember { app.wichtelein.sound.SoundPlayer() }
     DisposableEffect(Unit) { onDispose { speaker.shutdown() } }
     SideEffect {
         speaker.enabled = settings.speak
+        fxPlayer.enabled = settings.soundFx
         speaker.effect = settings.effect
         speaker.rate = settings.rate
         speaker.mood = settings.mood
@@ -271,6 +273,9 @@ private fun ArContent(activity: Activity, settings: Settings, onSettings: (Setti
                     val s = latest
                     if (clip != null) speaker.playClip(clip) else if (s.speak && !s.elfVoice) speaker.speak(ev.text, ev.mood)
                 }
+            }
+            for (fe in p.sounds) {
+                if (fe.timeMs > last && fe.timeMs <= inLoop) fxPlayer.play(fe.fx, fe.gain)
             }
             last = inLoop
             elapsedMs = inLoop

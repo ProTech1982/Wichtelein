@@ -80,11 +80,13 @@ object ExportManager {
         perf: Performance,
         settings: Settings,
         onProgress: (Float) -> Unit,
+        /** [video] ist ein Foto (JPEG): daraus entsteht ein Film der Länge [info].durationMs */
+        isPhoto: Boolean = false,
     ): ExportResultInfo {
         val app = context.applicationContext
         val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.GERMANY).format(Date())
         val out = File(exportsDir(app), "Wichtelein-$stamp.mp4")
-        val sprites = ElfSprites.load(app, settings.colors(), settings.elfStyle)
+        val sprites = ElfSprites.load(app, settings.colors())
 
         // 1) Sprache (nur mit der Wichtelstimme als Rohdaten möglich)
         var wav: File? = null
@@ -96,10 +98,11 @@ object ExportManager {
             // Systemstimme (oder Wichtelstimme nicht verfügbar): Sprache über synthesizeToFile erzeugen
             else -> withContext(Dispatchers.Default) { SystemTtsRender.renderAll(app, settings, perf.speech) }
         }
-        if (clips.any { it != null }) {
-            val pcm = SpeechMixer.mix(perf.speech, clips, info.durationMs)
+        val fxSounds = if (settings.soundFx) perf.sounds.filter { it.timeMs < info.durationMs } else emptyList()
+        if (clips.any { it != null } || fxSounds.isNotEmpty()) {
+            val pcm = SpeechMixer.mix(perf.speech, clips, info.durationMs, fxSounds)
             wav = File(app.cacheDir, "wichtel-sprache.wav").also { it.writeBytes(SpeechMixer.toWav(pcm)) }
-            hasSpeech = true
+            hasSpeech = clips.any { it != null }
         }
 
         // 2) Overlay: pro Videobild die passende Szene der Aufführung
@@ -117,9 +120,18 @@ object ExportManager {
             }
         }
         val videoEffects = ImmutableList.of<Effect>(OverlayEffect(ImmutableList.of(overlay)))
-        val videoItem = EditedMediaItem.Builder(MediaItem.fromUri(Uri.fromFile(video)))
-            .setEffects(Effects(ImmutableList.of<AudioProcessor>(), videoEffects))
-            .build()
+        val videoItem = if (isPhoto) {
+            // Standbild: Dauer und Bildrate müssen angegeben werden
+            EditedMediaItem.Builder(MediaItem.fromUri(Uri.fromFile(video)))
+                .setDurationUs(info.durationMs * 1000L)
+                .setFrameRate(perf.fps)
+                .setEffects(Effects(ImmutableList.of<AudioProcessor>(), videoEffects))
+                .build()
+        } else {
+            EditedMediaItem.Builder(MediaItem.fromUri(Uri.fromFile(video)))
+                .setEffects(Effects(ImmutableList.of<AudioProcessor>(), videoEffects))
+                .build()
+        }
         val sequences = ArrayList<EditedMediaItemSequence>()
         sequences.add(EditedMediaItemSequence(videoItem))
         wav?.let {

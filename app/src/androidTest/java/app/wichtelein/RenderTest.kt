@@ -366,10 +366,10 @@ class RotatedExportTest {
 class ColorTest {
     @get:Rule val rule = createComposeRule()
 
-    private fun count(bmp: Bitmap, match: (Float, Float, Float) -> Boolean): Int {
+    private fun count(bmp: Bitmap, rowFrom: Int = 0, rowTo: Int = bmp.height, match: (Float, Float, Float) -> Boolean): Int {
         val hsv = FloatArray(3)
         var n = 0
-        for (y in 0 until bmp.height) for (x in 0 until bmp.width) {
+        for (y in rowFrom until minOf(rowTo, bmp.height)) for (x in 0 until bmp.width) {
             val c = bmp.getPixel(x, y)
             if (AColor.alpha(c) < 200) continue
             AColor.colorToHSV(c, hsv)
@@ -380,63 +380,67 @@ class ColorTest {
 
     private fun bmp(s: ElfSprites, part: String) = s.image(part).asAndroidBitmap()
 
+    @Test fun figureLoadsWithLayout() {
+        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
+        val s = ElfSprites.load(ctx)
+        assertEquals(596f, s.layout.height, 0f)
+        assertNotNull("Besen fehlt", s.broom)
+        for (n in ElfSprites.partNames) assertTrue("Teil $n leer", s.image(n).width > 20 && s.image(n).height > 20)
+    }
+
     @Test fun onlyTheChosenGarmentChanges() {
         val ctx = InstrumentationRegistry.getInstrumentation().targetContext
         val base = ElfSprites.load(ctx)
-        val green = { h: Float, s: Float, v: Float -> Recolor.isGreen(h, s, v) }
-        val red = { h: Float, s: Float, v: Float -> (h <= 25f || h >= 325f) && s > 0.4f && v > 0.25f }
-        val blue = { h: Float, s: Float, v: Float -> h in 180f..260f && s > 0.4f && v > 0.2f }
+        val br = base.layout.bootRow
+        val hat = { h: Float, s: Float, v: Float -> Recolor.isHatRed(h, s, v) }
+        val coat = { h: Float, s: Float, v: Float -> Recolor.isCoat(h, s, v) }
+        val trousers = { h: Float, s: Float, v: Float -> Recolor.isTrousers(h, s, v) }
+        val boots = { h: Float, s: Float, v: Float -> Recolor.isBoot(h, s, v) }
+        val blue = { h: Float, s: Float, v: Float -> h in 180f..260f && s > 0.2f && v > 0.2f }
+        val reddish = { h: Float, s: Float, v: Float -> (h <= 25f || h >= 325f) && s > 0.3f && v > 0.2f }
+        val face = { h: Float, s: Float, v: Float -> (h <= 30f || h >= 340f) && s in 0.15f..0.6f && v > 0.6f }
 
-        val baseHatGreen = count(bmp(base, "head"), green)
-        val baseJacketGreen = count(bmp(base, "torso"), green)
-        val baseLegGreen = count(bmp(base, "legl"), green)
-        assertTrue("Mütze hat zu wenig Grün: $baseHatGreen", baseHatGreen > 1500)
-        assertTrue("Jacke hat zu wenig Grün: $baseJacketGreen", baseJacketGreen > 4000)
+        val baseHat = count(bmp(base, "head"), match = hat)
+        val baseCoat = count(bmp(base, "torso"), match = coat)
+        val baseTrousers = count(bmp(base, "legl"), 0, br, trousers)
+        val baseBoots = count(bmp(base, "legl"), br, match = boots)
+        val baseFace = count(bmp(base, "head"), match = face)
+        assertTrue("Mütze hat zu wenig Rot: $baseHat", baseHat > 20000)
+        assertTrue("Mantel hat zu wenig Grün: $baseCoat", baseCoat > 6000)
+        assertTrue("Hose zu klein: $baseTrousers", baseTrousers > 1500)
+        assertTrue("Stiefel zu klein: $baseBoots", baseBoots > 1500)
+        assertTrue("Gesicht nicht gefunden: $baseFace", baseFace > 500)
 
-        // Nur die Mütze rot
-        val hatRed = ElfSprites.load(ctx, ElfColors(hat = 1))
-        assertTrue("Mütze noch grün", count(bmp(hatRed, "head"), green) < baseHatGreen / 10)
-        assertTrue("Mütze nicht rot", count(bmp(hatRed, "head"), red) > baseHatGreen / 2)
-        assertEquals("Jacke darf sich nicht ändern", baseJacketGreen, count(bmp(hatRed, "torso"), green))
-        assertEquals("Beine dürfen sich nicht ändern", baseLegGreen, count(bmp(hatRed, "legl"), green))
+        // Nur die Mütze blau: Nase und Wangen bleiben, Mantel und Hose ebenfalls
+        val hatBlue = ElfSprites.load(ctx, ElfColors(hat = 5))
+        assertTrue("Mütze noch rot", count(bmp(hatBlue, "head"), match = hat) < baseHat / 10)
+        assertTrue("Mütze nicht blau", count(bmp(hatBlue, "head"), match = blue) > baseHat / 2)
+        assertEquals("Gesicht darf sich nicht ändern", baseFace, count(bmp(hatBlue, "head"), match = face))
+        assertEquals("Mantel darf sich nicht ändern", baseCoat, count(bmp(hatBlue, "torso"), match = coat))
+        assertEquals("Hose darf sich nicht ändern", baseTrousers, count(bmp(hatBlue, "legl"), 0, br, trousers))
+        assertTrue("Fäustlinge folgen der Mützenfarbe", count(bmp(hatBlue, "armr"), match = blue) > 500)
 
-        // Nur die Jacke blau (Körper und beide Arme)
-        val jacketBlue = ElfSprites.load(ctx, ElfColors(jacket = 5))
-        assertTrue("Jacke noch grün", count(bmp(jacketBlue, "torso"), green) < baseJacketGreen / 10)
-        assertTrue("Jacke nicht blau", count(bmp(jacketBlue, "torso"), blue) > baseJacketGreen / 2)
-        assertTrue("Arm nicht blau", count(bmp(jacketBlue, "armr"), blue) > 500)
-        assertEquals("Mütze darf sich nicht ändern", baseHatGreen, count(bmp(jacketBlue, "head"), green))
+        // Nur der Mantel rot
+        val coatRed = ElfSprites.load(ctx, ElfColors(jacket = 1))
+        assertTrue("Mantel noch grün", count(bmp(coatRed, "torso"), match = coat) < baseCoat / 10)
+        assertTrue("Mantel nicht rot", count(bmp(coatRed, "torso"), match = reddish) > baseCoat / 2)
+        assertEquals("Mütze darf sich nicht ändern", baseHat, count(bmp(coatRed, "head"), match = hat))
+
+        // Nur die Hose blau
+        val legsBlue = ElfSprites.load(ctx, ElfColors(legs = 5))
+        assertTrue("Hose nicht blau", count(bmp(legsBlue, "legl"), 0, br, blue) > baseTrousers / 2)
+        assertEquals("Stiefel dürfen sich nicht ändern", baseBoots, count(bmp(legsBlue, "legl"), br, match = boots))
 
         // Nur die Schuhe blau
         val bootsBlue = ElfSprites.load(ctx, ElfColors(boots = 4))
-        val baseBootRed = count(bmp(base, "legl").let { Bitmap.createBitmap(it, 0, 110, it.width, it.height - 110) }, red)
-        val newBootRed = count(bmp(bootsBlue, "legl").let { Bitmap.createBitmap(it, 0, 110, it.width, it.height - 110) }, red)
-        assertTrue("Schuhe waren nicht rotbraun? $baseBootRed", baseBootRed > 800)
-        assertTrue("Schuhe noch rot: $newBootRed", newBootRed < baseBootRed / 5)
-        assertEquals("Strumpfhose darf sich nicht ändern", baseLegGreen, count(bmp(bootsBlue, "legl"), green))
+        assertTrue("Schuhe nicht blau", count(bmp(bootsBlue, "legl"), br, match = blue) > baseBoots / 2)
+        assertTrue("Schuhe noch braun", count(bmp(bootsBlue, "legl"), br, match = boots) < baseBoots / 5)
+        assertEquals("Hose darf sich nicht ändern", baseTrousers, count(bmp(bootsBlue, "legl"), 0, br, trousers))
     }
 
-    @Test fun threeDStyleLoadsWithLayout() {
+    @Test fun posesRenderWithBroomAndWithoutFace() {
         val ctx = InstrumentationRegistry.getInstrumentation().targetContext
-        val s = ElfSprites.load(ctx, ElfColors(), ElfSprites.STYLE_3D)
-        assertTrue(s.layout.height > 100f)
-        assertTrue(ElfSprites.hasStyle(ctx, ElfSprites.STYLE_PHOTO))
-    }
-
-    @Test fun threeDStyleRendersAndCanBeRecolored() {
-        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
-        assertTrue("3D-Bilder fehlen", ElfSprites.hasStyle(ctx, ElfSprites.STYLE_3D))
-        val base = ElfSprites.load(ctx, ElfColors(), ElfSprites.STYLE_3D)
-        assertEquals(1000f, base.layout.height, 0f)
-        val green = { h: Float, s: Float, v: Float -> Recolor.isGreen(h, s, v) }
-        val baseHat = count(bmp(base, "head"), green)
-        val baseJacket = count(bmp(base, "torso"), green)
-        assertTrue("Mütze zu wenig Grün: $baseHat", baseHat > 3000)
-        assertTrue("Jacke zu wenig Grün: $baseJacket", baseJacket > 3000)
-        val red = ElfSprites.load(ctx, ElfColors(hat = 1, jacket = 5), ElfSprites.STYLE_3D)
-        assertTrue("Mütze noch grün", count(bmp(red, "head"), green) < baseHat / 10)
-        assertTrue("Jacke noch grün", count(bmp(red, "torso"), green) < baseJacket / 10)
-
+        val base = ElfSprites.load(ctx)
         val poses = listOf(
             Pose(),
             Pose().apply { legL = 30f; legR = -30f; armL = -12f; armR = 32f; bob = 0.02f },
@@ -444,17 +448,21 @@ class ColorTest {
             Pose().apply { prop = Prop.BROOM; armR = 28f; lean = 6f },
             Pose().apply { eyesClosed = true; spin = 90f; bob = -0.32f },
         )
-        val outfits = listOf(base, ElfSprites.load(ctx, ElfColors(1, 1, 1, 1), ElfSprites.STYLE_3D), red)
         rule.setContent {
             androidx.compose.foundation.Canvas(Modifier.size(700.dp, 300.dp).background(Color(0xFFE8DCC8))) {
                 poses.forEachIndexed { i, p ->
-                    outfits[i % outfits.size].draw(this, p, androidx.compose.ui.geometry.Offset(size.width * (i + 0.5f) / poses.size, size.height * 0.95f), size.height * 0.88f, 1)
+                    base.draw(this, p, androidx.compose.ui.geometry.Offset(size.width * (i + 0.5f) / poses.size, size.height * 0.95f), size.height * 0.88f, 1)
                 }
             }
         }
         rule.waitForIdle()
-        val b = shot(rule.onAllNodes(isRoot()).onFirst(), "style3d.png")
+        val b = shot(rule.onAllNodes(isRoot()).onFirst(), "poses.png")
         assertTrue(b.width > 100)
+        // Der Besen (Stroh, gelbbraun) muss im vierten Bildviertel zu sehen sein
+        val straw = { h: Float, s: Float, v: Float -> h in 28f..50f && s > 0.45f && v > 0.55f }
+        val x0 = b.width * 3 / 5
+        val sub = Bitmap.createBitmap(b, x0, 0, b.width / 5, b.height)
+        assertTrue("Besen nicht sichtbar: ${count(sub, match = straw)}", count(sub, match = straw) > 150)
     }
 
     @Test fun rendersSeveralOutfits() {

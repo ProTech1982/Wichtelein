@@ -71,9 +71,18 @@ object SpeechRender {
 object SpeechMixer {
     const val SAMPLE_RATE = 44100
 
-    fun mix(events: List<SpeechEvent>, clips: List<VoiceAudio?>, durationMs: Long): ShortArray {
+    /** Lautstärke der Geräusche gegenüber der Sprache */
+    const val FX_VOLUME = 0.55f
+
+    fun mix(
+        events: List<SpeechEvent>,
+        clips: List<VoiceAudio?>,
+        durationMs: Long,
+        sounds: List<app.wichtelein.sound.SoundEvent> = emptyList(),
+    ): ShortArray {
         val total = (durationMs * SAMPLE_RATE / 1000L).toInt()
         val acc = FloatArray(total)
+        app.wichtelein.sound.SoundMixer.mixInto(acc, sounds, FX_VOLUME)
         for ((i, ev) in events.withIndex()) {
             val clip = clips.getOrNull(i) ?: continue
             val start = (ev.timeMs * SAMPLE_RATE / 1000L).toInt()
