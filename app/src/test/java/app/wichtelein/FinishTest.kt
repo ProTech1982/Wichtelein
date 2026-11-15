@@ -35,7 +35,7 @@ class FinishTest {
         // keine Wichtel-Wörter (nur der Platzhalter {wichtel} für ihren Namen)
         for (line in e.flatten()) assertFalse("Wichtel-Wort in: $line", line.replace("{wichtel}", "").contains("Wichtel"))
         // nur bekannte Platzhalter
-        for (line in e.flatten()) for (m in Regex("\\{(\\w+)\\}").findAll(line)) assertTrue(line, m.groupValues[1] in setOf("name", "kind", "wichtel"))
+        for (line in e.flatten()) for (m in Regex("\\{(\\w+)\\}").findAll(line)) assertTrue(line, m.groupValues[1] in setOf("name", "kind", "wichtel", "item"))
         // kein Satz stimmt mit einem Wichtelsatz überein
         val wichtel = pools(Lines).flatten().toSet()
         for (line in e.flatten()) assertFalse("gleicher Satz wie beim Wichtel: $line", line in wichtel)
@@ -45,11 +45,11 @@ class FinishTest {
     @Test fun elfinOnlySpeaksHerOwnSentences() {
         val s = base.copy(cast = 1)
         val p = Recorder.record(PerfRequest(Pt(0.4f, 0.85f), emptyList(), 0.3f, null, null, 5L, 120_000L, null, s, aspect = 0.56f))
-        val allowed = pools(ElfinLines).flatten().map { fill(it, "Max", "Elfi") }.toSet()
+        val allowed = pools(ElfinLines).flatten().map { app.wichtelein.scene.SpeechText.prepare(fill(it, "Max", "Elfi")).text }.toSet()
         assertTrue(p.speech.size > 5)
         for (ev in p.speech) assertTrue("fremder Satz: ${ev.text}", ev.text in allowed)
         val w = Recorder.record(PerfRequest(Pt(0.4f, 0.85f), emptyList(), 0.3f, null, null, 5L, 120_000L, null, base, aspect = 0.56f))
-        val wichtelAllowed = pools(Lines).flatten().map { fill(it, "Max", "Pippo") }.toSet()
+        val wichtelAllowed = pools(Lines).flatten().map { app.wichtelein.scene.SpeechText.prepare(fill(it, "Max", "Pippo")).text }.toSet()
         for (ev in w.speech) assertTrue("fremder Satz beim Wichtel: ${ev.text}", ev.text in wichtelAllowed)
     }
 
@@ -65,8 +65,8 @@ class FinishTest {
     @Test fun bothFiguresUseTheirOwnTextsInOneFilm() {
         val s = base.copy(cast = 2)
         val p = Recorder.record(PerfRequest(Pt(0.3f, 0.85f), emptyList(), 0.3f, null, null, 9L, 120_000L, null, s, aspect = 0.56f))
-        val e = pools(ElfinLines).flatten().map { fill(it, "Max", "Elfi") }.toSet()
-        val w = pools(Lines).flatten().map { fill(it, "Max", "Pippo") }.toSet()
+        val e = pools(ElfinLines).flatten().map { app.wichtelein.scene.SpeechText.prepare(fill(it, "Max", "Elfi")).text }.toSet()
+        val w = pools(Lines).flatten().map { app.wichtelein.scene.SpeechText.prepare(fill(it, "Max", "Pippo")).text }.toSet()
         assertTrue(p.speech.any { it.actor == 0 } && p.speech.any { it.actor == 1 })
         for (ev in p.speech) assertTrue(ev.text, if (ev.actor == 1) ev.text in e else ev.text in w)
     }

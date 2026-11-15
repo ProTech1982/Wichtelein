@@ -59,7 +59,7 @@ class ElfinSnowRenderTest {
         val settings = Settings(cast = 1)
         val figure = ElfFigures.load(ctx, settings)
         assertTrue("Elfin-Figur gewählt", figure is ElfinFigure)
-        val blue = ElfFigures.load(ctx, settings.copy(hatColor = 5, jacketColor = 6, legColor = 8))
+        val blue = ElfFigures.load(ctx, settings.copy(elfinHatColor = 5, elfinJacketColor = 6, elfinLegColor = 8))
         val poses = listOf(
             Pose(),
             Pose().apply { armR = 150f; armL = 20f },

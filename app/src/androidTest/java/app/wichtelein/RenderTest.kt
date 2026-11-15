@@ -34,6 +34,7 @@ import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.printToString
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -156,15 +157,15 @@ class RenderTest {
         // Gegenstände: Filter Klassisch / Neon
         rule.onNodeWithText("🎄 Tannenbaum").assertExists()
         rule.onNodeWithText("🎄 Neon-Tannenbaum").assertExists()
-        rule.onNodeWithText("Neon (Cyberpunk) (6)").performClick()
+        rule.onNodeWithText("Neon (Cyberpunk) (6)").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         rule.waitForIdle()
         rule.onNodeWithText("🎄 Neon-Tannenbaum").assertExists()
         rule.onNodeWithText("🎄 Tannenbaum").assertDoesNotExist()
-        rule.onNodeWithText("Klassisch (11)").performClick()
+        rule.onNodeWithText("Klassisch (11)").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         rule.waitForIdle()
         rule.onNodeWithText("🎄 Tannenbaum").assertExists()
         rule.onNodeWithText("🎄 Neon-Tannenbaum").assertDoesNotExist()
-        rule.onNodeWithText("Alle (17)").performClick()
+        rule.onNodeWithText("Alle (17)").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         rule.waitForIdle()
         shot(rule.onAllNodes(isRoot()).onFirst(), "settings.png")
         rule.runOnIdle { screen.intValue = 1 }
