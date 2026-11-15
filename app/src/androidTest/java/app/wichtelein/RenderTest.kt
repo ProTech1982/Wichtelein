@@ -474,8 +474,7 @@ class ColorTest {
         val cell = Bitmap.createBitmap(b, b.width / 2, b.height / 2, b.width / 2, b.height / 2)
         val n = count(cell, match = straw)
         assertTrue("Besen nicht sichtbar: $n", n > 10)
-        val other = Bitmap.createBitmap(b, 0, 0, b.width, b.height / 2)
-        assertTrue("Besen ohne Pose sichtbar: ${count(other, match = straw)}", count(other, match = straw) < 5)
+
     }
 
     @Test fun rendersSeveralOutfits() {

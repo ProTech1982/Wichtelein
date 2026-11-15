@@ -129,7 +129,7 @@ fun DrawScope.drawWichtelFrame(
         val corner = CornerRadius(h * 0.03f)
         drawRoundRect(Color.White.copy(alpha = 0.96f), Offset(left, top), Size(bw, bh), corner)
         drawRoundRect(Color(0xFF999999), Offset(left, top), Size(bw, bh), corner, style = Stroke(h * 0.003f))
-        val tailX = elfX.coerceIn(left + 24f, left + bw - 24f)
+        val tailX = elfX.coerceIn(left + 24f, (left + bw - 24f).coerceAtLeast(left + 24f))
         val tail = Path().apply {
             moveTo(tailX - h * 0.018f, top + bh - 1f)
             lineTo(tailX + h * 0.018f, top + bh - 1f)
