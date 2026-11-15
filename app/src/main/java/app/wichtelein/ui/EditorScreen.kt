@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -252,7 +253,7 @@ fun EditorScreen(
                     frame = frame,
                     sprites = sprites,
                     sizeScale = settings.sizeScale,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().testTag("bildflaeche"),
                     onTap = { px, py ->
                         val p = Pt(px.coerceIn(0.03f, 0.97f), py.coerceIn(0.4f, 0.96f))
                         when (mode) {

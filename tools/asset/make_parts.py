@@ -155,7 +155,7 @@ layout = {
     "hand": [522, 533], "propK": 0.78, "bootRow": 0,
     "shadowW": 0.62,
     "skin": "#F1C3A3",
-    "broom": {"h": 330, "aspect": b_img.width / b_img.height, "gripFromBottom": 0.37, "handleX": handle_x},
+    "broom": {"h": 290, "aspect": b_img.width / b_img.height, "gripFromBottom": 0.46, "handleX": handle_x},
 }
 layout["bootRow"] = 619 - min(layout_parts["legl"][1], layout_parts["legr"][1])
 json.dump(layout, open(os.path.join(out_raw, "elf_layout.json"), "w"), indent=1)

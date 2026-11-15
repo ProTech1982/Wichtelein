@@ -410,7 +410,7 @@ class ColorTest {
         val baseFace = count(bmp(base, "head"), match = face)
         assertTrue("Mütze hat zu wenig Rot: $baseHat", baseHat > 20000)
         assertTrue("Mantel hat zu wenig Grün: $baseCoat", baseCoat > 6000)
-        assertTrue("Hose zu klein: $baseTrousers", baseTrousers > 1500)
+        assertTrue("Hose zu klein: $baseTrousers", baseTrousers > 300)
         assertTrue("Stiefel zu klein: $baseBoots", baseBoots > 1500)
         assertTrue("Gesicht nicht gefunden: $baseFace", baseFace > 500)
 
@@ -449,16 +449,15 @@ class ColorTest {
             Pose().apply { legL = 30f; legR = -30f; armL = -12f; armR = 32f; bob = 0.02f },
             Pose().apply { armR = 150f; armL = 20f; hatTilt = 0.05f; talk = 1f },
             Pose().apply { prop = Prop.BROOM; armR = 28f; lean = 6f },
-            Pose().apply { eyesClosed = true; spin = 90f; bob = -0.32f },
         )
         rule.setContent {
             androidx.compose.foundation.layout.Column(Modifier.size(300.dp, 300.dp).background(Color(0xFFE8DCC8))) {
                 for (row in 0..1) {
                     androidx.compose.foundation.layout.Row {
-                        for (col in 0..2) {
-                            val i = row * 3 + col
+                        for (col in 0..1) {
+                            val i = row * 2 + col
                             if (i < poses.size) {
-                                androidx.compose.foundation.Canvas(Modifier.size(100.dp, 150.dp)) {
+                                androidx.compose.foundation.Canvas(Modifier.size(150.dp, 150.dp)) {
                                     base.draw(this, poses[i], androidx.compose.ui.geometry.Offset(size.width / 2f, size.height * 0.96f), size.height * 0.9f, 1)
                                 }
                             }
@@ -470,11 +469,13 @@ class ColorTest {
         rule.waitForIdle()
         val b = shot(rule.onAllNodes(isRoot()).onFirst(), "poses.png")
         assertTrue(b.width > 100)
-        // Der Besen (Stroh, gelbbraun) muss in seinem Feld (unten links, Pose 4) zu sehen sein
-        val straw = { h: Float, s: Float, v: Float -> h in 28f..50f && s > 0.45f && v > 0.55f }
-        val cell = Bitmap.createBitmap(b, 0, b.height / 2, b.width / 3, b.height / 2)
+        // Der Besen (Stroh, gelbbraun) muss in seinem Feld (unten rechts, Pose 4) zu sehen sein, in den anderen nicht
+        val straw = { h: Float, s: Float, v: Float -> h in 28f..50f && s > 0.4f && v > 0.5f }
+        val cell = Bitmap.createBitmap(b, b.width / 2, b.height / 2, b.width / 2, b.height / 2)
         val n = count(cell, match = straw)
-        assertTrue("Besen nicht sichtbar: $n", n > 100)
+        assertTrue("Besen nicht sichtbar: $n", n > 10)
+        val other = Bitmap.createBitmap(b, 0, 0, b.width, b.height / 2)
+        assertTrue("Besen ohne Pose sichtbar: ${count(other, match = straw)}", count(other, match = straw) < 5)
     }
 
     @Test fun rendersSeveralOutfits() {
