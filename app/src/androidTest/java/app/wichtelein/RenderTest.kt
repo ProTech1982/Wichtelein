@@ -109,6 +109,8 @@ class RenderTest {
             }
         }
         rule.onNodeWithText("Wichtelein").assertExists()
+        rule.onNodeWithText("Foto-Film").assertExists()
+        rule.onNodeWithText("Foto auswählen").assertExists()
         rule.onNodeWithText("Video aufnehmen").assertExists()
         rule.onNodeWithText("Video auswählen").assertExists()
         rule.onNodeWithText("AR-Wichtel").assertExists()

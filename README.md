@@ -27,7 +27,7 @@ Namen, Sprüche, Stimme, Farbe und die erlaubten Szenen sind frei einstellbar, d
 
 ## Was fertig ist, was nur Prototyp ist, was fehlt
 
-**Umgesetzt und im Android-Emulator der CI geprüft** (16 Emulator-Tests und Unit-Tests, siehe unten):
+**Umgesetzt und im Android-Emulator der CI geprüft** (17 Emulator-Tests und Unit-Tests, siehe unten):
 - Startseite mit den fünf Bereichen, Namensabfrage beim ersten Start, Kinderprofile, Einstellungen, Wichtelaktionen,
   Meine Wichtelvideos (Darstellung), Editor mit Startpunkt, Größe, Weg, Szene und Würfeln.
 - **Der Wichtel** (seit 0.3.0): ein Wichtel mit roter Zipfelmütze, weißem Bart und grünem Mantel, aus dem Bild `Wichtel_bild1` (vom Nutzer mit ChatGPT erzeugt,

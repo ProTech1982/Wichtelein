@@ -7,12 +7,24 @@ import android.graphics.Color as AColor
 import android.media.ExifInterface
 import android.media.MediaExtractor
 import android.media.MediaMetadataRetriever
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.isRoot
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.wichtelein.anim.*
 import app.wichtelein.camera.*
 import app.wichtelein.settings.*
 import app.wichtelein.sound.Fx
+import app.wichtelein.ui.*
 import app.wichtelein.videoexport.*
 import java.io.File
 import kotlin.math.abs
@@ -21,12 +33,15 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /** Foto-Film: Foto aufbereiten und daraus ein Video mit Wichtel und Weihnachtsgeräuschen erzeugen. */
 @RunWith(AndroidJUnit4::class)
 class PhotoFilmTest {
+    @get:Rule val rule = createComposeRule()
+
     private val ctx get() = InstrumentationRegistry.getInstrumentation().targetContext
 
     private fun makePhoto(w: Int, h: Int, name: String): File {
@@ -113,5 +128,55 @@ class PhotoFilmTest {
         }
         val total = (frame.width / 2) * (frame.height / 2)
         assertTrue("Wichtel nicht im Bild: $diff von $total Punkten", diff > total / 60)
+    }
+
+    /** Bedienung: Foto im Editor öffnen, Aktion wählen, ins Bild tippen, als Video speichern. */
+    @Test fun photoEditorTakesActionPointsAndExports() {
+        val photo = makePhoto(640, 360, "editor_foto.jpg")
+        ExportManager.exportsDir(ctx).listFiles()?.forEach { it.delete() }
+        val settings = Settings(elfName = "Pippo", onboarded = true, speak = false, soundFx = true).withProfile("Max")
+        rule.mainClock.autoAdvance = false
+        rule.setContent { MaterialTheme { Surface { EditorScreen(photo, settings, {}, {}, {}, isPhoto = true) } } }
+
+        fun exists(t: String) = rule.onAllNodesWithText(t).fetchSemanticsNodes().isNotEmpty()
+        fun pump(timeoutMs: Long, what: String, cond: () -> Boolean) {
+            val t0 = System.currentTimeMillis()
+            while (!cond()) {
+                rule.mainClock.advanceTimeBy(100)
+                Thread.sleep(40)
+                if (System.currentTimeMillis() - t0 > timeoutMs) throw AssertionError("Zeitüberschreitung: $what")
+            }
+        }
+        val save = "💾 Als Video speichern"
+        pump(120_000, "Editor bereit") { exists(save) && runCatching { rule.onNodeWithText(save).assertIsEnabled() }.isSuccess }
+        assertTrue("Foto-Film-Titel", exists("Foto-Film"))
+        assertTrue("Längenregler ohne Aktionspunkte", exists("Länge des Films: 12 s"))
+
+        rule.onNodeWithText("🎯 Aktionen (0)").performClick()
+        pump(10_000, "Aktionsliste") { exists("🧹 Fegen") }
+        rule.onNodeWithText("🧹 Fegen").performClick()
+        rule.onAllNodes(isRoot()).onFirst().performTouchInput { click(Offset(width * 0.5f, height * 0.40f)) }
+        pump(60_000, "Aktionspunkt gesetzt") { exists("1. 🧹 Fegen ✕") }
+        rule.onNodeWithText("👋 Winken").performClick()
+        rule.onAllNodes(isRoot()).onFirst().performTouchInput { click(Offset(width * 0.3f, height * 0.38f)) }
+        pump(60_000, "zweiter Aktionspunkt") { exists("2. 👋 Winken ✕") }
+        pump(120_000, "Film neu berechnet (automatische Länge)") {
+            exists("🎯 Aktionen (2)") && exists(save) && runCatching { rule.onNodeWithText(save).assertIsEnabled() }.isSuccess &&
+                rule.onAllNodesWithText("Länge: automatisch", substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.onNodeWithText(save).performClick()
+        pump(420_000, "Export fertig") { exists("Fertig! 🎉") || exists("Export fehlgeschlagen") }
+        assertTrue("Export fehlgeschlagen", exists("Fertig! 🎉"))
+
+        val files = listExports(ctx)
+        assertEquals(1, files.size)
+        val ex = MediaExtractor()
+        ex.setDataSource(files[0].absolutePath)
+        val mimes = (0 until ex.trackCount).map { ex.getTrackFormat(it).getString(android.media.MediaFormat.KEY_MIME) ?: "" }
+        ex.release()
+        assertTrue("keine Videospur: $mimes", mimes.any { it.startsWith("video/") })
+        assertTrue("keine Tonspur: $mimes", mimes.any { it.startsWith("audio/") })
+        val d = readVideoInfo(files[0]).durationMs
+        assertTrue("Länge ergibt sich aus den Aktionspunkten: $d", d in 6_000L..59_000L)
     }
 }

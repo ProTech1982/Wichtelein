@@ -41,18 +41,18 @@ import androidx.compose.ui.unit.sp
 fun HomeScreen(
     settings: Settings,
     hasRoom: Boolean,
-    roomIsPhoto: Boolean = false,
     videoCount: Int,
     onFilm: () -> Unit,
     onPick: () -> Unit,
-    onPhoto: () -> Unit = {},
-    onPickPhoto: () -> Unit = {},
     onVideos: () -> Unit,
     onActions: () -> Unit,
     onSettings: () -> Unit,
     onUseLast: () -> Unit,
     onFirstProfile: (String?) -> Unit,
     onAr: () -> Unit = {},
+    roomIsPhoto: Boolean = false,
+    onPhoto: () -> Unit = {},
+    onPickPhoto: () -> Unit = {},
 ) {
     Column(
         Modifier
