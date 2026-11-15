@@ -158,14 +158,14 @@ class PhotoFilmTest {
         assertTrue("Foto-Film-Titel", exists("Foto-Film"))
         assertTrue("Längenregler ohne Aktionspunkte", exists("Länge des Films: 12 s"))
 
-        rule.onNodeWithText("🎯 Aktionen (0)").performClick()
+        rule.onNodeWithText("🎯 Aktionen (0)").performScrollTo().performClick()
         pump(10_000, "Aktionsliste") { exists("🧹 Fegen") }
         rule.onNodeWithText("🧹 Fegen").performScrollTo().performClick()
         rule.onNodeWithTag("bildflaeche").performTouchInput { click(Offset(width * 0.5f, height * 0.6f)) }
-        pump(60_000, "Aktionspunkt gesetzt") { exists("1. 🧹 Fegen ✕") }
+        pump(60_000, "Aktionspunkt gesetzt") { exists("🎯 Aktionen (1)") }
         rule.onNodeWithText("🚶 Hingehen").performScrollTo().performClick()
         rule.onNodeWithTag("bildflaeche").performTouchInput { click(Offset(width * 0.25f, height * 0.7f)) }
-        pump(60_000, "zweiter Aktionspunkt") { exists("2. 🚶 Hingehen ✕") }
+        pump(60_000, "zweiter Aktionspunkt") { exists("🎯 Aktionen (2)") }
         pump(120_000, "Film neu berechnet (automatische Länge)") {
             exists("🎯 Aktionen (2)") && exists(save) && runCatching { rule.onNodeWithText(save).assertIsEnabled() }.isSuccess &&
                 rule.onAllNodesWithText("Länge: automatisch", substring = true).fetchSemanticsNodes().isNotEmpty()

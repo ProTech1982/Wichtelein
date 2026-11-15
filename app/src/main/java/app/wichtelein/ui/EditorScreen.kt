@@ -288,7 +288,7 @@ fun EditorScreen(
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 FilterChip(selected = mode == EditMode.START, onClick = { mode = EditMode.START }, label = { Text("📍 Start") })
                 FilterChip(selected = mode == EditMode.PATH, onClick = { mode = EditMode.PATH }, label = { Text("🛤 Weg (${path.size})") })
                 FilterChip(selected = mode == EditMode.DOOR, onClick = { mode = EditMode.DOOR }, label = { Text(if (door == null) "🚪 Tür" else "🚪 Tür ✓") })
