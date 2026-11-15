@@ -149,8 +149,7 @@ class PhotoFilmTest {
                 Thread.sleep(40)
                 if (System.currentTimeMillis() - t0 > timeoutMs) {
                     val tree = runCatching { rule.onRoot().printToString(maxDepth = 12) }.getOrDefault("?")
-                    throw AssertionError("Zeitüberschreitung: $what | " + tree.replace("
-", " ").take(2500))
+                    throw AssertionError("Zeitüberschreitung: $what | " + tree.replace('\n', ' ').take(2500))
                 }
             }
         }
