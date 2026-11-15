@@ -62,6 +62,12 @@ object Scenes {
             doEnterHouse()
             doWave()
         },
+        SceneDef("brav_zuhause", "Ins Haus und drinnen bleiben", Category.BRAV, "Er geht in sein Wichtelhaus, schließt die Tür von innen und kommt nach einer Weile wieder heraus.", needsDoor = true) { _ ->
+            doGoInside()
+            idle(3500)
+            doComeOutside()
+            doWave()
+        },
         SceneDef("brav_tuer_fegen", "Vor der Tür fegen", Category.BRAV, "Er fegt vor seinem Haus und öffnet die Tür zur Begrüßung.", needsDoor = true) { _ ->
             doDoorSweep()
         },

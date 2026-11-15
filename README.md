@@ -65,6 +65,10 @@ verschieben, vergrößern, spiegeln, umfärben und mit oder ohne Licht zeigen; d
   Richtungen gerendert. Er dreht sich beim Laufen in Laufrichtung (auf den Betrachter zu, seitlich, vom Betrachter weg), steht beim Fegen seitlich (mit Staubwolken
   am Ende jedes Besenstrichs) und dreht sich zum Haus um 360° mit dem Rücken zum Betrachter, bevor er die Tür öffnet und hineingeht. Winken, Fegen und Laufen
   sind echte Bilder aus der jeweiligen Richtung; Hinsetzen, Purzelbaum, Schlafen u. Ä. entstehen aus dem Stehbild. Farben: Mütze und Mantel.
+- **Ins Haus gehen und drinnen bleiben (0.9.0):** Aktion „🏠 Ins Haus gehen & drinnen bleiben“: Er geht zur Tür, öffnet sie, geht hinein (wird dabei etwas kleiner), dreht sich
+  drinnen zum Betrachter um, winkt kurz und schließt die Tür von innen. Danach bleibt er im Haus, bis die Aktion „🚪 Aus dem Haus kommen“ (oder eine andere Aktion) ihn wieder herausholt;
+  er kommt dann größer werdend heraus, dreht sich um und schließt die Tür. Auch als Szene „Ins Haus und drinnen bleiben“.
+- **Lange Filme (0.8.1):** Viele Aktionen oder Gegenstände verlängern den Film; ist die Vorführung länger als das Video, wiederholt sich das Video, nichts wird abgeschnitten.
 - **Sprechblase pro Aktion (0.8.0):** an oder aus (gesprochen wird trotzdem), Form (Abgerundet, Rund, Viereck, Wolke, Zackig) und Größe; Standard in den Einstellungen,
   eigene Blase je Aktion im Editor (Werkzeug „🎯 Aktionen“, Aktion auswählen).
 - **Summen und Brummen (0.8.0, Einstellungen → Geräusche):** Ist die Stimme aus, brummt der Wichtel eine Silbe pro Wort. Ist sie an, summt er in den Pausen

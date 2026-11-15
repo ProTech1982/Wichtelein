@@ -40,6 +40,8 @@ enum class ElfAction(val label: String, val emoji: String, val needsDoor: Boolea
     KNOCK("Anklopfen", "✊", needsDoor = true, needsPoint = false),
     ENTER("Tür öffnen & reinschauen", "🏠", needsDoor = true, needsPoint = false),
     EXIT("Geschenk aus dem Haus holen", "🎁", needsDoor = true, needsPoint = false),
+    HOUSE_IN("Ins Haus gehen & drinnen bleiben", "🏠", needsDoor = true, needsPoint = false),
+    HOUSE_OUT("Aus dem Haus kommen", "🚪", needsDoor = true, needsPoint = false),
     DOOR_SWEEP("Vor der Tür fegen", "🧹", needsDoor = true, needsPoint = false),
 }
 

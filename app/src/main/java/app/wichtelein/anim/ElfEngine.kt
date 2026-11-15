@@ -1053,6 +1053,72 @@ class ElfEngine(
         turnAndClose(toDoor, fast)
     }
 
+    /**
+     * Geht zur Tür, öffnet sie, geht hinein (wird dabei nur so weit kleiner, wie es die Entfernung zur Tür verlangt), dreht sich drinnen
+     * zum Betrachter um und schließt die Tür von innen. Danach bleibt er im Haus (unsichtbar) bis eine Aktion ihn wieder herausholt.
+     */
+    suspend fun doGoInside() {
+        val front = Pt(door.x, (door.y + 0.02f).coerceAtMost(0.95f))
+        walkRoute(front)
+        turnTo(180f) // mit dem Rücken zum Betrachter zur Tür
+        say(Lines.doorHome.random(rng))
+        openDoor(900)
+        val sx = x
+        val sy = y
+        val ty = door.y - 0.005f
+        anim(1300) { t ->
+            val s = sin(clock * 11f)
+            x = sx + (door.x - sx) * t
+            y = sy + (ty - sy) * t
+            pose.scale = 1f - 0.55f * t
+            pose.legL = 25f * s
+            pose.legR = -25f * s
+            pose.bob = abs(s) * 0.012f
+        }
+        pose.relax()
+        pose.scale = 0.45f
+        // drinnen umdrehen, kurz winken und die Tür von innen zumachen
+        turnTo(0f)
+        anim(700) { pose.armR = 150f + 20f * sin(clock * 10f) }
+        pose.relax()
+        pose.armR = 55f
+        closeDoor(700)
+        pose.relax()
+        pose.scale = 0f
+        inHouse = true
+    }
+
+    /** Die Tür geht von innen auf, der Wichtel kommt heraus (wird größer), dreht sich um und schließt die Tür hinter sich. */
+    suspend fun doComeOutside() {
+        if (!inHouse) return
+        x = door.x
+        y = door.y - 0.005f
+        pose.relax()
+        pose.heading = 0f
+        facing = 1
+        pose.scale = 0.45f
+        visible = true
+        inHouse = false
+        openDoor(900)
+        val ty = (door.y + 0.02f).coerceAtMost(0.95f)
+        val sy = y
+        anim(1200) { t ->
+            val s = sin(clock * 11f)
+            y = sy + (ty - sy) * t
+            pose.scale = 0.45f + 0.55f * t
+            pose.legL = 25f * s
+            pose.legR = -25f * s
+            pose.bob = abs(s) * 0.012f
+        }
+        pose.relax()
+        pose.scale = 1f
+        say(Lines.doorExit.random(rng), Mood.AMUSED)
+        turnTo(180f) // zur Tür umdrehen und zumachen
+        pose.armR = 55f
+        closeDoor(700)
+        pose.relax()
+    }
+
     /** Vor der Tür sauber machen und dann einladend winken. */
     suspend fun doDoorSweep() {
         walkTo(Pt((door.x - 0.1f).coerceAtLeast(0.08f), frontOfDoor().y))
@@ -1078,7 +1144,9 @@ class ElfEngine(
 
     private suspend fun runStepInner(step: ScriptStep) {
         val a = step.action
-        if (inHouse && a != ElfAction.EXIT) doExitHouse()
+        if (a == ElfAction.HOUSE_IN && inHouse) return
+        // wer im Haus ist, kommt vor jeder anderen Aktion wieder heraus
+        if (inHouse && a != ElfAction.HOUSE_OUT) doComeOutside()
         if (a.needsPoint && step.at != null && a != ElfAction.GIFT) walkRoute(step.at)
         when (a) {
             ElfAction.WALK -> Unit
@@ -1105,6 +1173,8 @@ class ElfEngine(
             }
             ElfAction.ENTER -> doEnterHouse()
             ElfAction.EXIT -> doExitHouse(carryGift = true)
+            ElfAction.HOUSE_IN -> doGoInside()
+            ElfAction.HOUSE_OUT -> doComeOutside()
             ElfAction.DOOR_SWEEP -> doDoorSweep()
         }
     }

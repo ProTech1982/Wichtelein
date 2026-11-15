@@ -4,6 +4,10 @@ Auftrag: Wichtelein fertig bauen wie in `Prompt.txt` (Downloads, gehört zu eine
 Gebaut wird nur in GitHub Actions (kein Android-SDK lokal). Release = Push auf main (android.yml, Tag build-N).
 Entwicklungszweige per `gh workflow run ci.yml --ref <zweig>` testen (ci.yml hat workflow_dispatch). Emulator-Job flackert gelegentlich (Boot-Timeout -> neu starten).
 
+## Version 0.9.0 (enthält 0.8.1)
+- Neue Aktionen `HOUSE_IN`/`HOUSE_OUT` (`doGoInside`/`doComeOutside`), Szene „brav_zuhause“; im Haus ist der Wichtel unsichtbar (`inHouse`).
+- 0.8.1: Export verlängert kurze Videos per Schleife (`needLoop`, `EditedMediaItemSequence(…, true)`), Editor-Dauer = Aufführung (bis 4 min), Aufbau zählt mit.
+
 ## Version 0.8.0
 - Sprechblase: `anim/Bubble.kt` (5 Formen), je Aktion (`ScriptStep.bubble`), Standard in `Settings.bubble`; UI `ui/BubbleControls.kt`.
 - Summen/Brummen: `Settings.hum`, `Fx.MUMBLE1-3`, `Fx.HUM_*`; Engine plant Geräusche (`scheduleFx`); `Settings.allowsFx` entscheidet, was gespielt/exportiert wird.
