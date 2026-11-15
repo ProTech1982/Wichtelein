@@ -923,7 +923,7 @@ private fun EditMarkers(
             drawCircle(Color(0xFF43A047), 18f, at(it))
             drawCircle(if (sel == Sel.Start) SelColor else Color.White, 18f, at(it), style = Stroke(if (sel == Sel.Start) 6f else 3f))
         }
-        if (settings.both) st.start2?.let {
+        st.start2?.let {
             drawCircle(Color(0xFFE91E8C), 18f, at(it))
             drawCircle(if (sel == Sel.Start2) SelColor else Color.White, 18f, at(it), style = Stroke(if (sel == Sel.Start2) 6f else 3f))
             drawText(measurer, "🧝‍♀️", safe(at(it) - Offset(11f, 13f)), style = TextStyle(fontSize = 15.sp))
