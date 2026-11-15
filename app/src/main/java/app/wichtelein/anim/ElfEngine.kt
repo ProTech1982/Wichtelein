@@ -253,7 +253,7 @@ class ElfEngine(
 
     suspend fun idle(ms: Long) {
         // Summen: in längeren Pausen summt der Wichtel eine kleine Weihnachtsmelodie vor sich hin
-        if (settings().hum && ms >= 1800L && clock >= humUntil && rng.nextFloat() < 0.45f) {
+        if (settings().hum && ms >= 900L && clock >= humUntil && rng.nextFloat() < 0.45f) {
             val tune = listOf(Fx.HUM_TANNE, Fx.HUM_JINGLE, Fx.HUM_NACHT)[rng.nextInt(3)]
             scheduleFx(0.2f, tune, 0.5f)
             humUntil = clock + 7f
