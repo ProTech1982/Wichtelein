@@ -65,6 +65,8 @@ verschieben, vergrößern, spiegeln, umfärben und mit oder ohne Licht zeigen; d
   Richtungen gerendert. Er dreht sich beim Laufen in Laufrichtung (auf den Betrachter zu, seitlich, vom Betrachter weg), steht beim Fegen seitlich (mit Staubwolken
   am Ende jedes Besenstrichs) und dreht sich zum Haus um 360° mit dem Rücken zum Betrachter, bevor er die Tür öffnet und hineingeht. Winken, Fegen und Laufen
   sind echte Bilder aus der jeweiligen Richtung; Hinsetzen, Purzelbaum, Schlafen u. Ä. entstehen aus dem Stehbild. Farben: Mütze und Mantel.
+- **Wichtel und Elfin zusammen (0.9.3):** Einstellungen → Figuren: nur der Wichtel, nur die Elfin oder beide. Bei beiden wählst du im Editor pro Aktion, wer sie macht; der Wichtel bekommt nur männliche,
+  die Elfin nur weibliche Stimmen. Die Tür lässt sich wie die Gegenstände drehen. Die Einstellungen sind in aufklappbare Bereiche gegliedert.
 - **Drehen, Schnee-Schalter, 3D-Elfin (0.9.2):** Jeder Gegenstand lässt sich um seinen Fußpunkt drehen (⟲ ⟳, Schieber); ein schräges Bett dreht den liegenden Wichtel mit.
   „❄ Schnee: an/aus“ im Editor lässt es von Anfang an schneien. Die Wichtelfrau gibt es jetzt auch als 3D-Figur (dreht sich, läuft, fegt, winkt).
 - **Gegenstände klassisch oder Neon (0.9.1):** Tannenbaum, Zaun (Holz), Laterne, Lichterkette, Holzbett gibt es jetzt klassisch mit warmem Licht; die Neon-Gegenstände (Cyberpunk) bleiben als eigene Gruppe.

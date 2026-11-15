@@ -64,9 +64,11 @@ fun SettingsScreen(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack) { Text("← Zurück") }
-            Text("Einstellungen", fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            val anyOpen = open.values.any { it }
-            TextButton(onClick = { titles.forEach { open[it] = !anyOpen } }) { Text(if (anyOpen) "Alle zuklappen" else "Alle aufklappen") }
+            Text("Einstellungen", fontSize = 24.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.weight(1f))
+        }
+        val anyOpen = open.values.any { it }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = { titles.forEach { open[it] = !anyOpen } }) { Text(if (anyOpen) "▴ Alle zuklappen" else "▾ Alle aufklappen") }
         }
 
         Fold("🎭 Figuren", open, "Wichtel, Elfin oder beide · Namen · Kleidung") {

@@ -4,13 +4,22 @@ Auftrag: Wichtelein fertig bauen wie in `Prompt.txt` (Downloads, gehört zu eine
 Gebaut wird nur in GitHub Actions (kein Android-SDK lokal). Release = Push auf main (android.yml, Tag build-N).
 Entwicklungszweige per `gh workflow run ci.yml --ref <zweig>` testen (ci.yml hat workflow_dispatch). Emulator-Job flackert gelegentlich (Boot-Timeout -> neu starten).
 
-## Version 0.9.2 (Release 1.0 erst, wenn der Nutzer „ok“ sagt)
+## Version 0.9.3 (Release 1.0 erst, wenn der Nutzer „ok“ sagt)
+- Einstellungen: aufklappbare Bereiche (`Fold`, Zustand in einer `mutableStateMapOf`), „Alle aufklappen/zuklappen“.
+- Besetzung `Settings.cast` (0 Wichtel, 1 Elfin, 2 beide; `elfin`/`both` sind berechnet). Zwei Figuren: `Recorder` lässt zwei `ElfEngine` (Parameter `actor`) gleichzeitig laufen, die zweite hängt als
+  `FrameState.partner` am Bild; `ScriptStep.who` bestimmt, wer eine Aktion macht; ohne eigene Aktionen steht die andere Figur nur da (`PerfRequest.idleOnly`). `CastFigure(main, partner)` trägt beide Figuren,
+  `drawWichtelFrame` sortiert sie mit den Gegenständen nach Tiefe.
+- Stimmen nach Geschlecht: `VoiceInfo.female`, `VoiceCatalog.forActor`, `Settings.voiceFor/forActor/nameFor`, `SpeechEvent.actor`, `SpeechRender.renderAll` (wechselt die Stimme je Figur).
+  Die Geschlechter von Dii (weiblich) und Miro (vermutlich männlich) sind aus Recherche bzw. Annahme, bitte beim Anhören prüfen.
+- Tür drehbar: `EditState.doorRot` → `PerfRequest.doorRot` → `FrameState.doorRot`; gezeichnet gedreht um den Fußpunkt.
+
+## Version 0.9.2
 - Gegenstände drehen: `SceneryItem.rot` (Grad um den Fußpunkt), `EditOps.rotateItem`, Editor: ⟲ ⟳, Schieber und „0°“; ein gedrehtes Bett dreht den liegenden Wichtel mit (`lieSpin`), die Bettkante vorn entfällt dann.
 - Schnee an/aus: Chip „❄ Schnee“ im Editor (`EditState.snow` → `PerfRequest.snowFromStart` → `ElfEngine.configureSnow`), die Aktionen gehen zusätzlich (Schnee hört auf, fängt an).
 - 3D-Elfin: `blender/elfin3d.py` wird aus `wichtel3d.py` erzeugt (Kleid, Zöpfe, Ringelstrumpfhose, Mütze mit Bommel); Bilder in `assets/elfin3d/` (gleiche Clips und Blickrichtungen wie `elf3d`),
   `Elf3D(context, colors, dir)` und `Elf3D.available(context, dir)` kennen den Ordner; Einstellung: Elfin + Figur 3D.
 
-## Version 0.9.1 (Zweig v0.9.1-entwicklung)
+## Version 0.9.1
 - Gegenstände in zwei Stilen: `SceneryGroup.CLASSIC` (Holz, warmes Licht) und `NEON` (alte Cyberpunk-Variante, jetzt „Neon-…“). Neu: Schneemann, Geschenke, Schlitten, Zuckerstangen, Bank, Lagerfeuer,
   Holzzaun, Holzbett, klassische Laterne/Lichterkette/Tannenbaum. Quelle `blender/szene3d.py` (Aufruf mit Liste der Namen, **absoluter** Ausgabepfad!), Bilder in `assets/scenery/`.
 - Betten (`SceneryType.isBed`) sind jetzt Seitenansicht (Kopf links, gespiegelt = rechts); der Wichtel liegt quer, die vordere Bettkante wird über ihn gezeichnet (`frontOnlyFrac`).
