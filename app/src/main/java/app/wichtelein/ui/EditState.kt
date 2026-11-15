@@ -27,6 +27,17 @@ sealed interface Sel {
     data class Item(val id: Int) : Sel
 }
 
+/** Arten von Auswählbarem (damit ein Werkzeug nur „seine“ Dinge anfasst). */
+enum class SelKind { START, PATH, STEP, DOOR, ITEM }
+
+fun Sel.kind(): SelKind = when (this) {
+    Sel.Start -> SelKind.START
+    is Sel.Path -> SelKind.PATH
+    is Sel.Step -> SelKind.STEP
+    Sel.Door -> SelKind.DOOR
+    is Sel.Item -> SelKind.ITEM
+}
+
 object EditOps {
     const val MAX_WAYPOINTS = 12
     const val MAX_STEPS = 24
@@ -108,21 +119,23 @@ object EditOps {
         ry: Float,
         itemBox: (SceneryItem) -> Pair<Float, Float>,
         doorBox: Pair<Float, Float>?,
+        /** nur diese Arten werden getroffen (das aktive Werkzeug fasst nur seine eigenen Dinge an) */
+        kinds: Set<SelKind> = SelKind.values().toSet(),
     ): Sel? {
         fun near(p: Pt): Boolean {
             val dx = (p.x - x) / rx
             val dy = (p.y - y) / ry
             return dx * dx + dy * dy <= 1f
         }
-        for (i in s.script.indices.reversed()) if (s.script[i].at?.let { near(it) } == true) return Sel.Step(i)
-        for (i in s.path.indices.reversed()) if (near(s.path[i])) return Sel.Path(i)
-        s.start?.let { if (near(it)) return Sel.Start }
-        for (item in s.scenery.reversed()) {
+        if (SelKind.STEP in kinds) for (i in s.script.indices.reversed()) if (s.script[i].at?.let { near(it) } == true) return Sel.Step(i)
+        if (SelKind.PATH in kinds) for (i in s.path.indices.reversed()) if (near(s.path[i])) return Sel.Path(i)
+        if (SelKind.START in kinds) s.start?.let { if (near(it)) return Sel.Start }
+        if (SelKind.ITEM in kinds) for (item in s.scenery.reversed()) {
             val (w, h) = itemBox(item)
             if (x >= item.at.x - w / 2 && x <= item.at.x + w / 2 && y >= item.at.y - h && y <= item.at.y + 0.02f) return Sel.Item(item.id)
         }
         val d = s.door
-        if (d != null && doorBox != null) {
+        if (SelKind.DOOR in kinds && d != null && doorBox != null) {
             val (w, h) = doorBox
             if (x >= d.x - w / 2 && x <= d.x + w / 2 && y >= d.y - h && y <= d.y + 0.02f) return Sel.Door
         }

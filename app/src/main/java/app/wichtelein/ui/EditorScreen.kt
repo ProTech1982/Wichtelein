@@ -286,8 +286,23 @@ fun EditorScreen(
     fun itemBox(it: SceneryItem) = sceneryBox(it, sceneryAssets.art(it.type), info.aspect)
     fun doorBox(): Pair<Float, Float>? = if (st.door == null) null else Pair(st.doorScale * 0.56f / info.aspect, st.doorScale)
 
+    /** Jedes Werkzeug fasst nur seine eigenen Dinge an: so wird beim Weg-Setzen nichts anderes versehentlich ausgewählt oder verschoben. */
+    fun kindsFor(t: Tool): Set<SelKind> = when (t) {
+        Tool.START -> setOf(SelKind.START)
+        Tool.PATH -> setOf(SelKind.PATH)
+        Tool.ACTION -> setOf(SelKind.STEP)
+        Tool.DOOR -> setOf(SelKind.DOOR)
+        Tool.OBJECTS -> setOf(SelKind.ITEM)
+        Tool.SCENE -> emptySet()
+    }
+
+    fun selectTool(t: Tool) {
+        tool = t
+        sel = sel?.takeIf { it.kind() in kindsFor(t) }
+    }
+
     fun hitAt(px: Float, py: Float, w: Float, h: Float): Sel? =
-        EditOps.hit(st, px, py, hitPx / w, hitPx / h, ::itemBox, doorBox())
+        EditOps.hit(st, px, py, hitPx / w, hitPx / h, ::itemBox, doorBox(), kindsFor(tool))
 
     /** Tippen: vorhandenes auswählen, sonst je nach Werkzeug etwas Neues setzen. */
     fun tapAt(px: Float, py: Float, w: Float, h: Float) {
@@ -460,12 +475,12 @@ fun EditorScreen(
                 Text("${(settings.sizeScale * 100).toInt()} %", color = Hint, fontSize = 12.sp)
             }
             androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                FilterChip(selected = tool == Tool.START, onClick = { tool = Tool.START }, label = { Text("📍 Start") })
-                FilterChip(selected = tool == Tool.PATH, onClick = { tool = Tool.PATH }, label = { Text("🛤 Weg (${st.path.size})") })
-                FilterChip(selected = tool == Tool.ACTION, onClick = { tool = Tool.ACTION }, label = { Text("🎯 Aktionen (${st.script.size})") })
-                FilterChip(selected = tool == Tool.DOOR, onClick = { tool = Tool.DOOR }, label = { Text(if (st.door == null) "🚪 Tür" else "🚪 Tür ✓") })
-                FilterChip(selected = tool == Tool.OBJECTS, onClick = { tool = Tool.OBJECTS }, label = { Text("🎄 Objekte (${st.scenery.size})") })
-                FilterChip(selected = tool == Tool.SCENE, onClick = { tool = Tool.SCENE }, label = { Text("🎬 Szene") })
+                FilterChip(selected = tool == Tool.START, onClick = { selectTool(Tool.START) }, label = { Text("📍 Start") })
+                FilterChip(selected = tool == Tool.PATH, onClick = { selectTool(Tool.PATH) }, label = { Text("🛤 Weg (${st.path.size})") })
+                FilterChip(selected = tool == Tool.ACTION, onClick = { selectTool(Tool.ACTION) }, label = { Text("🎯 Aktionen (${st.script.size})") })
+                FilterChip(selected = tool == Tool.DOOR, onClick = { selectTool(Tool.DOOR) }, label = { Text(if (st.door == null) "🚪 Tür" else "🚪 Tür ✓") })
+                FilterChip(selected = tool == Tool.OBJECTS, onClick = { selectTool(Tool.OBJECTS) }, label = { Text("🎄 Objekte (${st.scenery.size})") })
+                FilterChip(selected = tool == Tool.SCENE, onClick = { selectTool(Tool.SCENE) }, label = { Text("🎬 Szene") })
             }
 
             // Ausgewähltes: verschieben (Ziehen im Bild), Größe, Löschen
