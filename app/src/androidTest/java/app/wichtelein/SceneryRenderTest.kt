@@ -54,14 +54,14 @@ class SceneryRenderTest {
     @Test fun drawsAllObjectsWithBlinkingLights() {
         val assets = SceneryAssets.load(ctx)
         val types = SceneryType.values().toList()
-        val cols = 6
+        val cols = 4
         val rows = (types.size + cols - 1) / cols
         rule.setContent {
-            Column(Modifier.size((100 * cols).dp, (150 * rows).dp).background(Color(0xFFB8A898))) {
+            Column(Modifier.size((78 * cols).dp, (78 * rows).dp).background(Color(0xFFB8A898))) {
                 for (row in 0 until rows) Row {
                     for (col in 0 until cols) {
                         val t = types.getOrNull(row * cols + col)
-                        Canvas(Modifier.size(100.dp, 150.dp)) {
+                        Canvas(Modifier.size(78.dp, 78.dp)) {
                             if (t != null) drawScenery(listOf(SceneryItem(1, t, Pt(0.5f, 0.92f), 0.8f)), assets, 0.4f)
                         }
                     }
@@ -73,14 +73,14 @@ class SceneryRenderTest {
         File(File(ctx.filesDir, "shots").apply { mkdirs() }, "scenery.png").outputStream().use { b.compress(Bitmap.CompressFormat.PNG, 100, it) }
         val bg = AColor.rgb(0xB8, 0xA8, 0x98)
         for (i in types.indices) {
-            val cw = b.width / cols
-            val ch = b.height / rows
+            val cw = (78 * ctx.resources.displayMetrics.density).toInt()
+            val ch = cw
             var changed = 0
             for (y in 0 until ch step 3) for (x in 0 until cw step 3) {
                 val c = b.getPixel((i % cols) * cw + x, (i / cols) * ch + y)
                 if (kotlin.math.abs(AColor.red(c) - AColor.red(bg)) + kotlin.math.abs(AColor.green(c) - AColor.green(bg)) + kotlin.math.abs(AColor.blue(c) - AColor.blue(bg)) > 60) changed++
             }
-            assertTrue("Gegenstand ${types[i].id} nicht sichtbar: $changed", changed > 150)
+            assertTrue("Gegenstand ${types[i].id} nicht sichtbar: $changed", changed > 60)
         }
     }
 }
