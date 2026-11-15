@@ -81,7 +81,7 @@ fun EditorScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val info = remember(file.path, file.lastModified()) { readVideoInfo(file) }
-    val sprites = rememberElfSprites(settings.colors())
+    val sprites = rememberElfSprites(settings.colors(), settings.elfStyle)
     val speaker = remember { Speaker(context) }
     DisposableEffect(Unit) { onDispose { speaker.shutdown() } }
     SideEffect {

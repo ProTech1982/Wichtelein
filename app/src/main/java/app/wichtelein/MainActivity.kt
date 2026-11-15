@@ -2,6 +2,7 @@ package app.wichtelein
 
 import app.wichtelein.camera.*
 import app.wichtelein.anim.*
+import app.wichtelein.ar.ArScreen
 import app.wichtelein.scene.*
 import app.wichtelein.speech.*
 import app.wichtelein.videoexport.*
@@ -37,7 +38,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-enum class Screen { HOME, CAMERA, EDITOR, VIDEOS, ACTIONS, SETTINGS }
+enum class Screen { HOME, CAMERA, EDITOR, VIDEOS, ACTIONS, SETTINGS, AR }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -142,6 +143,7 @@ fun WichtelApp() {
             onVideos = { videoCount = listExports(context).size; screen = Screen.VIDEOS },
             onActions = { screen = Screen.ACTIONS },
             onSettings = { screen = Screen.SETTINGS },
+            onAr = { screen = Screen.AR },
             onUseLast = { screen = Screen.EDITOR },
             onFirstProfile = { name ->
                 val base = settings.copy(onboarded = true)
@@ -159,6 +161,7 @@ fun WichtelApp() {
             onBack = { videoCount = listExports(context).size; screen = Screen.HOME },
             onOpenVideos = { videoCount = listExports(context).size; screen = Screen.VIDEOS },
         )
+        Screen.AR -> ArScreen(settings, ::update, onBack = { screen = Screen.HOME })
         Screen.VIDEOS -> MyVideosScreen(onBack = { videoCount = listExports(context).size; screen = Screen.HOME })
         Screen.ACTIONS -> ActionsScreen(settings, ::update, onBack = { screen = Screen.HOME })
         Screen.SETTINGS -> SettingsScreen(

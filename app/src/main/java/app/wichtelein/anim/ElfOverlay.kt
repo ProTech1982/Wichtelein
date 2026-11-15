@@ -64,43 +64,68 @@ fun ElfOverlay(
 }
 
 /**
- * Zeichnet einen Moment der Aufführung: Gegenstände, Wichtel, Partikel und Sprechblase.
- * Wird für die Vorschau und für den Videoexport benutzt, deshalb gibt es hier nur Größen relativ zur Fläche.
+ * Bildet Positionen der Aufführung (x, y relativ 0..1) auf die Zeichenfläche ab. Normal ist das einfach x * Breite,
+ * y * Höhe; im AR-Modus wird die Position auf den erkannten Boden projiziert.
  */
-fun DrawScope.drawWichtelFrame(f: FrameState, sprites: ElfFigure, sizeScale: Float, measurer: TextMeasurer) {
+interface WichtelProjection {
+    /** Bildschirmposition des Fußpunkts, oder null, wenn der Punkt nicht sichtbar ist (z. B. hinter der Kamera). */
+    fun position(x: Float, y: Float): Offset?
+
+    /** Höhe des Wichtels in Pixeln an dieser Stelle. */
+    fun elfHeight(x: Float, y: Float): Float
+}
+
+/**
+ * Zeichnet einen Moment der Aufführung: Gegenstände, Wichtel, Partikel und Sprechblase.
+ * Wird für die Vorschau, den Videoexport und (mit [projection]) für AR benutzt.
+ */
+fun DrawScope.drawWichtelFrame(
+    f: FrameState,
+    sprites: ElfFigure,
+    sizeScale: Float,
+    measurer: TextMeasurer,
+    projection: WichtelProjection? = null,
+) {
     val w = size.width
     val h = size.height
+    fun pos(x: Float, y: Float): Offset? = if (projection != null) projection.position(x, y) else Offset(x * w, y * h)
+    fun eh(x: Float, y: Float): Float = if (projection != null) projection.elfHeight(x, y) else h * sizeScale * depth(y)
 
-    drawDoorBack(f, w, h)
+    if (projection == null) drawDoorBack(f, w, h)
 
     for (item in f.mess.sortedBy { it.y }) {
-        drawItem(item.kind, Offset(item.x * w, item.y * h), h * sizeScale * depth(item.y) * 0.14f, item.rot)
+        val o = pos(item.x, item.y) ?: continue
+        drawItem(item.kind, o, eh(item.x, item.y) * 0.14f, item.rot)
     }
 
-    if (f.visible) {
-        val eh = h * sizeScale * depth(f.y)
-        sprites.draw(this, f.pose, Offset(f.x * w, f.y * h), eh, f.facing)
+    val elfPos = pos(f.x, f.y)
+    val elfH = eh(f.x, f.y)
+    if (f.visible && elfPos != null) {
+        sprites.draw(this, f.pose, elfPos, elfH, f.facing)
     }
 
     f.flying?.let { fl ->
-        drawItem(fl.kind, Offset(fl.x * w, fl.y * h), h * sizeScale * depth(fl.y) * 0.14f, fl.rot)
+        val o = pos(fl.x, fl.y)
+        if (o != null) drawItem(fl.kind, o, eh(fl.x, fl.y) * 0.14f, fl.rot)
     }
 
-    drawDoorLeaf(f, w, h)
+    if (projection == null) drawDoorLeaf(f, w, h)
 
-    for (p in f.particles) drawParticle(p, w, h, measurer)
+    for (p in f.particles) {
+        val o = pos(p.x, p.y) ?: continue
+        drawParticle(p, o, eh(p.x, p.y) * 0.04f, h, measurer)
+    }
 
     val text = f.bubble
-    if (text != null && f.visible && f.pose.scale > 0.5f) {
-        val eh = h * sizeScale * depth(f.y)
+    if (text != null && f.visible && f.pose.scale > 0.5f && elfPos != null) {
         val style = TextStyle(fontSize = (h * 0.027f).toSp(), color = Color(0xFF222222), fontWeight = FontWeight.Medium)
         val layout = measurer.measure(text, style, constraints = Constraints(maxWidth = (w * 0.62f).toInt().coerceAtLeast(40)))
         val pad = h * 0.02f
         val bw = layout.size.width + pad * 2
         val bh = layout.size.height + pad * 2
-        val elfX = f.x * w
+        val elfX = elfPos.x
         val left = (elfX - bw / 2).coerceIn(8f, (w - bw - 8f).coerceAtLeast(8f))
-        val top = (f.y * h - eh * 1.12f - bh - h * 0.015f).coerceAtLeast(8f)
+        val top = (elfPos.y - elfH * 1.12f - bh - h * 0.015f).coerceAtLeast(8f)
         val corner = CornerRadius(h * 0.03f)
         drawRoundRect(Color.White.copy(alpha = 0.96f), Offset(left, top), Size(bw, bh), corner)
         drawRoundRect(Color(0xFF999999), Offset(left, top), Size(bw, bh), corner, style = Stroke(h * 0.003f))
@@ -116,10 +141,9 @@ fun DrawScope.drawWichtelFrame(f: FrameState, sprites: ElfFigure, sizeScale: Flo
     }
 }
 
-private fun DrawScope.drawParticle(p: Particle, w: Float, h: Float, measurer: TextMeasurer) {
+private fun DrawScope.drawParticle(p: Particle, c: Offset, base: Float, h: Float, measurer: TextMeasurer) {
     val f = (p.life / p.maxLife).coerceIn(0f, 1f)
-    val c = Offset(p.x * w, p.y * h)
-    val unit = h * 0.012f * p.size
+    val unit = base.coerceAtLeast(h * 0.006f) * p.size
     when (p.kind) {
         PK.POOF -> drawCircle(Color.White.copy(alpha = 0.8f * f), unit * (1.5f + (1f - f) * 2f), c)
         PK.DUST -> drawCircle(Color(0xFFB9A98C).copy(alpha = 0.7f * f), unit * 0.9f, c)

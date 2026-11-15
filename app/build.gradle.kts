@@ -61,6 +61,8 @@ dependencies {
     implementation(files("libs/sherpa-onnx-1.13.8.aar"))
 
     implementation("org.apache.commons:commons-compress:1.27.1")
+    // Echtes AR (Bodenerkennung, Verankerung im Raum)
+    implementation("com.google.ar:core:1.45.0")
     val media3 = "1.4.1"
     implementation("androidx.media3:media3-common:$media3")
     implementation("androidx.media3:media3-effect:$media3")

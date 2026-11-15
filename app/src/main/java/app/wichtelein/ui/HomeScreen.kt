@@ -49,6 +49,7 @@ fun HomeScreen(
     onSettings: () -> Unit,
     onUseLast: () -> Unit,
     onFirstProfile: (String?) -> Unit,
+    onAr: () -> Unit = {},
 ) {
     Column(
         Modifier
@@ -64,7 +65,7 @@ fun HomeScreen(
                 (if (kid != null) " zu $kid" else "") + " und macht Unsinn oder räumt auf!",
         )
 
-        val sprites = rememberElfSprites(settings.colors())
+        val sprites = rememberElfSprites(settings.colors(), settings.elfStyle)
         val pose = remember { Pose().apply { armR = 150f } }
         Canvas(Modifier.fillMaxWidth().height(170.dp)) {
             val eh = size.height * 0.92f
@@ -74,6 +75,7 @@ fun HomeScreen(
         BigButton("🎥", "Video aufnehmen", "Den Raum filmen, 5 bis 10 Sekunden", onFilm)
         BigButton("🖼", "Video auswählen", "Ein vorhandenes Video aus der Galerie", onPick)
         if (hasRoom) BigButton("✏️", "Letztes Video weiter bearbeiten", "Das zuletzt benutzte Video noch einmal öffnen", onUseLast)
+        BigButton("🌍", "AR-Wichtel", "Der Wichtel steht live in deinem echten Raum (ARCore)", onAr)
         BigButton("🎞", "Meine Wichtelvideos", if (videoCount == 0) "Noch keine fertigen Videos" else "$videoCount fertige Videos", onVideos)
         BigButton("🎭", "Wichtelaktionen", "Brav, frech oder Überraschung – was darf er tun?", onActions)
         BigButton("⚙️", "Einstellungen", "Namen, Stimme, Farbe, Profile", onSettings)

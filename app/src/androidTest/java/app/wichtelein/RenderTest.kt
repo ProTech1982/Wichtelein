@@ -111,6 +111,7 @@ class RenderTest {
         rule.onNodeWithText("Wichtelein").assertExists()
         rule.onNodeWithText("Video aufnehmen").assertExists()
         rule.onNodeWithText("Video auswählen").assertExists()
+        rule.onNodeWithText("AR-Wichtel").assertExists()
         rule.onNodeWithText("Meine Wichtelvideos").assertExists()
         rule.onNodeWithText("Wichtelaktionen").assertExists()
         rule.onNodeWithText("Einstellungen").assertExists()
@@ -413,6 +414,13 @@ class ColorTest {
         assertTrue("Schuhe waren nicht rotbraun? $baseBootRed", baseBootRed > 800)
         assertTrue("Schuhe noch rot: $newBootRed", newBootRed < baseBootRed / 5)
         assertEquals("Strumpfhose darf sich nicht ändern", baseLegGreen, count(bmp(bootsBlue, "legl"), green))
+    }
+
+    @Test fun threeDStyleFallsBackWhenImagesAreMissing() {
+        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
+        val s = ElfSprites.load(ctx, ElfColors(), ElfSprites.STYLE_3D)
+        assertTrue(s.layout.height > 100f)
+        assertTrue(ElfSprites.hasStyle(ctx, ElfSprites.STYLE_PHOTO))
     }
 
     @Test fun rendersSeveralOutfits() {

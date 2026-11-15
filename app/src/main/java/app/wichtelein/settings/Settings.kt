@@ -29,6 +29,8 @@ data class Settings(
     val jacketColor: Int = 0,
     val legColor: Int = 0,
     val bootColor: Int = 0,
+    /** Figur: 0 = Foto-Puppe, 1 = 3D (in Blender gerendert) */
+    val elfStyle: Int = 0,
     val sizeScale: Float = 0.30f,
     val elfVoice: Boolean = true,
     val rate: Float = 1.0f,
@@ -87,6 +89,7 @@ object SettingsStore {
             jacketColor = p.getInt("jacketColor", legacyColor),
             legColor = p.getInt("legColor", legacyColor),
             bootColor = p.getInt("bootColor", d.bootColor),
+            elfStyle = p.getInt("elfStyle", d.elfStyle),
             sizeScale = p.getFloat("sizeScale", d.sizeScale),
             elfVoice = p.getBoolean("elfVoice", d.elfVoice),
             rate = p.getFloat("rate", d.rate),
@@ -109,6 +112,7 @@ object SettingsStore {
             .putInt("jacketColor", s.jacketColor)
             .putInt("legColor", s.legColor)
             .putInt("bootColor", s.bootColor)
+            .putInt("elfStyle", s.elfStyle)
             .putFloat("sizeScale", s.sizeScale)
             .putBoolean("elfVoice", s.elfVoice)
             .putFloat("rate", s.rate)
