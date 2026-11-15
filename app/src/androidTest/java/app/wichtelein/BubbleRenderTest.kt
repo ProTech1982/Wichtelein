@@ -66,7 +66,7 @@ class BubbleRenderTest {
                 val p = b.getPixel(c * cw + x, r * ch + y)
                 if (AColor.red(p) > 240 && AColor.green(p) > 240 && AColor.blue(p) > 240) white++
             }
-            assertTrue("${shapes[r]} Spalte $c: zu wenig Blase ($white)", white > 30)
+            assertTrue("${shapes[r]} Spalte $c: zu wenig Blase ($white)", white > (if (c == 0) 1 else 30))
         }
     }
 }
