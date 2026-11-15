@@ -58,21 +58,16 @@ object Scenes {
             doSit(1200)
             doSnack()
         },
-        SceneDef("brav_heim", "Nach Hause gehen", Category.BRAV, "Er geht in sein Wichtelhaus, die Tür fällt zu – und er kommt wieder heraus.", needsDoor = true) { _ ->
+        SceneDef("brav_heim", "Nach Hause gehen", Category.BRAV, "Er öffnet die Tür seines Wichtelhauses, schaut in die weihnachtliche Stube, dreht sich um und schließt sie.", needsDoor = true) { _ ->
             doEnterHouse()
-            idle(2200)
-            doExitHouse()
             doWave()
         },
         SceneDef("brav_tuer_fegen", "Vor der Tür fegen", Category.BRAV, "Er fegt vor seinem Haus und öffnet die Tür zur Begrüßung.", needsDoor = true) { _ ->
             doDoorSweep()
         },
         // ---- Frecher Wichtel
-        SceneDef("frech_tuer", "Tür-Streich", Category.FRECH, "Klopf, klopf – er verschwindet im Haus, knallt die Tür zu und lacht.", needsDoor = true) { _ ->
-            walkTo(Pt(0.5f, 0.8f))
+        SceneDef("frech_tuer", "Tür-Streich", Category.FRECH, "Klopf, klopf – er reißt die Tür auf, späht hinein, knallt sie zu und lacht.", needsDoor = true) { _ ->
             doEnterHouse(fast = true)
-            idle(1300)
-            doExitHouse(fast = true)
             sayFrom(Lines.chaos)
         },
         SceneDef("frech_chaos", "Chaos-Wichtel", Category.FRECH, "Er wirft Spielzeug durch das Zimmer.") { s ->
@@ -99,9 +94,7 @@ object Scenes {
             doChaos()
         },
         // ---- Überraschung
-        SceneDef("ueb_haus_geschenk", "Geschenk aus dem Haus", Category.UEBERRASCHUNG, "Die Tür geht auf, und er bringt ein Geschenk heraus.", needsDoor = true) { s ->
-            doEnterHouse()
-            idle(1500)
+        SceneDef("ueb_haus_geschenk", "Geschenk aus dem Haus", Category.UEBERRASCHUNG, "Die Tür geht auf, und er holt ein Geschenk aus dem Haus.", needsDoor = true) { s ->
             doExitHouse(carryGift = true)
             doGiftCarry(s.next())
         },

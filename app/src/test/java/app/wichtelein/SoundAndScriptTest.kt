@@ -96,24 +96,24 @@ class SoundAndScriptTest {
         val p = Recorder.record(
             req(listOf(ScriptStep(ElfAction.KNOCK), ScriptStep(ElfAction.ENTER), ScriptStep(ElfAction.EXIT)), door = door),
         )
-        assertEquals(listOf("Anklopfen", "Ins Haus gehen", "Aus dem Haus kommen"), p.sceneNames)
+        assertEquals(listOf("Anklopfen", "Tür öffnen & reinschauen", "Geschenk aus dem Haus holen"), p.sceneNames)
         val kinds = p.sounds.map { it.fx }
         assertTrue("dreimal Klopfen", kinds.count { it == Fx.KNOCK } == 3)
         assertTrue("Tür quietscht auf", kinds.count { it == Fx.DOOR_OPEN } >= 2)
         assertTrue("Tür fällt zu", kinds.count { it == Fx.DOOR_CLOSE } >= 2)
         assertTrue("Tür geht auf", p.frames.any { it.doorOpen > 0.9f })
-        assertTrue("im Haus unsichtbar", p.frames.any { it.visible && it.pose.scale < 0.05f && abs(it.x - door.x) < 0.02f })
-        assertTrue("danach wieder draußen", p.frames.last().pose.scale > 0.9f)
+        assertTrue("bleibt immer sichtbar und groß", p.frames.filter { it.doorOpen > 0.02f }.all { it.visible && it.pose.scale > 0.95f })
+        assertTrue("holt ein Geschenk heraus", p.frames.any { it.pose.prop == Prop.GIFT })
     }
 
-    @Test fun anotherActionAfterEnteringLeavesTheHouseFirst() {
+    @Test fun anotherActionAfterTheDoorActionContinuesNormally() {
         val door = Pt(0.5f, 0.7f)
         val p = Recorder.record(
             req(listOf(ScriptStep(ElfAction.ENTER), ScriptStep(ElfAction.DANCE, Pt(0.25f, 0.85f))), door = door),
         )
-        assertTrue("Tanzen nach dem Betreten: ${p.sceneNames}", p.sceneNames == listOf("Ins Haus gehen", "Tanzen"))
+        assertTrue("Tanzen nach dem Betreten: ${p.sceneNames}", p.sceneNames == listOf("Tür öffnen & reinschauen", "Tanzen"))
         val last = p.frames.last()
-        assertTrue("Wichtel ist wieder draußen", last.pose.scale > 0.9f)
+        assertTrue("Wichtel sichtbar", last.pose.scale > 0.9f)
         assertEquals(0.25f, last.x, 0.05f)
     }
 

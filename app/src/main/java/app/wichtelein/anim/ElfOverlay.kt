@@ -19,7 +19,11 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.clipPath
+import kotlin.math.sin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -228,9 +232,54 @@ private fun DrawScope.drawDoorBack(f: FrameState, w: Float, h: Float) {
     val dw = dh * 0.56f
     val cx = pos.x * w
     val by = pos.y * h
-    drawPath(doorPath(cx, by, dw, dh, f.doorRound), Color(0xFF2B1A10))
-    drawPath(doorPath(cx, by, dw * 0.8f, dh * 0.9f, f.doorRound), Color(0xFFF6C768).copy(alpha = 0.55f * f.doorOpen))
-    drawPath(doorPath(cx, by, dw * 0.45f, dh * 0.6f, f.doorRound), Color(0xFFFFE8A8).copy(alpha = 0.45f * f.doorOpen))
+    val o = f.doorOpen.coerceIn(0f, 1f)
+    val opening = doorPath(cx, by, dw, dh, f.doorRound)
+    drawPath(opening, Color(0xFF2B1A10))
+    // winzige Weihnachtsstube: warme Wand, Holzboden, Tannenbaum mit blinkenden Lichtern, Geschenke, Kaminglut, Lichterkette
+    clipPath(opening) {
+        val left = cx - dw / 2f
+        val top = by - dh
+        drawRect(Brush.verticalGradient(listOf(Color(0xFF3B2016), Color(0xFF8A5532)), startY = top, endY = by), Offset(left, top), Size(dw, dh), alpha = o)
+        val floorTop = by - dh * 0.16f
+        drawRect(Color(0xFF2A170D), Offset(left, floorTop), Size(dw, dh * 0.16f), alpha = o)
+        drawLine(Color(0x55FFC070), Offset(left, floorTop), Offset(left + dw, floorTop), dh * 0.006f, alpha = o)
+        // Kamin links mit flackernder Glut
+        val fire = 0.65f + 0.35f * sin(f.timeSec * 9f)
+        drawRect(Color(0xFF1A0E08), Offset(left + dw * 0.08f, floorTop - dh * 0.2f), Size(dw * 0.22f, dh * 0.2f), alpha = o)
+        drawRect(Color(0xFFFF8A2A), Offset(left + dw * 0.11f, floorTop - dh * 0.12f), Size(dw * 0.16f, dh * 0.1f), alpha = o * fire)
+        drawCircle(Brush.radialGradient(0f to Color(0x88FF9A3A), 1f to Color.Transparent, center = Offset(left + dw * 0.19f, floorTop - dh * 0.08f), radius = dw * 0.5f),
+            dw * 0.5f, Offset(left + dw * 0.19f, floorTop - dh * 0.08f), alpha = o * fire, blendMode = BlendMode.Plus)
+        // Tannenbaum rechts: drei Etagen, Stern, Lichter
+        val tx = left + dw * 0.64f
+        for (i in 0..2) {
+            val w2 = dw * (0.34f - i * 0.08f)
+            val ty = floorTop - dh * (0.05f + i * 0.17f)
+            drawPath(Path().apply {
+                moveTo(tx, ty - dh * 0.2f); lineTo(tx - w2 / 2, ty); lineTo(tx + w2 / 2, ty); close()
+            }, Color(0xFF1F6B3A), alpha = o)
+        }
+        val starY = floorTop - dh * 0.58f
+        drawCircle(Color(0xFFFFE066), dw * 0.035f, Offset(tx, starY), alpha = o * (0.8f + 0.2f * sin(f.timeSec * 5f)))
+        val cols = listOf(Color(0xFFFF3B6B), Color(0xFF3BD0FF), Color(0xFFFFC53B), Color(0xFFB36BFF))
+        for (i in 0 until 8) {
+            val lx = tx + dw * (-0.1f + 0.2f * ((i * 37) % 10) / 10f) * (1f - (i % 3) * 0.2f)
+            val ly = floorTop - dh * (0.12f + 0.4f * ((i * 53) % 10) / 10f)
+            val tw = 0.5f + 0.5f * sin(f.timeSec * (3f + i % 3) + i)
+            drawCircle(cols[i % 4].copy(alpha = 0.4f + 0.6f * tw), dw * 0.02f, Offset(lx, ly), alpha = o)
+        }
+        // Geschenke am Boden
+        drawRect(Color(0xFFD93A3A), Offset(left + dw * 0.36f, floorTop - dh * 0.07f), Size(dw * 0.12f, dh * 0.07f), alpha = o)
+        drawRect(Color(0xFFF2C94C), Offset(left + dw * 0.405f, floorTop - dh * 0.07f), Size(dw * 0.02f, dh * 0.07f), alpha = o)
+        drawRect(Color(0xFF3A7BD9), Offset(left + dw * 0.5f, floorTop - dh * 0.05f), Size(dw * 0.09f, dh * 0.05f), alpha = o)
+        // Lichterkette unter der Decke
+        for (i in 0 until 7) {
+            val lx = left + dw * (0.08f + i * 0.14f)
+            val ly = top + dh * (0.1f + 0.03f * sin(i * 1.3f + 1f))
+            val tw = 0.5f + 0.5f * sin(f.timeSec * 4f + i * 1.7f)
+            drawCircle(cols[i % 4].copy(alpha = 0.5f + 0.5f * tw), dw * 0.022f, Offset(lx, ly), alpha = o)
+        }
+    }
+    drawPath(doorPath(cx, by, dw * 0.8f, dh * 0.9f, f.doorRound), Color(0xFFF6C768).copy(alpha = 0.18f * o))
 }
 
 /** Das Türblatt: links angeschlagen, schwingt beim Öffnen zur Seite (schmaler werdend) und davor wieder zu. */

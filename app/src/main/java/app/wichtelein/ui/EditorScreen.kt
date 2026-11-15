@@ -109,7 +109,7 @@ fun EditorScreen(
         value = if (isPhoto) withContext(Dispatchers.IO) { BitmapFactory.decodeFile(file.path)?.asImageBitmap() } else null
     }
     val sprites = rememberElfFigure(settings)
-    val sceneryAssets = remember { SceneryAssets.load(context) }
+    val sceneryAssets = remember(settings.sceneryStyles) { SceneryAssets.load(context, settings.sceneryStyles) }
     val speaker = remember { Speaker(context) }
     val fxPlayer = remember { SoundPlayer() }
     DisposableEffect(Unit) { onDispose { speaker.shutdown() } }

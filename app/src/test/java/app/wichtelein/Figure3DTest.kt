@@ -76,23 +76,30 @@ class Figure3DTest {
         assertTrue("2D dreht sofort: $hs", hs.all { angleDiff(it, 90f) < 1f || angleDiff(it, 180f) < 1f })
     }
 
-    @Test fun enteringTheHouseTurnsToTheDoorBackToTheViewer() {
+    @Test fun openingTheDoorLooksAtItAndThenTurnsAroundToCloseIt() {
         val door = Pt(0.6f, 0.62f)
         val p = Recorder.record(req(listOf(ScriptStep(ElfAction.ENTER)), door = door, start = Pt(0.2f, 0.85f)))
-        // beim Hineingehen (Wichtel schrumpft) blickt er vom Betrachter weg
-        val entering = p.frames.filter { it.visible && it.pose.scale in 0.1f..0.9f && abs(it.x - door.x) < 0.1f }
-        assertTrue("Hineingehen sichtbar", entering.isNotEmpty())
-        assertTrue("Rücken zum Betrachter: ${entering.map { it.pose.heading }.distinct()}", entering.all { angleDiff(it.pose.heading, 180f) < 10f })
-        // vorher hat er sich dorthin gedreht (kommt von links: erst 90°, dann 180°)
-        val turnFrames = p.frames.filter { it.pose.heading in 100f..170f }
-        assertTrue("Drehung zur Tür", turnFrames.isNotEmpty())
+        // bleibt in voller Größe sichtbar (kein Hineingehen wie in einen Keller)
+        assertTrue(p.frames.filter { it.doorOpen > 0.02f }.all { it.visible && it.pose.scale > 0.95f })
+        // bei geöffneter Tür schaut er zur Tür (seitlich), danach dreht er sich um 180° (Zwischenrichtungen) und schließt
+        val open = p.frames.filter { it.doorOpen > 0.95f }
+        assertTrue(open.isNotEmpty())
+        val toDoor = open.first().pose.heading
+        assertTrue("seitlich zur Tür: $toDoor", angleDiff(toDoor, 90f) < 10f || angleDiff(toDoor, 270f) < 10f)
+        val opposite = (toDoor + 180f) % 360f
+        val closing = p.frames.filter { it.doorOpen in 0.02f..0.95f && it.pose.heading.let { h -> angleDiff(h, opposite) < 10f } }
+        assertTrue("Rücken zur Tür beim Schließen", closing.isNotEmpty())
+        val turning = p.frames.filter { it.doorOpen > 0.95f && angleDiff(it.pose.heading, toDoor) in 20f..160f }
+        assertTrue("Drehung um die Hochachse", turning.isNotEmpty())
+        // die Tür geht dabei wirklich zu
+        assertTrue(p.frames.last().doorOpen < 0.05f)
     }
 
-    @Test fun exitingTheHouseFacesTheViewer() {
+    @Test fun takingAGiftFromTheHouseKeepsTheElfOutside() {
         val door = Pt(0.5f, 0.62f)
-        val p = Recorder.record(req(listOf(ScriptStep(ElfAction.ENTER), ScriptStep(ElfAction.EXIT)), door = door))
-        val leaving = p.frames.filter { it.visible && it.pose.scale in 0.2f..0.9f && it.y > door.y && angleDiff(it.pose.heading, 0f) < 10f }
-        assertTrue("kommt mit dem Gesicht zum Betrachter heraus", leaving.isNotEmpty())
+        val p = Recorder.record(req(listOf(ScriptStep(ElfAction.EXIT)), door = door))
+        assertTrue(p.frames.any { it.pose.prop == Prop.GIFT })
+        assertTrue(p.frames.filter { it.doorOpen > 0.02f }.all { it.visible && it.pose.scale > 0.95f })
     }
 
     // ---------------------------------------------------------------- Laufweg

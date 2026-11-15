@@ -144,17 +144,15 @@ class PerformanceTest {
         }
     }
 
-    @Test fun elfGoesInsideAndComesBackOut() {
+    @Test fun elfStaysOutsideAndPeeksIntoTheHouse() {
         val p = Recorder.record(doorReq("brav_heim"))
-        val inside = p.frames.indexOfFirst { it.visible && it.pose.scale < 0.05f && it.frameAfterAppear(p) }
-        assertTrue("nie im Haus", inside > 0)
-        assertTrue("kommt nicht wieder heraus", p.frames.drop(inside).any { it.pose.scale > 0.95f })
-        // beim Betreten steht er an der Tür
-        val f = p.frames[inside]
-        assertEquals(0.8f, f.x, 0.03f)
+        // der Wichtel verschwindet nie (kein „Keller“): er bleibt in voller Größe sichtbar
+        assertTrue("schrumpft/verschwindet", p.frames.filter { it.doorOpen > 0.02f }.all { it.visible && it.pose.scale > 0.95f })
+        // bei geöffneter Tür steht er neben der Tür
+        val open = p.frames.filter { it.doorOpen > 0.95f }
+        assertTrue(open.isNotEmpty())
+        assertTrue("neben der Tür: ${open.map { it.x }.distinct()}", open.all { kotlin.math.abs(it.x - 0.8f) in 0.05f..0.25f })
     }
-
-    private fun FrameState.frameAfterAppear(p: Performance) = p.frames.indexOf(this) > 40
 
     @Test fun doorScenesAreOnlyChosenWhenADoorExists() {
         val doorNames = Scenes.all.filter { it.needsDoor }.map { it.name }.toSet()

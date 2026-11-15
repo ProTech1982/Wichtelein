@@ -33,6 +33,8 @@ data class Settings(
     val elfVoice: Boolean = true,
     val rate: Float = 1.0f,
     val mood: Int = Mood.NEUTRAL,
+    /** Farbe und Licht je Art von Gegenstand (Schlüssel = SceneryType.id) */
+    val sceneryStyles: Map<String, app.wichtelein.anim.SceneryStyle> = emptyMap(),
     /** Perspektive im Bild: 1 = weiter oben kleiner, 0 = überall gleich groß */
     val perspective: Float = 1f,
     /** 3D-Wichtel (in Blender gerendert, 360° drehbar) statt der 2D-Figur */
@@ -100,6 +102,7 @@ object SettingsStore {
             soundFx = p.getBoolean("soundFx", d.soundFx),
             figure3d = p.getBoolean("figure3d", d.figure3d),
             perspective = p.getFloat("perspective", d.perspective),
+            sceneryStyles = app.wichtelein.anim.SceneryPalette.decode(p.getString("sceneryStyles", "")),
             disabledScenes = (p.getStringSet("disabledScenes", emptySet()) ?: emptySet()).toSet(),
         )
     }
@@ -125,6 +128,7 @@ object SettingsStore {
             .putBoolean("soundFx", s.soundFx)
             .putBoolean("figure3d", s.figure3d)
             .putFloat("perspective", s.perspective)
+            .putString("sceneryStyles", app.wichtelein.anim.SceneryPalette.encode(s.sceneryStyles))
             .putStringSet("disabledScenes", s.disabledScenes)
             .apply()
     }

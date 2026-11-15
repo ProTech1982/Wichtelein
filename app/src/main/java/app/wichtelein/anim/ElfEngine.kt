@@ -949,57 +949,71 @@ class ElfEngine(
         pose.relax()
     }
 
-    /** Geht zur Tür, öffnet sie, tritt ein und schließt sie von innen. Danach ist der Wichtel im Haus (unsichtbar). */
-    suspend fun doEnterHouse(fast: Boolean = false) {
-        walkRoute(frontOfDoor())
-        turnTo(180f) // mit dem Rücken zum Betrachter zur Tür
-        say(Lines.doorHome.random(rng))
-        openDoor(if (fast) 350 else 900)
-        val sx = x
-        val sy = y
-        val ty = door.y - 0.005f
-        anim(if (fast) 500L else 1000L) { t ->
-            val s = sin(clock * 11f)
-            x = sx + (door.x - sx) * t
-            y = sy + (ty - sy) * t
-            pose.scale = 1f - 0.97f * t
-            pose.legL = 25f * s
-            pose.legR = -25f * s
-            pose.bob = abs(s) * 0.015f
-        }
-        pose.relax()
-        pose.scale = 0f
-        inHouse = true
-        closeDoor(if (fast) 250 else 700)
+    /** Stelle neben der Tür (auf der Seite, zu der die Tür nicht aufschwingt), wo der Wichtel steht und die Tür bedient. */
+    private fun doorStand(): Pt {
+        val dw = doorScale * 0.56f / aspect
+        val side = if (doorHingeLeft) 1f else -1f
+        return Pt((door.x + side * (dw / 2f + 0.07f)).coerceIn(0.05f, 0.95f), (door.y + 0.012f).coerceAtMost(0.97f))
     }
 
-    /** Kommt aus dem Haus (die Tür geht auf), tritt zur Seite und schließt die Tür hinter sich. */
-    suspend fun doExitHouse(carryGift: Boolean = false, fast: Boolean = false) {
-        x = door.x
-        y = door.y - 0.005f
-        facing = 1
+    /** Hingehen, zur Tür drehen (Blickrichtung zur Tür); liefert die Blickrichtung in Grad (90 = nach rechts, 270 = nach links). */
+    private suspend fun approachDoor(): Float {
+        val stand = doorStand()
+        walkRoute(stand)
+        val toRight = door.x > x
+        facing = if (toRight) 1 else -1
+        val toDoor = if (toRight) 90f else 270f
+        turnTo(toDoor)
+        return toDoor
+    }
+
+    /** Dreht sich um (Rücken zur Tür) und schließt die Tür hinter sich – den Arm nach hinten gestreckt. */
+    private suspend fun turnAndClose(toDoor: Float, fast: Boolean) {
+        turnTo(if (toDoor == 90f) 270f else 90f)
+        facing = -facing
+        pose.armR = 55f
+        pose.armL = 25f
+        closeDoor(if (fast) 250 else 700)
         pose.relax()
-        pose.scale = 0f
-        visible = true
-        inHouse = false
-        pose.heading = 0f
-        pose.prop = if (carryGift) Prop.GIFT else Prop.NONE
-        openDoor(if (fast) 300 else 900)
-        val sy = y
-        val ty = frontOfDoor().y
-        anim(if (fast) 500L else 1000L) { t ->
-            val s = sin(clock * 11f)
-            y = sy + (ty - sy) * t
-            pose.scale = 0.03f + 0.97f * t
-            pose.legL = 25f * s
-            pose.legR = -25f * s
-            pose.bob = abs(s) * 0.015f
+    }
+
+    /**
+     * Öffnet die Tür seines Wichtelhauses, schaut in die kleine weihnachtliche Stube (sie erscheint hinter der Tür), dreht sich dann um
+     * und schließt die Tür hinter sich. Der Wichtel selbst bleibt dabei draußen vor der Tür.
+     */
+    suspend fun doEnterHouse(fast: Boolean = false) {
+        val toDoor = approachDoor()
+        say(Lines.doorHome.random(rng))
+        anim(if (fast) 250L else 500L) { t ->
+            pose.armR = 70f * t
+            pose.lean = 3f * t
+        }
+        openDoor(if (fast) 350 else 900)
+        // hineinschauen: Kopf wiegt leicht, ein Arm zeigt auf die Stube
+        anim(if (fast) 700L else 2200L) {
+            pose.armR = 25f + 8f * sin(clock * 4f)
+            pose.hatTilt = 0.05f * sin(clock * 2.5f)
+            pose.lean = 4f
         }
         pose.relax()
-        pose.scale = 1f
+        turnAndClose(toDoor, fast)
+    }
+
+    /** Öffnet die Tür, holt ein Geschenk heraus (oder greift nur hinein), dreht sich um und schließt die Tür. */
+    suspend fun doExitHouse(carryGift: Boolean = false, fast: Boolean = false) {
+        val toDoor = approachDoor()
+        openDoor(if (fast) 300 else 900)
+        anim(if (fast) 500L else 1200L) { t ->
+            pose.armR = 60f + 25f * sin(t * PIf)
+            pose.lean = 6f * sin(t * PIf)
+        }
+        if (carryGift) {
+            pose.prop = Prop.GIFT
+            sfx(Fx.GIFT)
+        }
+        pose.relax()
         say(Lines.doorExit.random(rng), Mood.AMUSED)
-        walkTo(Pt((door.x + 0.16f).coerceAtMost(0.92f), ty))
-        closeDoor(if (fast) 300 else 700)
+        turnAndClose(toDoor, fast)
     }
 
     /** Vor der Tür sauber machen und dann einladend winken. */
@@ -1018,8 +1032,6 @@ class ElfEngine(
     /** Führt einen Aktionspunkt aus: erst hingehen, dann die Aktion. */
     suspend fun runStep(step: ScriptStep) {
         val a = step.action
-        if (a == ElfAction.ENTER && inHouse) return
-        if (a == ElfAction.EXIT && !inHouse) return
         if (inHouse && a != ElfAction.EXIT) doExitHouse()
         if (a.needsPoint && step.at != null && a != ElfAction.GIFT) walkRoute(step.at)
         when (a) {
@@ -1046,7 +1058,7 @@ class ElfEngine(
                 doKnock()
             }
             ElfAction.ENTER -> doEnterHouse()
-            ElfAction.EXIT -> doExitHouse()
+            ElfAction.EXIT -> doExitHouse(carryGift = true)
             ElfAction.DOOR_SWEEP -> doDoorSweep()
         }
     }

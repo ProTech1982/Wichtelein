@@ -21,6 +21,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -106,6 +107,9 @@ fun SettingsScreen(
             Switch(checked = settings.speak, onCheckedChange = { onChange(settings.copy(speak = it)) })
         }
         VoiceSettings(settings, onChange)
+
+        Section("Gegenstände: Farbe und Licht")
+        SceneryStyles(settings, onChange)
 
         Section("Geräusche")
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
@@ -197,6 +201,74 @@ private fun ColorRow(label: String, choices: List<ColorChoice>, selected: Int, o
                     )
                     .clickable { onPick(i) },
             )
+        }
+    }
+}
+
+
+/** Farbe und Licht jeder Art von Gegenstand (Tannenbaum, Bett, Zaun …): Farbton, mit/ohne Licht, Lichtfarbe, mit Vorschau. */
+@Composable
+private fun SceneryStyles(settings: Settings, onChange: (Settings) -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val assets = remember(settings.sceneryStyles) { SceneryAssets.load(ctx, settings.sceneryStyles) }
+    fun set(t: SceneryType, st: SceneryStyle) {
+        val m = settings.sceneryStyles.toMutableMap()
+        if (st == SceneryStyle()) m.remove(t.id) else m[t.id] = st
+        onChange(settings.copy(sceneryStyles = m))
+    }
+    Text("Jeder Gegenstand lässt sich einzeln umfärben, mit oder ohne Licht und mit eigener Lichtfarbe zeigen.", fontSize = 12.sp, color = Color.Gray)
+    for (t in SceneryType.values()) {
+        val st = settings.sceneryStyles[t.id] ?: SceneryStyle()
+        androidx.compose.material3.Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    val art = assets.art(t)
+                    Canvas(Modifier.height(70.dp).width(70.dp)) {
+                        if (art != null) {
+                            val k = minOf(size.width / art.image.width, size.height / art.image.height)
+                            val dw = (art.image.width * k).toInt()
+                            val dh = (art.image.height * k).toInt()
+                            drawImage(
+                                art.image,
+                                dstOffset = androidx.compose.ui.unit.IntOffset(((size.width - dw) / 2).toInt(), ((size.height - dh) / 2).toInt()),
+                                dstSize = androidx.compose.ui.unit.IntSize(dw, dh),
+                                filterQuality = androidx.compose.ui.graphics.FilterQuality.Medium,
+                            )
+                        }
+                    }
+                    Text("${t.emoji} ${t.label}", fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                    Text("Licht", fontSize = 13.sp)
+                    Switch(checked = st.lights, onCheckedChange = { set(t, st.copy(lights = it)) })
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    androidx.compose.material3.FilterChip(
+                        selected = st.hue < 0,
+                        onClick = { set(t, st.copy(hue = if (st.hue < 0) 0 else -1)) },
+                        label = { Text(if (st.hue < 0) "Originalfarbe" else "Farbe: ${st.hue}°") },
+                    )
+                    if (st.hue >= 0) {
+                        androidx.compose.material3.Slider(
+                            value = st.hue.toFloat(),
+                            onValueChange = { set(t, st.copy(hue = it.toInt().coerceIn(0, 359))) },
+                            valueRange = 0f..359f,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+                if (st.lights) {
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Lichtfarbe:", fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                        SceneryPalette.lightColors.forEachIndexed { i, (name, c) ->
+                            androidx.compose.material3.FilterChip(
+                                selected = st.lightColor == (if (i == 0) -1 else i),
+                                onClick = { set(t, st.copy(lightColor = if (i == 0) -1 else i)) },
+                                label = { Text(name) },
+                                leadingIcon = if (c != null) ({ Box(Modifier.size(12.dp).background(c, androidx.compose.foundation.shape.CircleShape)) }) else null,
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

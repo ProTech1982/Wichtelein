@@ -65,6 +65,77 @@ class SceneryMeta(val w: Int, val h: Int, val anchorX: Float, val anchorY: Float
 
 class SceneryArt(val image: ImageBitmap, val meta: SceneryMeta)
 
+/**
+ * Aussehen einer Art von Gegenstand (Einstellungen): [hue] = Farbverschiebung in Grad (-1 = Originalfarben), [lights] = mit oder ohne
+ * Licht, [lightColor] = Nummer in [SceneryPalette.lightColors] (-1 = Originalfarben der Lichter).
+ */
+data class SceneryStyle(val hue: Int = -1, val lights: Boolean = true, val lightColor: Int = -1)
+
+object SceneryPalette {
+    /** Lichtfarben zur Auswahl; null = die Originalfarben der Lichter (bunt). */
+    val lightColors: List<Pair<String, Color?>> = listOf(
+        "Original" to null,
+        "Cyan" to Color(0xFF00D9FF),
+        "Magenta" to Color(0xFFFF1AA6),
+        "Gelb" to Color(0xFFFFC107),
+        "Violett" to Color(0xFF8C40FF),
+        "Grün" to Color(0xFF26FF73),
+        "Weiß" to Color(0xFFFFEBD9),
+        "Rot" to Color(0xFFFF2A2A),
+    )
+
+    /** Als Text speichern: `art|farbton|licht|lichtfarbe;…` (nur Abweichungen vom Standard). */
+    fun encode(styles: Map<String, SceneryStyle>): String =
+        styles.filter { it.value != SceneryStyle() }.entries.joinToString(";") { (k, v) -> "$k|${v.hue}|${if (v.lights) 1 else 0}|${v.lightColor}" }
+
+    fun decode(text: String?): Map<String, SceneryStyle> {
+        if (text.isNullOrBlank()) return emptyMap()
+        val out = HashMap<String, SceneryStyle>()
+        for (part in text.split(';')) {
+            val f = part.split('|')
+            if (f.size != 4) continue
+            val hue = f[1].toIntOrNull() ?: continue
+            val l = f[2].toIntOrNull() ?: continue
+            val c = f[3].toIntOrNull() ?: continue
+            out[f[0]] = SceneryStyle(hue.coerceIn(-1, 359), l != 0, c.coerceIn(-1, lightColors.lastIndex))
+        }
+        return out
+    }
+}
+
+/** Farbton verschieben (nur kräftige Farben, Dunkles und Graues bleibt) und bei „ohne Licht“ leuchtende Stellen abdunkeln. */
+fun tintArt(src: android.graphics.Bitmap, hueShift: Int, lightsOff: Boolean): android.graphics.Bitmap {
+    if (hueShift < 0 && !lightsOff) return src
+    val w = src.width
+    val h = src.height
+    val px = IntArray(w * h)
+    src.getPixels(px, 0, w, 0, 0, w, h)
+    val hsv = FloatArray(3)
+    for (i in px.indices) {
+        val c = px[i]
+        val a = android.graphics.Color.alpha(c)
+        if (a < 8) continue
+        android.graphics.Color.colorToHSV(c, hsv)
+        var changed = false
+        if (lightsOff) {
+            // leuchtende Neonflächen und Lampen: sehr hell und kräftig
+            if (hsv[2] > 0.8f && (hsv[1] > 0.3f || hsv[2] > 0.96f)) {
+                hsv[2] *= if (hsv[1] > 0.3f) 0.42f else 0.7f
+                hsv[1] *= 0.7f
+                changed = true
+            }
+        }
+        if (hueShift >= 0 && hsv[1] > 0.2f && hsv[2] > 0.12f) {
+            hsv[0] = (hsv[0] + hueShift) % 360f
+            changed = true
+        }
+        if (changed) px[i] = android.graphics.Color.HSVToColor(a, hsv)
+    }
+    val out = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+    out.setPixels(px, 0, w, 0, 0, w, h)
+    return out
+}
+
 /** Die Bilder aller Gegenstände (fehlen sie, bleibt der Gegenstand unsichtbar statt abzustürzen). */
 class SceneryAssets(private val arts: Map<SceneryType, SceneryArt>) {
     fun art(t: SceneryType): SceneryArt? = arts[t]
@@ -72,14 +143,26 @@ class SceneryAssets(private val arts: Map<SceneryType, SceneryArt>) {
     companion object {
         val NONE = SceneryAssets(emptyMap())
 
-        fun load(context: Context): SceneryAssets {
+        fun load(context: Context, styles: Map<String, SceneryStyle> = emptyMap()): SceneryAssets {
             val map = HashMap<SceneryType, SceneryArt>()
             val opts = BitmapFactory.Options().apply { inScaled = false }
             for (t in SceneryType.values()) {
                 try {
                     val json = context.assets.open("scenery/${t.id}.json").bufferedReader().use { it.readText() }
                     val bmp = context.assets.open("scenery/${t.id}.png").use { BitmapFactory.decodeStream(it, null, opts) } ?: continue
-                    map[t] = SceneryArt(bmp.asImageBitmap(), SceneryMeta.fromJson(json))
+                    val style = styles[t.id] ?: SceneryStyle()
+                    var meta = SceneryMeta.fromJson(json)
+                    val lc = SceneryPalette.lightColors.getOrNull(style.lightColor)?.second
+                    meta = when {
+                        !style.lights -> SceneryMeta(meta.w, meta.h, meta.anchorX, meta.anchorY, emptyList(), null, 0f)
+                        lc != null -> SceneryMeta(
+                            meta.w, meta.h, meta.anchorX, meta.anchorY,
+                            meta.lights.map { SceneryLight(it.x, it.y, it.r, lc, it.speed, it.phase) },
+                            meta.groundGlow?.let { lc }, meta.groundRx,
+                        )
+                        else -> meta
+                    }
+                    map[t] = SceneryArt(tintArt(bmp, style.hue, !style.lights).asImageBitmap(), meta)
                 } catch (_: Exception) {
                 }
             }
