@@ -165,8 +165,9 @@ class PhotoFilmTest {
         rule.waitForIdle()
         val griffAfter = rule.onNodeWithTag("griff").getBoundsInRoot().top
         assertTrue("Bedienfeld wächst: $griffBefore -> $griffAfter", griffAfter.value < griffBefore.value - 20f)
-        val panelAfter = rule.onNodeWithTag("bedienfeld").getBoundsInRoot().height
-        assertTrue("Bedienfeld höher als 250 dp: $panelAfter", panelAfter.value > 260f)
+        val panelBox = rule.onNodeWithTag("bedienfeld").getBoundsInRoot()
+        val panelAfter = (panelBox.bottom - panelBox.top).value
+        assertTrue("Bedienfeld höher als 250 dp: $panelAfter", panelAfter > 260f)
         rule.onNodeWithText("🎬 Szene").performSemanticsAction(SemanticsActions.OnClick)
         pump(10_000, "Szenen-Werkzeug") { exists("Länge des Films: 12 s") }
         assertTrue("Längenregler ohne Aktionspunkte", exists("Länge des Films: 12 s"))
