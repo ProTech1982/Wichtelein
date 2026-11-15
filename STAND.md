@@ -4,6 +4,9 @@ Auftrag: Wichtelein fertig bauen wie in `Prompt.txt` (Downloads, gehört zu eine
 Gebaut wird nur in GitHub Actions (kein Android-SDK lokal). Release = Push auf main (android.yml, Tag build-N).
 Entwicklungszweige per `gh workflow run ci.yml --ref <zweig>` testen (ci.yml hat workflow_dispatch). Emulator-Job flackert gelegentlich (Boot-Timeout -> neu starten).
 
+## Version 0.6.0
+- Gegenstände stellt der Wichtel selbst auf (`doBuild`, wächst von unten nach oben, im Editor blass als Geist); Bett: Aktion/Szene „Ins Bett & schnarchen“ (`doBed`, Fx.SNORE); „Psst/Schhh/Brrr/Hmmm“ werden nicht mehr buchstabiert (`scene/SpeechText.kt`), „Psst“ = leises Zischen (Fx.PSST). Enthält 0.5.1 (Wegpunkte im ganzen Bild, Feineinstellung, Perspektive).
+
 ## Version 0.5.1
 - Wegpunkte/Objekte dürfen fast im ganzen Bild liegen (MIN_Y 0,03 statt 0,4, z. B. Treppe); Feineinstellung: Pfeil-Knöpfe (0,4 % Schritt) und „Ziehen langsam“; Einstellung „Perspektive“ (0 = überall gleich groß).
 
