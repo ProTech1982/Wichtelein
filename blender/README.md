@@ -1,21 +1,20 @@
-# Blender-Quellen des 3D-Wichtels
+# Blender-Variante des Wichtels (Experiment)
 
-Der 3D-Wichtel entsteht vollständig aus Python-Skripten (Blender 4/5, Cycles) – es gibt keine fremden Modelle oder Texturen.
+Der Wichtel in der App ist der Gartenwichtel aus `Wichtel_bild1` (ChatGPT-Bild des Nutzers), in Teile geschnitten
+(`tools/asset/`, siehe dort). Der frühere, selbst modellierte 3D-Wichtel wurde entfernt (sah nicht gut aus).
+
+Hier liegt der Versuch, dieselben Textur-Teile in Blender zu wölben und mit Licht zu rendern:
 
 | Datei | Aufgabe |
 |---|---|
-| `make_wichtel.py` | baut Modell, Materialien, Licht und Kamera (Maße: 1,0 Einheiten hoch, Blick nach -Y) |
-| `render_parts.py` | rendert Kopf, Körper, Arme und Beine einzeln als transparente PNGs (Cycles, 1000 px pro Einheit) |
-| `slice_parts.py` | schneidet die Teile zu und schreibt `elf3d_*.png` und `elf3d_layout.json` in die App-Ressourcen |
-| `render_preview.py`, `iter.sh` | schnelle Vorschau des ganzen Wichtels |
-| `save_blend.py` | speichert `wichtel.blend` |
-
-Ablauf (Blender-Pfad anpassen, immer mit `--factory-startup`, sonst startet der MCP-Server der Add-ons mit):
+| `prep_height.py` | erzeugt je Teil eine Höhenkarte (Kissenform aus der Transparenz) |
+| `render_textured.py` | baut je Teil ein feines Gitter, beklebt es mit der Teil-Textur, wölbt es mit der Höhenkarte und rendert es (Cycles) |
 
 ```
-blender --factory-startup -b -P make_wichtel.py -P render_parts.py -- ordner 96 CYCLES
-python slice_parts.py ordner ../app/src/main/res/drawable-nodpi ../app/src/main/res/raw
+python prep_height.py ../app/src/main/res/drawable-nodpi hoehen
+blender --factory-startup -b -P render_textured.py -- ../app/src/main/res/drawable-nodpi hoehen ../app/src/main/res/raw/elf_layout.json ausgabe 2 32
 ```
 
-Die App bewegt die gerenderten Teile mit derselben Gelenk-Animation wie die Foto-Puppe (`ElfLayout` beschreibt Positionen und Gelenke).
-Die Animationen entstehen also in der App aus den Posen, nicht als vorgerenderte Blender-Clips.
+Ergebnis des Vergleichs: Die Blender-Teile sind weicher, aber flacher in Farbe und Kontrast als die direkt geschnittenen Teile
+(grauerer Bart, weniger Leuchtkraft). Deshalb benutzt die App die geschnittenen Teile. Die Skripte bleiben als Ausgangspunkt für
+eine echte 3D-Figur (Seitenansichten brauchen zusätzliche Texturen).
