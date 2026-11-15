@@ -79,9 +79,9 @@ object ExportManager {
         info: VideoInfo,
         perf: Performance,
         settings: Settings,
-        onProgress: (Float) -> Unit,
         /** [video] ist ein Foto (JPEG): daraus entsteht ein Film der Länge [info].durationMs */
         isPhoto: Boolean = false,
+        onProgress: (Float) -> Unit,
     ): ExportResultInfo {
         val app = context.applicationContext
         val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.GERMANY).format(Date())

@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -99,7 +100,7 @@ class PhotoFilmTest {
         assertTrue("Geräusche vorhanden", perf.sounds.any { it.fx == Fx.JINGLE })
 
         val info = VideoInfo(640, 360, perf.durationMs)
-        val result = runBlocking { ExportManager.export(ctx, photo, info, perf, settings, {}, isPhoto = true) }
+        val result = runBlocking { ExportManager.export(ctx, photo, info, perf, settings, isPhoto = true, onProgress = {}) }
         val out = result.file
         assertTrue("Datei zu klein: ${out.length()}", out.length() > 10_000)
 
