@@ -130,7 +130,7 @@ class PerformanceTest {
         assertTrue(seen)
     }
 
-    private val doorScenes = listOf("brav_heim", "brav_tuer_fegen", "frech_tuer", "ueb_haus_geschenk")
+    private val doorScenes = listOf("brav_heim", "brav_zuhause", "brav_tuer_fegen", "frech_tuer", "ueb_haus_geschenk")
     private fun doorReq(id: String?, seed: Long = 4, ms: Long = 40_000, category: Category? = null) =
         PerfRequest(Pt(0.3f, 0.8f), emptyList(), 0.3f, category, id, seed, ms, null, settings, door = Pt(0.8f, 0.6f), doorScale = 0.2f)
 
@@ -156,7 +156,7 @@ class PerformanceTest {
 
     @Test fun doorScenesAreOnlyChosenWhenADoorExists() {
         val doorNames = Scenes.all.filter { it.needsDoor }.map { it.name }.toSet()
-        assertEquals(4, doorNames.size)
+        assertEquals(5, doorNames.size)
         for (seed in 1L..15L) {
             val without = Recorder.record(req(seed = seed, ms = 40_000))
             assertTrue("ohne Tür: ${without.sceneNames}", without.sceneNames.none { it in doorNames })
