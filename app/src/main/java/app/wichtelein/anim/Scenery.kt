@@ -119,7 +119,7 @@ fun DrawScope.drawScenery(items: List<SceneryItem>, assets: SceneryAssets, timeS
                 val rx = m.groundRx * k
                 withTransform({ scale(1f, 0.28f, base) }) {
                     drawCircle(
-                        Brush.radialGradient(0f to gc.copy(alpha = 0.55f), 0.55f to gc.copy(alpha = 0.18f), 1f to Color.Transparent, center = base, radius = rx),
+                        Brush.radialGradient(0f to gc.copy(alpha = 0.4f), 0.55f to gc.copy(alpha = 0.12f), 1f to Color.Transparent, center = base, radius = rx),
                         radius = rx, center = base, blendMode = BlendMode.Plus,
                     )
                 }
@@ -135,9 +135,9 @@ fun DrawScope.drawScenery(items: List<SceneryItem>, assets: SceneryAssets, timeS
             for (l in m.lights) {
                 val a = if (l.speed <= 0f) 1f else (0.55f + 0.45f * sin(2.0 * PI * (l.speed * timeSec + l.phase)).toFloat())
                 val c = Offset(origin.x + l.x * k, origin.y + l.y * k)
-                val rad = (l.r * k * 2.6f).coerceAtLeast(3f)
+                val rad = (l.r * k * 1.9f).coerceAtLeast(3f)
                 drawCircle(
-                    Brush.radialGradient(0f to l.color.copy(alpha = 0.85f * a), 0.3f to l.color.copy(alpha = 0.35f * a), 1f to Color.Transparent, center = c, radius = rad),
+                    Brush.radialGradient(0f to l.color.copy(alpha = 0.7f * a), 0.3f to l.color.copy(alpha = 0.25f * a), 1f to Color.Transparent, center = c, radius = rad),
                     radius = rad, center = c, blendMode = BlendMode.Plus,
                 )
                 drawCircle(Color.White.copy(alpha = 0.75f * a), (l.r * k * 0.35f).coerceAtLeast(1f), c, blendMode = BlendMode.Plus)
