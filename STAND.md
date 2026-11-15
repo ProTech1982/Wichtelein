@@ -4,6 +4,8 @@ Auftrag: Wichtelein fertig bauen wie in `Prompt.txt` (Downloads) + Stimme verbes
 Gebaut wird nur in GitHub Actions (kein Android-SDK lokal). Release = Push auf main (android.yml, Tag build-N).
 Emulator-Job flackert gelegentlich (Boot-Timeout -> Job neu starten).
 
+## Version 0.2.0 (Release): AR (ARCore, ungeprüft auf Gerät), 3D-Wichtel aus Blender (Teile, Stil wählbar), Tür links/rechts + Rundung, Kleidungsfarben, Tür-Szenen.
+
 ## Erledigt
 - Stimme: natürlicher Standard, Effekt dosierbar, 7 Stimmen (Download), Anhören-Knopf. Klangqualität kann nur der Nutzer beurteilen.
 - Engine deterministisch (virtuelle Uhr), `Performance`-Zeitleiste, 15 Szenen/3 Kategorien, 36 Sprüche, Aktionen inkl. Hinsetzen/Stolpern/Geschenk.
@@ -14,7 +16,8 @@ Emulator-Job flackert gelegentlich (Boot-Timeout -> Job neu starten).
 - Code in Pakete gegliedert; `ElfFigure` macht die Figur austauschbar; Systemstimme im Export (ungetestet im Emulator).
 
 ## Offen / ungeprüft
-- Blender-3D-Wichtel: Blender war nicht erreichbar; ARCore später. Wichtel ist 2D-Puppe aus Referenzbild (Rechte klären).
+- AR (ARCore) nicht auf Gerät geprüft; kein Videoexport aus AR. 3D-Wichtel = gerenderte Teile (Blender, `blender/`), nur Vorderansicht. Foto-Wichtel: Rechte des Referenzbildes klären.
+- Blender nur mit `--factory-startup` im Hintergrund rendern (Add-ons/GPU blockieren sonst); Mütze nie per subdivide_edges auf Kegel bauen (hängt).
 - Kamera im Querformat, Ansehen/Teilen, echte Klangqualität: nicht auf echtem Gerät geprüft.
 - Systemstimme im Export: umgesetzt, im Emulator nicht ausführbar.
 

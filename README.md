@@ -16,15 +16,20 @@ Namen, Sprüche, Stimme, Farbe und die erlaubten Szenen sind frei einstellbar, d
    Die Vorschau läuft sofort über dem Video, die Sprache wird passend zum Zeitpunkt abgespielt.
 4. **Als Video speichern:** Fortschrittsanzeige, danach liegt das MP4 in der Galerie (*Filme/Wichtelein*) und unter
    **Meine Wichtelvideos** (ansehen, teilen, löschen).
-5. **Wichtelaktionen:** Hier lassen sich einzelne Szenen ein- und ausschalten.
+5. **AR-Wichtel:** Auf der Startseite „AR-Wichtel“ öffnen, Boden suchen lassen, auf den Boden tippen – der Wichtel steht im echten Raum und spielt seine Szenen
+   (nur auf Handys mit ARCore, siehe unten).
+6. **Wichtelaktionen:** Hier lassen sich einzelne Szenen ein- und ausschalten.
 
 ## Was fertig ist, was nur Prototyp ist, was fehlt
 
-**Umgesetzt und im Android-Emulator der CI geprüft** (11 Emulator-Tests und Unit-Tests, siehe unten):
+**Umgesetzt und im Android-Emulator der CI geprüft** (14 Emulator-Tests und Unit-Tests, siehe unten):
 - Startseite mit den fünf Bereichen, Namensabfrage beim ersten Start, Kinderprofile, Einstellungen, Wichtelaktionen,
   Meine Wichtelvideos (Darstellung), Editor mit Startpunkt, Größe, Weg, Szene und Würfeln.
+- **Zwei Figuren:** „Foto-Wichtel“ (Teile aus dem Referenzbild) und „3D-Wichtel“ (in Blender modelliert und gerendert, `blender/`), wählbar in den Einstellungen;
+  beide haben dieselbe Gelenk-Animation, dieselben Kleidungsfarben und denselben Mund/Blinzeln.
 - Aktionen: Laufen, Stehen, Winken, Fegen, Tanzen, Stolpern, Hinsetzen, Verstecken, Purzelbaum, Schlafen, Naschen, Chaos
   (Spielzeug werfen), Aufräumen, Zauber; Gegenstände: Besen, Geschenk, Keks, Spielzeug, Konfetti.
+- **Tür-Optionen:** Anschlag **links oder rechts** (Türblatt schwingt zur gewählten Seite) und die Form von **eckig bis Rundbogen** per Regler.
 - **Wichtelhaus-Tür:** Im Editor wird die Tür im Video markiert; der Wichtel öffnet sie (Türblatt schwingt auf, warmes Licht), geht hinein, schließt sie,
   kommt wieder heraus oder fegt davor (4 Türszenen, nur wenn eine Tür markiert ist). Die Tür wird als Overlay gezeichnet.
 - **Kleidungsfarben** je Kleidungsstück (Mütze, Jacke, Strumpfhose, Schuhe), zur Laufzeit per HSV-Umfärbung der Bildteile.
@@ -38,8 +43,13 @@ Namen, Sprüche, Stimme, Farbe und die erlaubten Szenen sind frei einstellbar, d
   Update-Suche und optionale Stimmen-Downloads benutzt.
 - Signierte Release-APK per GitHub Actions, Update-Suche in der App.
 
+**Echtes AR (ARCore) – umgesetzt, aber nur kompiliert und auf Einbindung getestet, nicht auf einem Handy:**
+- Bodenerkennung, Verankerung des Wichtels im Raum, Perspektive/Größe passend zur Entfernung, Szenen mit Sprache. Der Emulator der CI hat kein ARCore,
+  deshalb ist die Kamera-/Boden-/Tracking-Logik (`ar/`) **ungeprüft**. Es braucht ein ARCore-fähiges Handy mit „Google Play-Dienste für AR“.
+- Einschränkung: Aus dem AR-Modus gibt es noch keinen Videoexport (nur Live-Ansicht); Türszenen sind im AR-Modus abgeschaltet.
+
 **Prototypisch / mit Einschränkung:**
-- Der Wichtel ist eine **2D-Puppe** aus ausgeschnittenen Teilen eines Referenzbildes (Frontansicht, wird gespiegelt), keine 3D-Figur:
+- Beide Wichtel sind **2D-Puppen aus Einzelteilen** (der 3D-Wichtel besteht aus in Blender gerenderten Teilen, kein Echtzeit-3D-Modell). Der Foto-Wichtel ist aus ausgeschnittenen Teilen eines Referenzbildes (Frontansicht, wird gespiegelt), keine 3D-Figur:
   Beine, Arme, Körper und Kopf drehen sich um ihre Gelenke (Farben frei wählbar), dazu Blinzeln, Kopfnicken beim Sprechen, Mund, Schatten.
   Das ist bewusst gewählt, weil es deutlich besser aussieht als ein selbst modelliertes einfaches 3D-Modell.
   Die Bilder sind in `app/src/main/res/drawable-nodpi/`. **Herkunft und Nutzungsrechte des Referenzbildes sind vor einer
@@ -52,9 +62,9 @@ Namen, Sprüche, Stimme, Farbe und die erlaubten Szenen sind frei einstellbar, d
   (der Emulator hat keine brauchbare Kamera). Ebenso ist die **Klangqualität der Stimmen nur vom Nutzer beurteilbar**.
 
 **Fehlt:**
-- Blender-3D-Figur und vorgerenderte transparente Animationssequenzen: Blender war beim Bau nicht erreichbar (MCP-Verbindung
-  schlug fehl). Die Figur ist über die Schnittstelle `ElfFigure` austauschbar; Szenen, Zeitleiste, Editor und Export bleiben dann unverändert.
-- Echtes AR mit ARCore (laut Auftrag eine spätere Zusatzfunktion).
+- Vorgerenderte Blender-Animationsclips: Die 3D-Figur wird in Teilen gerendert und in der App animiert; es gibt keine einzelnen Blender-Animationsclips.
+  Die Figur ist über die Schnittstelle `ElfFigure` austauschbar (z. B. gegen ein Echtzeit-3D-Modell).
+- Der 3D-Wichtel hat nur die Vorderansicht (wird gespiegelt) und ist stilisiert („Spielzeug-Look“), nicht so detailliert wie das Referenzbild.
 - Anpassbare Bewegungsabläufe pro Szene über die Wegpunkte hinaus; Mehrfach-Videos in einem Projekt.
 - Weitere Kleidungsstücke (z. B. andere Mützen oder Schals) – bisher nur die Farben.
 - Die Wichtelhaus-Tür ist ein gezeichnetes Türblatt über der echten Tür im Video; Aussehen und Farbe lassen sich noch nicht einstellen.
