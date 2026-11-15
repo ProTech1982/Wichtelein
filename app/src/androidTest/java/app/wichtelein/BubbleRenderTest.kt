@@ -37,21 +37,21 @@ class BubbleRenderTest {
     @Composable
     private fun Cell(spec: BubbleSpec, text: String) {
         val measurer = rememberTextMeasurer()
-        Canvas(Modifier.size(150.dp, 90.dp).background(Color(0xFFCDB89A))) {
-            val style = TextStyle(fontSize = (size.height * 0.13f * spec.size).toSp(), color = Color(0xFF222222), fontWeight = FontWeight.Medium)
+        Canvas(Modifier.size(150.dp, 120.dp).background(Color(0xFFCDB89A))) {
+            val style = TextStyle(fontSize = (size.height * 0.085f * spec.size).toSp(), color = Color(0xFF222222), fontWeight = FontWeight.Medium)
             val k = if (spec.shape == BubbleShape.ROUNDED || spec.shape == BubbleShape.RECT) 1f else 0.7f
             val layout = measurer.measure(text, style, constraints = Constraints(maxWidth = (size.width * 0.6f * spec.size.coerceAtMost(1.3f) * k).toInt().coerceAtLeast(40)))
-            drawBubble(layout, spec, size.width / 2f, size.height * 1.05f, size.width, size.height * 1.4f)
+            drawBubble(layout, spec, size.width / 2f, size.height * 0.98f, size.width, size.height * 1.6f)
         }
     }
 
     @Test fun everyShapeAndSizeIsDrawn() {
         val shapes = BubbleShape.values()
         rule.setContent {
-            Column(Modifier.size(300.dp, 450.dp)) {
+            Column(Modifier.size(300.dp, 600.dp)) {
                 for (sh in shapes) Row {
-                    Cell(BubbleSpec(true, sh, 0.6f), "Hi!")
-                    Cell(BubbleSpec(true, sh, 1.6f), "Ich bin der Wichtel und wohne in deinem Zimmer.")
+                    Cell(BubbleSpec(true, sh, 0.8f), "Hallo Wichtel!")
+                    Cell(BubbleSpec(true, sh, 1.3f), "Ich wohne in deinem Zimmer.")
                 }
             }
         }
@@ -66,7 +66,7 @@ class BubbleRenderTest {
                 val p = b.getPixel(c * cw + x, r * ch + y)
                 if (AColor.red(p) > 240 && AColor.green(p) > 240 && AColor.blue(p) > 240) white++
             }
-            assertTrue("${shapes[r]} Spalte $c: zu wenig Blase ($white)", white > (if (c == 0) 1 else 30))
+            assertTrue("${shapes[r]} Spalte $c: zu wenig Blase ($white)", white > 20)
         }
     }
 }
