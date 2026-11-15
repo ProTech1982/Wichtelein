@@ -92,7 +92,7 @@ private val Warn = Color(0xFFFFE08A)
  * Bedienung: Antippen wählt einen vorhandenen Punkt oder Gegenstand aus (Ziehen verschiebt ihn, „Löschen“ entfernt ihn),
  * Antippen einer leeren Stelle setzt je nach Werkzeug etwas Neues. „↶ / ↷“ nimmt jeden Schritt zurück bzw. stellt ihn wieder her.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun EditorScreen(
     file: File,
@@ -448,7 +448,18 @@ fun EditorScreen(
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Größe des Wichtels: immer sichtbar, in jedem Werkzeug
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Größe", color = Color.White, fontSize = 13.sp)
+                Slider(
+                    value = settings.sizeScale,
+                    onValueChange = { onSettings(settings.copy(sizeScale = it)) },
+                    valueRange = 0.12f..0.6f,
+                    modifier = Modifier.weight(1f),
+                )
+                Text("${(settings.sizeScale * 100).toInt()} %", color = Hint, fontSize = 12.sp)
+            }
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
                 FilterChip(selected = tool == Tool.START, onClick = { tool = Tool.START }, label = { Text("📍 Start") })
                 FilterChip(selected = tool == Tool.PATH, onClick = { tool = Tool.PATH }, label = { Text("🛤 Weg (${st.path.size})") })
                 FilterChip(selected = tool == Tool.ACTION, onClick = { tool = Tool.ACTION }, label = { Text("🎯 Aktionen (${st.script.size})") })
@@ -624,12 +635,6 @@ fun EditorScreen(
                         value = settings.perspective,
                         onValueChange = { onSettings(settings.copy(perspective = it)) },
                         valueRange = 0f..1.2f,
-                    )
-                    Text("Größe des Wichtels", color = Color.White, fontSize = 13.sp)
-                    Slider(
-                        value = settings.sizeScale,
-                        onValueChange = { onSettings(settings.copy(sizeScale = it)) },
-                        valueRange = 0.12f..0.6f,
                     )
                     if (scriptMode) {
                         Text(
