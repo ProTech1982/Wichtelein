@@ -4,6 +4,9 @@ Auftrag: Wichtelein fertig bauen wie in `Prompt.txt` (Downloads, gehört zu eine
 Gebaut wird nur in GitHub Actions (kein Android-SDK lokal). Release = Push auf main (android.yml, Tag build-N).
 Entwicklungszweige per `gh workflow run ci.yml --ref <zweig>` testen (ci.yml hat workflow_dispatch). Emulator-Job flackert gelegentlich (Boot-Timeout -> neu starten).
 
+## Version 0.5.1
+- Wegpunkte/Objekte dürfen fast im ganzen Bild liegen (MIN_Y 0,03 statt 0,4, z. B. Treppe); Feineinstellung: Pfeil-Knöpfe (0,4 % Schritt) und „Ziehen langsam“; Einstellung „Perspektive“ (0 = überall gleich groß).
+
 ## Version 0.5.0
 - Editor neu (`ui/EditorScreen.kt`, Logik `ui/EditState.kt`): Auswahl, Ziehen, Löschen je Punkt, Rückgängig/Wiederholen (`EditHistory`), Werkzeug-Chips.
 - Gegenstände (`anim/Scenery.kt`, Bilder `assets/scenery/`, erzeugt mit `blender/szene3d.py`): Tannenbaum, Bett, Zaun, Laterne, Lichterkette, Neonschild; additive Lichter, Tiefensortierung vor/hinter dem Wichtel, im Export enthalten (`ExportManager.export(scenery=…)`).

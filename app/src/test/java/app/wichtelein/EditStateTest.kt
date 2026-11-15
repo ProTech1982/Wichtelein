@@ -95,6 +95,24 @@ class EditStateTest {
         assertFalse(EditOps.contains(s, Sel.Item(1)))
     }
 
+    @Test fun waypointsMayLieHighUpAndCanBeNudgedFinely() {
+        var s = EditState()
+        s = EditOps.addPath(s, Pt(0.5f, 0.12f)) // weit oben im Bild (Treppe)
+        assertEquals(0.12f, s.path[0].y, 1e-6f)
+        s = EditOps.nudge(s, Sel.Path(0), 0.004f, -0.004f)
+        assertEquals(0.504f, s.path[0].x, 1e-5f)
+        assertEquals(0.116f, s.path[0].y, 1e-5f)
+        // am Rand bleibt es im Bild
+        s = EditOps.nudge(s, Sel.Path(0), 0f, -5f)
+        assertEquals(EditOps.MIN_Y, s.path[0].y, 1e-6f)
+    }
+
+    @Test fun perspectiveCanBeSwitchedOff() {
+        assertEquals(depth(0.2f), depth(0.2f, 1f), 1e-6f)
+        assertEquals(depth(0.78f), depth(0.2f, 0f), 1e-6f)
+        assertTrue(depth(0.2f, 0.5f) > depth(0.2f, 1f) && depth(0.2f, 0.5f) < depth(0.78f))
+    }
+
     @Test fun limitsAreRespected() {
         var s = EditState()
         repeat(EditOps.MAX_WAYPOINTS + 5) { s = EditOps.addPath(s, Pt(0.5f, 0.7f)) }

@@ -116,7 +116,7 @@ object ExportManager {
                 val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
                 val canvas = Canvas(bmp.asImageBitmap())
                 CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, canvas, Size(w.toFloat(), h.toFloat())) {
-                    drawWichtelFrame(perf.frameAt(presentationTimeUs / 1000L), sprites, settings.sizeScale, measurer, scenery = layer)
+                    drawWichtelFrame(perf.frameAt(presentationTimeUs / 1000L), sprites, settings.sizeScale, measurer, scenery = layer, perspective = settings.perspective)
                 }
                 return bmp
             }

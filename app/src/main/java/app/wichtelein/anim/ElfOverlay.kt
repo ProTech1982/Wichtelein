@@ -35,6 +35,15 @@ import androidx.compose.ui.unit.sp
 /** Perspektive: weiter oben im Bild (kleineres y) = weiter weg = kleiner. */
 fun depth(y: Float): Float = 0.55f + 0.6f * y
 
+/**
+ * Größe nach Höhe im Bild mit einstellbarer Perspektive: 1 = normal (weiter oben kleiner), 0 = überall gleich groß
+ * (z. B. für eine Treppe oder eine Wand, die kaum Tiefe hat). Bezugspunkt ist die Höhe 0,78 (Standardstart).
+ */
+fun depth(y: Float, perspective: Float): Float {
+    val ref = depth(0.78f)
+    return ref + (depth(y) - ref) * perspective.coerceIn(0f, 1.5f)
+}
+
 private val ConfettiColors = listOf(
     Color(0xFFE53935), Color(0xFFFDD835), Color(0xFF43A047),
     Color(0xFF1E88E5), Color(0xFF8E24AA), Color(0xFFFB8C00),
@@ -52,6 +61,7 @@ fun ElfOverlay(
     modifier: Modifier = Modifier,
     onTap: ((Float, Float) -> Unit)? = null,
     scenery: SceneryLayer? = null,
+    perspective: Float = 1f,
 ) {
     val measurer = rememberTextMeasurer()
     val tap by rememberUpdatedState(onTap)
@@ -60,7 +70,7 @@ fun ElfOverlay(
             detectTapGestures { o -> tap?.invoke(o.x / size.width, o.y / size.height) }
         },
     ) {
-        if (frame != null) drawWichtelFrame(frame, sprites, sizeScale, measurer, scenery = scenery)
+        if (frame != null) drawWichtelFrame(frame, sprites, sizeScale, measurer, scenery = scenery, perspective = perspective)
     }
 }
 
@@ -87,11 +97,12 @@ fun DrawScope.drawWichtelFrame(
     measurer: TextMeasurer,
     projection: WichtelProjection? = null,
     scenery: SceneryLayer? = null,
+    perspective: Float = 1f,
 ) {
     val w = size.width
     val h = size.height
     fun pos(x: Float, y: Float): Offset? = if (projection != null) projection.position(x, y) else Offset(x * w, y * h)
-    fun eh(x: Float, y: Float): Float = if (projection != null) projection.elfHeight(x, y) else h * sizeScale * depth(y)
+    fun eh(x: Float, y: Float): Float = if (projection != null) projection.elfHeight(x, y) else h * sizeScale * depth(y, perspective)
 
     if (projection == null) drawDoorBack(f, w, h)
 

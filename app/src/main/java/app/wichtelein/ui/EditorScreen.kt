@@ -133,6 +133,7 @@ fun EditorScreen(
     var action by remember { mutableStateOf(ElfAction.SWEEP) }
     var objType by remember { mutableStateOf(SceneryType.TREE) }
     var sliderBase by remember { mutableStateOf<EditState?>(null) }
+    var fine by remember { mutableStateOf(false) }
 
     fun commit(n: EditState) {
         if (n != st) {
@@ -370,6 +371,7 @@ fun EditorScreen(
                     sizeScale = settings.sizeScale,
                     modifier = Modifier.fillMaxSize(),
                     scenery = layer,
+                    perspective = settings.perspective,
                 )
                 EditMarkers(st, sel, ::itemBox, ::doorBox, Modifier.fillMaxSize())
                 // Bedienfläche: Tippen wählt/setzt, Ziehen verschiebt das Getroffene
@@ -398,7 +400,8 @@ fun EditorScreen(
                                     if (d != null) {
                                         change.consume()
                                         val cur = EditOps.position(st, d)
-                                        if (cur != null) st = EditOps.move(st, d, Pt(cur.x + amount.x / size.width, cur.y + amount.y / size.height))
+                                        val k = if (fine) 0.2f else 1f
+                                        if (cur != null) st = EditOps.move(st, d, Pt(cur.x + k * amount.x / size.width, cur.y + k * amount.y / size.height))
                                     }
                                 },
                                 onDragEnd = {
@@ -459,6 +462,17 @@ fun EditorScreen(
                         Text("Ausgewählt: ${EditOps.label(st, s)}", color = Color(0xFF80D8FF), fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
                         OutlinedButton(onClick = { commit(EditOps.remove(st, s)); sel = null }) { Text("🗑 Löschen", color = Color(0xFFFF8A80)) }
                         TextButton(onClick = { sel = null }) { Text("Abwählen") }
+                    }
+                    // Feineinstellung: kleine Schritte per Knopf, oder Ziehen im Zeitlupen-Modus
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Fein:", color = Color.White, fontSize = 13.sp)
+                        for ((label, dx, dy) in listOf(Triple("◀", -1f, 0f), Triple("▶", 1f, 0f), Triple("▲", 0f, -1f), Triple("▼", 0f, 1f))) {
+                            OutlinedButton(
+                                onClick = { commit(EditOps.nudge(st, s, dx * 0.004f, dy * 0.004f)) },
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp),
+                            ) { Text(label, color = Color.White) }
+                        }
+                        FilterChip(selected = fine, onClick = { fine = !fine }, label = { Text("Ziehen langsam") })
                     }
                     if (s is Sel.Item) {
                         val item = st.scenery.first { it.id == s.id }
@@ -599,6 +613,12 @@ fun EditorScreen(
                             Slider(value = photoSeconds, onValueChange = { photoSeconds = it }, valueRange = 6f..40f)
                         }
                     }
+                    Text("Perspektive: ${(settings.perspective * 100).toInt()} %  (0 = überall gleich groß, z. B. Treppe)", color = Color.White, fontSize = 13.sp)
+                    Slider(
+                        value = settings.perspective,
+                        onValueChange = { onSettings(settings.copy(perspective = it)) },
+                        valueRange = 0f..1.2f,
+                    )
                     Text("Größe des Wichtels", color = Color.White, fontSize = 13.sp)
                     Slider(
                         value = settings.sizeScale,

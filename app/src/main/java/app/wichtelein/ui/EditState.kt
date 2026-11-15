@@ -31,7 +31,8 @@ object EditOps {
     const val MAX_WAYPOINTS = 12
     const val MAX_STEPS = 24
     const val MAX_ITEMS = 24
-    const val MIN_Y = 0.4f
+    /** Punkte dürfen fast im ganzen Bild liegen (auch weit oben, z. B. auf einer Treppe) */
+    const val MIN_Y = 0.03f
 
     fun clamp(p: Pt) = Pt(p.x.coerceIn(0.03f, 0.97f), p.y.coerceIn(MIN_Y, 0.96f))
 
@@ -62,6 +63,12 @@ object EditOps {
         is Sel.Step -> if (sel.index in s.script.indices) s.copy(script = s.script.filterIndexed { i, _ -> i != sel.index }) else s
         Sel.Door -> s.copy(door = null)
         is Sel.Item -> s.copy(scenery = s.scenery.filter { it.id != sel.id })
+    }
+
+    /** Schiebt das Ausgewählte um ([dx], [dy]) relativ zur Bildgröße (Feineinstellung per Knopf). */
+    fun nudge(s: EditState, sel: Sel, dx: Float, dy: Float): EditState {
+        val p = position(s, sel) ?: return s
+        return move(s, sel, Pt(p.x + dx, p.y + dy))
     }
 
     /** Aktuelle Stelle des Ausgewählten. */
