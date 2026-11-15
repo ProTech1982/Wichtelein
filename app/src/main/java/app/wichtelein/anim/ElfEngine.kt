@@ -156,6 +156,15 @@ class ElfEngine(
     /** Orte, um die sich der Wichtel bewegt (Start, Weg, Aktionspunkte); leer = ganzes Bild */
     private var roam: List<Pt> = emptyList()
 
+    private var items: List<SceneryItem> = emptyList()
+
+    /** Aufbaufortschritt der Gegenstände nach Nummer */
+    val built = HashMap<Int, Float>()
+
+    /** Gegenstand, auf dem der Wichtel liegt, sonst -1 */
+    var onItem = -1
+        private set
+
     private var bubbleUntil = 0f
     private var lastAction = -1
     private var lastNanos = 0L
@@ -175,6 +184,7 @@ class ElfEngine(
         x, y, facing, visible, pose.copy(), bubble,
         mess.map { it.copy() }, flying?.copy(), particles.map { it.copy() },
         doorPos, doorScale, doorOpen, doorHingeLeft, doorRound, clock,
+        if (built.isEmpty()) emptyMap() else HashMap(built), onItem,
     )
 
     // ---------------------------------------------------------------- Takt
@@ -230,7 +240,10 @@ class ElfEngine(
         bubble = text
         val ms = bubbleDurationMs(text)
         bubbleUntil = clock + ms / 1000f
-        speak(text, mood)
+        // Zischlaute („Psst“) nicht buchstabieren lassen, sondern als Geräusch abspielen
+        val spoken = SpeechText.prepare(text)
+        if (spoken.hiss) sfx(Fx.PSST, 0.35f)
+        if (spoken.text.isNotBlank()) speak(spoken.text, mood)
         return ms
     }
 
@@ -273,6 +286,119 @@ class ElfEngine(
         val c1 = 1.70158f
         val c3 = c1 + 1f
         return 1f + c3 * (t - 1f).pow(3) + c1 * (t - 1f).pow(2)
+    }
+
+    fun configureScenery(list: List<SceneryItem>) {
+        items = list
+        built.clear()
+    }
+
+    /** Das erste Bett im Bild, falls es eins gibt. */
+    fun findBed(): SceneryItem? = items.firstOrNull { it.type == SceneryType.BED }
+
+    private fun halfWidth(it: SceneryItem) = it.scale * it.type.ratio / aspect / 2f
+
+    /** Stelle neben dem Gegenstand, auf der der Wichtel arbeitet (auf der Seite mit mehr Platz). */
+    private fun standBeside(it: SceneryItem): Pt {
+        val side = if (it.at.x > 0.5f) -1f else 1f
+        return Pt((it.at.x + side * (halfWidth(it) * 0.9f + 0.05f)).coerceIn(0.04f, 0.96f), (it.at.y + 0.005f).coerceAtMost(0.97f))
+    }
+
+    /** Stellt einen Gegenstand auf: hingehen, hämmern und werkeln, der Gegenstand wächst von unten nach oben. */
+    suspend fun doBuild(item: SceneryItem) {
+        walkTo(standBeside(item))
+        val toRight = item.at.x > x
+        facing = if (toRight) 1 else -1
+        turnTo(if (toRight) 90f else 270f)
+        say("Jetzt stelle ich ${item.type.label} auf!")
+        sfx(Fx.WHOOSH, 0.6f)
+        var hit = -1
+        val hw = halfWidth(item)
+        anim(2600) { t ->
+            built[item.id] = (t * t * (3f - 2f * t)).coerceIn(0f, 1f)
+            val s = sin(clock * 10f)
+            pose.armR = 70f + 45f * s
+            pose.armL = 30f
+            pose.lean = 4f * s
+            val h = (clock * 10f / PIf).toInt()
+            if (h != hit) {
+                hit = h
+                if (h % 2 == 0) sfx(Fx.KNOCK, 0.8f)
+                burst(item.at.x, item.at.y - 0.02f, 2, PK.DUST, 0.06f, 0.6f, 1.2f)
+            }
+            if (rng.nextFloat() < 0.35f) burst(item.at.x + rnd(-hw, hw), item.at.y - rnd(0f, item.scale), 1, PK.SPARK, 0.08f, 0.5f, 0.8f)
+        }
+        built[item.id] = 1f
+        pose.relax()
+        sfx(Fx.SPARKLE)
+        sfx(Fx.JINGLE, 0.7f)
+        burst(item.at.x, item.at.y - item.scale * 0.5f, 10, PK.POOF, 0.15f, 0.8f, 1.2f)
+        sayWait("Fertig! Sieht toll aus!")
+    }
+
+    /** Geht zum Bett, legt sich hinein, schnarcht und steht danach wieder auf. */
+    suspend fun doBed(bed: SceneryItem?) {
+        if (bed == null) {
+            say("Hier ist gar kein Bett …")
+            idle(1500)
+            return
+        }
+        val stand = standBeside(bed)
+        walkTo(stand)
+        val toRight = bed.at.x > x
+        facing = if (toRight) 1 else -1
+        turnTo(if (toRight) 90f else 270f)
+        sayWait("Gute Nacht! Ab ins Bett.")
+        // Liegepunkt: Mitte der Matratze; der Körper dreht sich um seine Mitte
+        val sign = if (bed.flip) 1f else -1f
+        val centerY = bed.at.y - bed.scale * 0.28f
+        val lie = Pt(bed.at.x, (centerY + 0.4f * hNorm).coerceAtMost(0.98f))
+        val sx = x
+        val sy = y
+        onItem = bed.id
+        anim(1400) { t ->
+            x = sx + (lie.x - sx) * t
+            y = sy + (lie.y - sy) * t - 0.07f * sin(t * PIf)
+            pose.spin = sign * 90f * t
+            pose.legL = 18f * sin(t * PIf)
+            pose.legR = -18f * sin(t * PIf)
+        }
+        x = lie.x
+        y = lie.y
+        pose.spin = sign * 90f
+        pose.relax()
+        pose.spin = sign * 90f
+        sfx(Fx.THUD, 0.5f)
+        var zTimer = 0f
+        var snoreAt = -1
+        anim(5600) {
+            pose.eyesClosed = true
+            pose.spin = sign * 90f
+            pose.squash = 0.012f * sin(clock * 2.6f)
+            val n = (clock / 1.7f).toInt()
+            if (n != snoreAt) {
+                snoreAt = n
+                sfx(Fx.SNORE, 0.9f)
+            }
+            zTimer += 0.033f
+            if (zTimer > 0.6f) {
+                zTimer = 0f
+                particles.add(Particle(x - sign * 0.04f, y - hNorm * 0.5f, -sign * 0.02f, -0.07f, 1.6f, 1.6f, PK.Z, 1f))
+            }
+        }
+        pose.eyesClosed = false
+        pose.squash = 0f
+        sayWait("Hm? Schon Morgen?")
+        anim(1000) { t ->
+            x = lie.x + (stand.x - lie.x) * t
+            y = lie.y + (stand.y - lie.y) * t - 0.06f * sin(t * PIf)
+            pose.spin = sign * 90f * (1f - t)
+        }
+        x = stand.x
+        y = stand.y
+        pose.spin = 0f
+        onItem = -1
+        pose.relax()
     }
 
     fun configureRoam(points: List<Pt>, aspect: Float) {
@@ -875,6 +1001,7 @@ class ElfEngine(
             ElfAction.CHAOS -> doChaos(walk = false)
             ElfAction.HIDE -> doHide(Pt((x + rnd(-0.2f, 0.2f)).coerceIn(0.1f, 0.9f), y))
             ElfAction.BOW -> doBow()
+            ElfAction.BED -> doBed(findBed())
             ElfAction.KNOCK -> {
                 walkTo(frontOfDoor())
                 doKnock()
@@ -892,6 +1019,8 @@ class ElfEngine(
     suspend fun perform(req: PerfRequest, played: MutableList<String>) {
         appear(req.start)
         greet()
+        // die platzierten Gegenstände stellt der Wichtel nacheinander selbst auf
+        if (req.autoBuild) for (item in items) doBuild(item)
         if (req.script.isNotEmpty()) {
             // Drehbuch: die Aktionspunkte der Reihe nach abarbeiten, danach verbeugen und stehen bleiben
             for (st in req.script) {
@@ -907,7 +1036,7 @@ class ElfEngine(
         var last: SceneDef? = null
         var first = req.sceneId?.let { Scenes.find(it) }
         while (true) {
-            val scene = first ?: Scenes.pick(req.category, req.enabledScenes, last, rng, req.door != null)
+            val scene = first ?: Scenes.pick(req.category, req.enabledScenes, last, rng, req.door != null, findBed() != null)
             first = null
             last = scene
             played.add(scene.name)

@@ -23,6 +23,8 @@ class SceneDef(
     val description: String,
     /** braucht die Tür des Wichtelhauses (im Editor markiert) */
     val needsDoor: Boolean = false,
+    /** braucht ein Bett im Bild (im Editor unter „Objekte“ aufgestellt) */
+    val needsBed: Boolean = false,
     val run: suspend ElfEngine.(Stops) -> Unit,
 )
 
@@ -47,6 +49,9 @@ object Scenes {
             doSit(1500)
             doWave()
             doSleep()
+        },
+        SceneDef("brav_bett", "Ins Bett und schnarchen", Category.BRAV, "Der Wichtel legt sich in sein Bett und schnarcht laut.", needsBed = true) { _ ->
+            doBed(findBed())
         },
         SceneDef("brav_keks", "Keks-Pause", Category.BRAV, "Er setzt sich hin und genießt einen Keks.") { s ->
             walkTo(s.next())
@@ -132,9 +137,9 @@ object Scenes {
      * Wählt eine Szene. [category] = null mischt alle Kategorien. Nur erlaubte Szenen ([enabled] = null: alle);
      * die zuletzt gespielte wird vermieden.
      */
-    fun pick(category: Category?, enabled: Set<String>?, last: SceneDef?, rng: Random, hasDoor: Boolean = false): SceneDef {
+    fun pick(category: Category?, enabled: Set<String>?, last: SceneDef?, rng: Random, hasDoor: Boolean = false, hasBed: Boolean = false): SceneDef {
         val cat = category ?: Category.values().random(rng)
-        val allowed = all.filter { (enabled == null || it.id in enabled) && (hasDoor || !it.needsDoor) }
+        val allowed = all.filter { (enabled == null || it.id in enabled) && (hasDoor || !it.needsDoor) && (hasBed || !it.needsBed) }
         var pool = allowed.filter { it.category == cat && it != last }
         if (pool.isEmpty()) pool = allowed.filter { it != last }
         if (pool.isEmpty()) pool = allowed // nur eine erlaubte Szene: sie darf sich wiederholen

@@ -196,7 +196,7 @@ fun EditorScreen(
         else -> min(info.durationMs, 90_000L).coerceAtLeast(3_000L)
     }
     // die Gegenstände ändern die Aufführung nicht: ohne sie neu aufnehmen
-    val perfKey = st.copy(scenery = emptyList(), nextId = 0)
+    val perfKey = st.copy(nextId = 0)
 
     // 1) Aufführung aufnehmen, sobald sich etwas ändert
     LaunchedEffect(settings, perfKey, category, sceneId, seed, duration) {
@@ -208,6 +208,7 @@ fun EditorScreen(
             doorHingeLeft = st.doorHingeLeft,
             doorRound = st.doorRound,
             script = st.script,
+            scenery = st.scenery,
             stopAfterScript = isPhoto && st.script.isNotEmpty(),
             aspect = info.aspect,
             sizeScale = settings.sizeScale,
@@ -372,6 +373,7 @@ fun EditorScreen(
                     modifier = Modifier.fillMaxSize(),
                     scenery = layer,
                     perspective = settings.perspective,
+                    showUnbuilt = true,
                 )
                 EditMarkers(st, sel, ::itemBox, ::doorBox, Modifier.fillMaxSize())
                 // Bedienfläche: Tippen wählt/setzt, Ziehen verschiebt das Getroffene
@@ -521,7 +523,7 @@ fun EditorScreen(
                                 selected = action == a,
                                 onClick = {
                                     action = a
-                                    if (!a.needsPoint && st.door != null) {
+                                    if (!a.needsPoint && (!a.needsDoor || st.door != null) && (!a.needsBed || st.scenery.any { it.type == SceneryType.BED })) {
                                         val n = EditOps.addStep(st, a, null)
                                         if (n != st) {
                                             commit(n)
@@ -532,6 +534,9 @@ fun EditorScreen(
                                 label = { Text("${a.emoji} ${a.label}") },
                             )
                         }
+                    }
+                    if (action.needsBed && st.scenery.none { it.type == SceneryType.BED }) {
+                        Text("Stelle zuerst ein Bett auf (Chip „🎄 Objekte“), dann lässt sich diese Aktion hinzufügen.", color = Warn, fontSize = 12.sp)
                     }
                     if (action.needsDoor && st.door == null) {
                         Text("Setze zuerst die Tür (Chip „🚪 Tür“), dann lässt sich diese Aktion hinzufügen.", color = Warn, fontSize = 12.sp)
@@ -581,7 +586,8 @@ fun EditorScreen(
                 Tool.OBJECTS -> {
                     Text(
                         "Wähle einen Gegenstand und tippe ins Bild (Fußpunkt = Stelle am Boden). Jeder lässt sich verschieben, in der Größe ändern, " +
-                            "spiegeln und löschen. Der Wichtel läuft davor und dahinter vorbei; Lichter leuchten und blinken.",
+                            "spiegeln und löschen. Hier siehst du ihn nur blass angedeutet: Im Film stellt der Wichtel ihn selbst auf. " +
+                            "Mit einem Bett kann er sich hineinlegen und schnarchen (Aktion „🛏 Ins Bett“).",
                         color = Hint,
                         fontSize = 12.sp,
                     )

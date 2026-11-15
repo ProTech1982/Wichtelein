@@ -42,6 +42,10 @@ enum class Fx(val label: String) {
     CRUNCH("Knuspern"),
     /** Raschelndes Geschenkpapier mit Glöckchen */
     GIFT("Geschenk"),
+    /** Schnarchen: langsam ein, rumpelnd aus */
+    SNORE("Schnarchen"),
+    /** „Psst“: kurzes Zischen */
+    PSST("Psst"),
 }
 
 class SoundEvent(val timeMs: Long, val fx: Fx, val gain: Float = 1f)
@@ -176,6 +180,24 @@ object SoundSynth {
             }
             Fx.CRUNCH -> FloatArray(n(0.35f)).also { o ->
                 for (i in 0 until 5) noise(o, i * 0.06f + rng.nextFloat() * 0.02f, 0.03f, 0.6f, 0.25f, rng) { exp(-5f * it) }
+            }
+            Fx.SNORE -> FloatArray(n(1.7f)).also { o ->
+                // Einatmen: Rauschen schwillt an (rau durch schnelles Zittern); Ausatmen: tiefes Rumpeln
+                noise(o, 0.0f, 0.65f, 0.5f, 0.82f, rng) { u -> (sin(u * PI).toFloat()).pow(1.3f) * (0.6f + 0.4f * sin(u * 150f)) }
+                var ph = 0.0
+                val s0 = n(0.72f)
+                val len = n(0.85f)
+                for (i in 0 until len) {
+                    val u = i.toFloat() / len
+                    ph += 2.0 * PI * (62f - 18f * u) / SAMPLE_RATE
+                    val saw = ((ph / (2 * PI)) % 1.0).toFloat() * 2f - 1f
+                    val env = (sin(u * PI).toFloat()).pow(0.8f)
+                    o[s0 + i] += 0.5f * env * saw * (0.65f + 0.35f * sin(u * 120f)) + 0.15f * env * (rng.nextFloat() * 2f - 1f)
+                }
+            }
+            Fx.PSST -> FloatArray(n(0.7f)).also { o ->
+                // leises, weiches Zischen (geflüstert): sanft ein- und ausblenden
+                noise(o, 0.02f, 0.58f, 0.32f, 0.3f, rng) { u -> (sin(u * PI).toFloat()).pow(1.1f) }
             }
             Fx.GIFT -> FloatArray(n(1.0f)).also { o ->
                 noise(o, 0f, 0.35f, 0.28f, 0.35f, rng) { u -> sin(u * PI * 3f).toFloat().let { it * it } * (1f - u) }

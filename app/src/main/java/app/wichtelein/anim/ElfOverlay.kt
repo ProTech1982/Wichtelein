@@ -62,6 +62,7 @@ fun ElfOverlay(
     onTap: ((Float, Float) -> Unit)? = null,
     scenery: SceneryLayer? = null,
     perspective: Float = 1f,
+    showUnbuilt: Boolean = false,
 ) {
     val measurer = rememberTextMeasurer()
     val tap by rememberUpdatedState(onTap)
@@ -70,7 +71,7 @@ fun ElfOverlay(
             detectTapGestures { o -> tap?.invoke(o.x / size.width, o.y / size.height) }
         },
     ) {
-        if (frame != null) drawWichtelFrame(frame, sprites, sizeScale, measurer, scenery = scenery, perspective = perspective)
+        if (frame != null) drawWichtelFrame(frame, sprites, sizeScale, measurer, scenery = scenery, perspective = perspective, showUnbuilt = showUnbuilt)
     }
 }
 
@@ -98,6 +99,7 @@ fun DrawScope.drawWichtelFrame(
     projection: WichtelProjection? = null,
     scenery: SceneryLayer? = null,
     perspective: Float = 1f,
+    showUnbuilt: Boolean = false,
 ) {
     val w = size.width
     val h = size.height
@@ -113,14 +115,15 @@ fun DrawScope.drawWichtelFrame(
 
     // Gegenstände, die weiter hinten stehen als der Wichtel, kommen vor ihm
     val sc = if (projection == null) scenery else null
-    if (sc != null) drawScenery(sc.items.filter { it.at.y <= f.y }.sortedBy { it.at.y }, sc.assets, f.timeSec)
+    val progress = { it: SceneryItem -> f.built[it.id] ?: 0f }
+    if (sc != null) drawScenery(sc.items.filter { it.at.y <= f.y || it.id == f.onItem }.sortedBy { it.at.y }, sc.assets, f.timeSec, progress, showUnbuilt)
 
     val elfPos = pos(f.x, f.y)
     val elfH = eh(f.x, f.y)
     if (f.visible && elfPos != null) {
         sprites.draw(this, f.pose, elfPos, elfH, f.facing)
     }
-    if (sc != null) drawScenery(sc.items.filter { it.at.y > f.y }.sortedBy { it.at.y }, sc.assets, f.timeSec)
+    if (sc != null) drawScenery(sc.items.filter { it.at.y > f.y && it.id != f.onItem }.sortedBy { it.at.y }, sc.assets, f.timeSec, progress, showUnbuilt)
 
     f.flying?.let { fl ->
         val o = pos(fl.x, fl.y)

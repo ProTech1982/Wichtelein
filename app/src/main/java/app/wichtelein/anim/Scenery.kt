@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -18,13 +19,13 @@ import kotlin.math.sin
 import org.json.JSONObject
 
 /** Dinge, die man ins Bild stellen kann (in Blender gerendert, Cyberpunk-Weihnacht mit Neonlicht). */
-enum class SceneryType(val id: String, val label: String, val emoji: String, val defaultScale: Float) {
-    TREE("tree", "Tannenbaum", "🎄", 0.42f),
-    BED("bed", "Bett", "🛏", 0.22f),
-    FENCE("fence", "Zaun", "🚧", 0.14f),
-    LAMP("lamp", "Laterne", "🏮", 0.34f),
-    LIGHTS("lights", "Lichterkette", "💡", 0.16f),
-    SIGN("sign", "Neonschild", "🪧", 0.18f),
+enum class SceneryType(val id: String, val label: String, val emoji: String, val defaultScale: Float, val ratio: Float) {
+    TREE("tree", "Tannenbaum", "🎄", 0.42f, 0.82f),
+    BED("bed", "Bett", "🛏", 0.30f, 1.40f),
+    FENCE("fence", "Zaun", "🚧", 0.14f, 2.14f),
+    LAMP("lamp", "Laterne", "🏮", 0.34f, 0.60f),
+    LIGHTS("lights", "Lichterkette", "💡", 0.16f, 1.73f),
+    SIGN("sign", "Neonschild", "🪧", 0.18f, 1.10f),
 }
 
 /** Ein platzierter Gegenstand: Fußpunkt [at] (relativ im Bild), Höhe [scale] in Bildhöhen, optional gespiegelt. */
@@ -100,11 +101,21 @@ fun sceneryBox(item: SceneryItem, art: SceneryArt?, aspect: Float): Pair<Float, 
  * Zeichnet die Gegenstände (hinter oder vor dem Wichtel je nach Fußpunkt). Lichter leuchten additiv und blinken je nach Zeit
  * [timeSec]; so wirken Neonröhren und Lichterketten auch im fertigen Video lebendig.
  */
-fun DrawScope.drawScenery(items: List<SceneryItem>, assets: SceneryAssets, timeSec: Float) {
+fun DrawScope.drawScenery(
+    items: List<SceneryItem>,
+    assets: SceneryAssets,
+    timeSec: Float,
+    /** Aufbaufortschritt 0..1 je Gegenstand (der Wichtel stellt sie nacheinander auf); 0 = noch nicht da */
+    progressOf: (SceneryItem) -> Float = { 1f },
+    /** noch nicht aufgebaute Gegenstände blass andeuten (im Editor, damit man sie platzieren kann) */
+    ghost: Boolean = false,
+) {
     val w = size.width
     val h = size.height
     for (item in items) {
         val art = assets.art(item.type) ?: continue
+        val prog = progressOf(item).coerceIn(0f, 1f)
+        if (prog <= 0f && !ghost) continue
         val m = art.meta
         val hpx = h * item.scale
         val k = hpx / m.h
@@ -113,6 +124,19 @@ fun DrawScope.drawScenery(items: List<SceneryItem>, assets: SceneryAssets, timeS
         withTransform({
             if (item.flip) scale(-1f, 1f, base)
         }) {
+            if (prog <= 0f) {
+                // Geisterbild: so sieht man, wo der Gegenstand später steht
+                drawImage(
+                    art.image,
+                    srcOffset = IntOffset.Zero,
+                    srcSize = IntSize(art.image.width, art.image.height),
+                    dstOffset = IntOffset(origin.x.toInt(), origin.y.toInt()),
+                    dstSize = IntSize((m.w * k).toInt().coerceAtLeast(1), hpx.toInt().coerceAtLeast(1)),
+                    alpha = 0.3f,
+                    filterQuality = FilterQuality.Medium,
+                )
+                return@withTransform
+            }
             // Bodenlicht (Neonschein auf dem Boden)
             val gc = m.groundGlow
             if (gc != null && m.groundRx > 0f) {
@@ -124,15 +148,19 @@ fun DrawScope.drawScenery(items: List<SceneryItem>, assets: SceneryAssets, timeS
                     )
                 }
             }
-            drawImage(
-                art.image,
-                srcOffset = IntOffset.Zero,
-                srcSize = IntSize(art.image.width, art.image.height),
-                dstOffset = IntOffset(origin.x.toInt(), origin.y.toInt()),
-                dstSize = IntSize((m.w * k).toInt().coerceAtLeast(1), hpx.toInt().coerceAtLeast(1)),
-                filterQuality = FilterQuality.High,
-            )
+            // beim Aufbau wächst das Bild von unten nach oben
+            clipRect(top = if (prog < 1f) origin.y + hpx * (1f - prog) else 0f) {
+                drawImage(
+                    art.image,
+                    srcOffset = IntOffset.Zero,
+                    srcSize = IntSize(art.image.width, art.image.height),
+                    dstOffset = IntOffset(origin.x.toInt(), origin.y.toInt()),
+                    dstSize = IntSize((m.w * k).toInt().coerceAtLeast(1), hpx.toInt().coerceAtLeast(1)),
+                    filterQuality = FilterQuality.High,
+                )
+            }
             for (l in m.lights) {
+                if (prog < 1f && origin.y + l.y * k < origin.y + hpx * (1f - prog)) continue
                 val a = if (l.speed <= 0f) 1f else (0.55f + 0.45f * sin(2.0 * PI * (l.speed * timeSec + l.phase)).toFloat())
                 val c = Offset(origin.x + l.x * k, origin.y + l.y * k)
                 val rad = (l.r * k * 1.9f).coerceAtLeast(3f)

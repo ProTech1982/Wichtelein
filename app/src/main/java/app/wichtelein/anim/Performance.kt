@@ -21,7 +21,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 data class Pt(val x: Float, val y: Float)
 
 /** Was der Wichtel an einem Aktionspunkt tut. [needsPoint] = er läuft vorher dorthin; [needsDoor] = braucht die Tür des Wichtelhauses. */
-enum class ElfAction(val label: String, val emoji: String, val needsDoor: Boolean = false, val needsPoint: Boolean = true) {
+enum class ElfAction(val label: String, val emoji: String, val needsDoor: Boolean = false, val needsPoint: Boolean = true, val needsBed: Boolean = false) {
     WALK("Hingehen", "🚶"),
     SWEEP("Fegen", "🧹"),
     WAVE("Winken", "👋"),
@@ -36,6 +36,7 @@ enum class ElfAction(val label: String, val emoji: String, val needsDoor: Boolea
     CHAOS("Chaos machen", "🧸"),
     HIDE("Verstecken", "🙈"),
     BOW("Verbeugen", "🙇"),
+    BED("Ins Bett & schnarchen", "🛏", needsPoint = false, needsBed = true),
     KNOCK("Anklopfen", "✊", needsDoor = true, needsPoint = false),
     ENTER("Ins Haus gehen", "🏠", needsDoor = true, needsPoint = false),
     EXIT("Aus dem Haus kommen", "🚪", needsDoor = true, needsPoint = false),
@@ -88,6 +89,10 @@ class FrameState(
     val doorRound: Float = 1f,
     /** Zeit in Sekunden (für blinkende Lichter der Gegenstände) */
     val timeSec: Float = 0f,
+    /** Aufbaufortschritt (0..1) der Gegenstände nach Nummer; fehlt eine Nummer, steht der Gegenstand noch nicht */
+    val built: Map<Int, Float> = emptyMap(),
+    /** Gegenstand, auf dem der Wichtel gerade liegt (er wird dann hinter ihm gezeichnet), sonst -1 */
+    val onItem: Int = -1,
 )
 
 /** Eine fertig aufgenommene Wichtel-Aufführung: Bilder mit festem Takt plus Sprach-Ereignisse. */
@@ -135,6 +140,9 @@ class PerfRequest(
     val stopAfterScript: Boolean = false,
     /** Seitenverhältnis des Bildes (Breite / Höhe) */
     val aspect: Float = 1f,
+    /** Gegenstände im Bild; der Wichtel stellt sie am Anfang nacheinander auf (siehe [autoBuild]) */
+    val scenery: List<SceneryItem> = emptyList(),
+    val autoBuild: Boolean = true,
     /** Der Wichtel bleibt in der Nähe der gesetzten Punkte (Start, Weg, Aktionen); false = ganzes Bild (AR) */
     val confineToPoints: Boolean = true,
 )
@@ -158,6 +166,7 @@ object Recorder {
             fx = { f: Fx, gain: Float -> sounds.add(SoundEvent(engine.timeMs, f, gain)) },
         )
         engine.configureDoor(req.door, req.doorScale, req.doorHingeLeft, req.doorRound)
+        engine.configureScenery(req.scenery)
         engine.configureRoam(
             if (req.confineToPoints) listOf(req.start) + req.path + req.script.mapNotNull { it.at } else emptyList(),
             req.aspect,
