@@ -153,7 +153,7 @@ class SnowAndObjectsTest {
     }
 
     @Test fun threeDElfinFilesLiveInTheirOwnFolder() {
-        assertEquals("elfin3d/walk_03_05.png", Elf3DLayout.fileName(FrameChoice("walk", 3, 5), "elfin3d"))
-        assertEquals("elf3d/walk_03_05.png", Elf3DLayout.fileName(FrameChoice("walk", 3, 5)))
+        assertEquals("elfin3d/walk_03_05.webp", Elf3DLayout.fileName(FrameChoice("walk", 3, 5), "elfin3d"))
+        assertEquals("elf3d/walk_03_05.webp", Elf3DLayout.fileName(FrameChoice("walk", 3, 5)))
     }
 }

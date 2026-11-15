@@ -10,144 +10,144 @@ import app.wichtelein.ui.*
 import kotlin.random.Random
 
 /** Sätze des Wichtels. {kind} = Name des Kindes, {wichtel} = Name des Wichtels. */
-object Lines {
-    val greet = listOf(
+object Lines : LineBook {
+    override val greet = listOf(
         "Hallo {kind}! Ich bin {wichtel}, dein Wichtel!",
         "Huhu {kind}! Schön, dass du da bist!",
         "Psst, {kind}! Ich bin {wichtel} und wohne heimlich in deinem Zimmer.",
     )
-    val tidy = listOf(
+    override val tidy = listOf(
         "Ordnung muss sein, {kind}!",
         "Ich räume ein bisschen auf!",
         "Schwuppdiwupp, alles wird sauber!",
         "Ein Wichtel hilft gern.",
     )
-    val tidyDone = listOf(
+    override val tidyDone = listOf(
         "So, schön aufgeräumt!",
         "Fertig! Mama und Papa freuen sich bestimmt.",
         "Alles blitzeblank, {kind}!",
     )
-    val chaos = listOf(
+    override val chaos = listOf(
         "Hihi, jetzt gibt es Chaos!",
         "Upsi! Das war ich nicht... doch!",
         "{kind}, nicht verraten!",
         "Wichtelstreich!",
     )
-    val dance = listOf(
+    override val dance = listOf(
         "Tanz, tanz, tanz!",
         "Wichtel-Party, {kind}!",
         "Wer tanzt mit mir?",
     )
-    val tumble = listOf(
+    override val tumble = listOf(
         "Hui, ein Purzelbaum!",
         "Aaaah! Hoppla!",
         "Schau mal, {kind}, ich kann rollen!",
     )
-    val dizzy = listOf(
+    override val dizzy = listOf(
         "Mir ist ganz schwindelig!",
         "Puh, alles dreht sich.",
     )
-    val wave = listOf(
+    override val wave = listOf(
         "Hallo {kind}! Ich sehe dich!",
         "Winke, winke!",
         "Hier bin ich, {kind}!",
     )
-    val sleep = listOf(
+    override val sleep = listOf(
         "Ich bin so müde... gute Nacht.",
         "Gähn... ein kleines Nickerchen.",
     )
-    val wake = listOf(
+    override val wake = listOf(
         "Huch, ich bin eingeschlafen!",
         "Oh, schon Morgen?",
     )
-    val snack = listOf(
+    override val snack = listOf(
         "Mmmh, ein Keks!",
         "Nur ein winziges Stück, {kind}.",
         "Plätzchen sind das Beste!",
     )
-    val hide = listOf(
+    override val hide = listOf(
         "Findest du mich?",
         "Ich verstecke mich, {kind}!",
     )
-    val hideFound = listOf(
+    override val hideFound = listOf(
         "Buh! Hier bin ich!",
         "Hast du mich gesehen, {kind}?",
     )
-    val doorHome = listOf(
+    override val doorHome = listOf(
         "Ich gehe kurz nach Hause, {name}.",
         "Mein Haus ruft mich!",
     )
-    val doorExit = listOf(
+    override val doorExit = listOf(
         "Da bin ich wieder!",
         "Zuhause ist es am schönsten, aber draußen ist es lustig.",
     )
-    val doorKnock = listOf(
+    override val doorKnock = listOf(
         "Klopf, klopf! Ist jemand zu Hause?",
         "Klopf, klopf, klopf!",
     )
-    val doorWelcome = listOf(
+    override val doorWelcome = listOf(
         "Herzlich willkommen im Wichtelhaus!",
         "Meine Tür steht immer offen, {name}.",
     )
-    val sit = listOf(
+    override val sit = listOf(
         "Puh, kurz hinsetzen.",
         "So, jetzt gemütlich.",
         "Ein Wichtel braucht auch mal eine Pause.",
     )
-    val trip = listOf(
+    override val trip = listOf(
         "Huch! Wer hat das da hingelegt?",
         "Hoppla, ich bin gestolpert!",
         "Aua, mein Wichtelzeh!",
     )
-    val tripEmbarrassed = listOf(
+    override val tripEmbarrassed = listOf(
         "Das hat keiner gesehen, oder?",
         "Ich wollte das so machen.",
         "Alles gut, {name}, ich bin ein Profi.",
     )
-    val gift = listOf(
+    override val gift = listOf(
         "Ich habe etwas für dich, {name}!",
         "Psst, ein Geschenk ist unterwegs.",
     )
-    val giftPlaced = listOf(
+    override val giftPlaced = listOf(
         "Das ist für dich, {name}. Nicht schütteln!",
         "Überraschung! Mach es später auf.",
     )
-    val giftPop = listOf(
+    override val giftPop = listOf(
         "Simsalabim! Ein Geschenk!",
         "Schau mal, {name}, was da plötzlich liegt!",
     )
-    val snowOn = listOf(
+    override val snowOn = listOf(
         "Oh, schaut mal nach oben!",
         "Ich glaube, es fängt an zu schneien!",
     )
-    val snowLike = listOf(
+    override val snowLike = listOf(
         "Schneeflöckchen, Weißröckchen!",
         "Wie schön, alles wird ganz weiß!",
     )
-    val snowOff = listOf(
+    override val snowOff = listOf(
         "Genug Schnee für heute!",
         "Danke, liebe Wolken!",
     )
-    val magic = listOf(
+    override val magic = listOf(
         "Hokuspokus Wichtelzipfel!",
         "Abrakadabra, Spielzeug komm herbei!",
     )
-    val surprised = listOf(
+    override val surprised = listOf(
         "Ups, das war ich!",
         "Huch, das hat ja geklappt!",
         "Ich wusste gar nicht, dass ich das kann!",
     )
-    val bow = listOf(
+    override val bow = listOf(
         "Vielen Dank, vielen Dank!",
         "Applaus, Applaus, {name}!",
     )
-    val sneaky = listOf(
+    override val sneaky = listOf(
         "Pssst, ich nasche nur ganz heimlich.",
         "Der Keks ist doch gar nicht für dich, {name}... oder?",
     )
 
     /** Allgemeine Wichtelsprüche für zwischendurch. {name} = Name des Kindes, {wichtel} = Name des Wichtels. */
-    val general = listOf(
+    override val general = listOf(
         "Hallo {name}! Heute habe ich wieder etwas angestellt!",
         "Psst, {name}! Nicht verraten, dass ich hier war.",
         "{name}, du bist der beste Freund, den ein Wichtel haben kann!",
@@ -186,7 +186,27 @@ object Lines {
         "Morgen überrasche ich dich wieder. Aber verrate nichts!",
     )
 
-    val chat = listOf(
+    override val build = listOf(
+        "Jetzt stelle ich {item} auf!",
+        "Ich baue {item} auf, einen Moment!",
+    )
+    override val buildDone = listOf(
+        "Fertig! Sieht toll aus!",
+        "Geschafft, das sieht gut aus!",
+    )
+    override val noBed = listOf(
+        "Hier ist gar kein Bett …",
+    )
+    override val bedNight = listOf(
+        "Gute Nacht! Ab ins Bett.",
+        "Zeit zum Schlafen, gute Nacht!",
+    )
+    override val bedMorning = listOf(
+        "Hm? Schon Morgen?",
+        "Gähn, habe ich lange geschlafen?",
+    )
+
+    override val chat = listOf(
         "Weißt du was, {kind}? Du bist toll!",
         "{wichtel} hat dich lieb.",
         "Wann gibt es Plätzchen?",

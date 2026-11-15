@@ -50,6 +50,12 @@ data class Settings(
     val figure3d: Boolean = false,
     /** Wer erscheint: 0 = Wichtel, 1 = Wichtelfrau (Elfin), 2 = beide zusammen */
     val cast: Int = 0,
+    /** Kleiderfarben der Elfin (Nummern wie beim Wichtel) und ihre eigenen Sätze */
+    val elfinHatColor: Int = 0,
+    val elfinJacketColor: Int = 0,
+    val elfinLegColor: Int = 0,
+    val elfinBootColor: Int = 0,
+    val elfinCustomLines: String = "",
     /** Name der Elfin ({wichtel} in ihren Sätzen) */
     val elfinName: String = "Elfi",
     /** Stimme der Elfin (nur weibliche Stimmen); die Stimme des Wichtels ist [voiceId] (nur männliche) */
@@ -77,12 +83,18 @@ data class Settings(
 
     fun colors() = ElfColors(hatColor, jacketColor, legColor, bootColor).clamped()
 
+    /** Kleiderfarben der Figur [actor] (0 = Wichtel, 1 = Elfin) */
+    fun colorsFor(actor: Int) = if (actor == 1) ElfColors(elfinHatColor, elfinJacketColor, elfinLegColor, elfinBootColor).clamped() else colors()
+
     fun activeProfile(): Profile? = profiles.firstOrNull { it.id == activeProfileId } ?: profiles.firstOrNull()
 
     /** Namen des aktiven Profils (für {name} in den Sprüchen). */
     fun kidList(): List<String> = activeProfile()?.let { parseNames(it.name) } ?: emptyList()
 
     fun customList(): List<String> = parseLines(customLines)
+
+    /** Eigene Sätze der Figur [actor] (die Elfin benutzt nur ihre eigenen) */
+    fun customListFor(actor: Int): List<String> = parseLines(if (actor == 1) elfinCustomLines else customLines)
 
     /** Erlaubte Szenen; null = alle. */
     fun enabledScenes(): Set<String>? =
@@ -134,6 +146,11 @@ object SettingsStore {
             figure3d = p.getBoolean("figure3d", d.figure3d),
             cast = if (p.contains("cast")) p.getInt("cast", 0).coerceIn(0, 2) else if (p.getBoolean("elfin", false)) 1 else 0,
             elfinName = p.getString("elfinName", d.elfinName) ?: d.elfinName,
+            elfinHatColor = p.getInt("elfinHatColor", 0),
+            elfinJacketColor = p.getInt("elfinJacketColor", 0),
+            elfinLegColor = p.getInt("elfinLegColor", 0),
+            elfinBootColor = p.getInt("elfinBootColor", 0),
+            elfinCustomLines = p.getString("elfinCustomLines", "") ?: "",
             elfinVoiceId = p.getString("elfinVoiceId", d.elfinVoiceId) ?: d.elfinVoiceId,
             perspective = p.getFloat("perspective", d.perspective),
             bubble = app.wichtelein.anim.BubbleSpec(
@@ -173,6 +190,11 @@ object SettingsStore {
             .putBoolean("figure3d", s.figure3d)
             .putInt("cast", s.cast)
             .putString("elfinName", s.elfinName)
+            .putInt("elfinHatColor", s.elfinHatColor)
+            .putInt("elfinJacketColor", s.elfinJacketColor)
+            .putInt("elfinLegColor", s.elfinLegColor)
+            .putInt("elfinBootColor", s.elfinBootColor)
+            .putString("elfinCustomLines", s.elfinCustomLines)
             .putString("elfinVoiceId", s.elfinVoiceId)
             .putFloat("perspective", s.perspective)
             .putBoolean("bubbleShow", s.bubble.show)

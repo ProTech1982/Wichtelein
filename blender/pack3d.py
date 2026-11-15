@@ -1,4 +1,4 @@
-"""Verkleinert die gerenderten Bilder des 3D-Wichtels auf Handygröße und legt sie in die App-Assets.
+"""Verkleinert die gerenderten Bilder des 3D-Wichtels (oder der Elfin) auf Handygröße und legt sie als WebP in die App-Assets.
 Aufruf: python pack3d.py render_ordner ../app/src/main/assets/elf3d [breite]"""
 import glob
 import json
@@ -14,14 +14,14 @@ k = new_w / meta["cell"][0]
 new_h = round(meta["cell"][1] * k)
 os.makedirs(dst, exist_ok=True)
 for f in os.listdir(dst):
-    if f.endswith(".png") or f.endswith(".json"):
+    if f.endswith(".png") or f.endswith(".webp") or f.endswith(".json"):
         os.remove(os.path.join(dst, f))
 n = 0
 total = 0
 for f in sorted(glob.glob(os.path.join(src, "*.png"))):
     im = Image.open(f).convert("RGBA").resize((new_w, new_h), Image.LANCZOS)
-    out = os.path.join(dst, os.path.basename(f))
-    im.save(out, optimize=True)
+    out = os.path.join(dst, os.path.basename(f)[:-4] + ".webp")
+    im.save(out, "WEBP", quality=88, method=6, alpha_quality=100)
     total += os.path.getsize(out)
     n += 1
 meta["cell"] = [new_w, new_h]

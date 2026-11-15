@@ -93,7 +93,9 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
             if (settings.both) Text("Beide treten zusammen auf. Im Editor legst du bei jeder Aktion fest, wer sie macht; ohne Aktionen machen beide ihr eigenes Ding.", fontSize = 12.sp, color = Color.Gray)
-            ClothingEditor(settings, onChange)
+            FigureStyle(settings, onChange)
+            val actors = when (settings.cast) { 1 -> listOf(1); 2 -> listOf(0, 1); else -> listOf(0) }
+            for (actor in actors) ClothingEditor(settings, onChange, actor, showTitle = actors.size > 1)
             Text("Standardgröße")
             Slider(value = settings.sizeScale, onValueChange = { onChange(settings.copy(sizeScale = it)) }, valueRange = 0.12f..0.6f)
         }
@@ -158,12 +160,20 @@ fun SettingsScreen(
             )
         }
 
-        Fold("✏ Eigene Sätze", open, "Eigene Sprüche für die Figuren") {
-            OutlinedTextField(
+        Fold("✏ Eigene Sätze", open, "Eigene Sprüche für den Wichtel und die Elfin") {
+            if (settings.cast != 1) OutlinedTextField(
                 value = settings.customLines,
                 onValueChange = { onChange(settings.copy(customLines = it)) },
-                label = { Text("Eigene Sätze (einer pro Zeile)") },
-                supportingText = { Text("Platzhalter: {name} = Name des Kindes, {wichtel} = Name der sprechenden Figur") },
+                label = { Text("Eigene Sätze des Wichtels (einer pro Zeile)") },
+                supportingText = { Text("Platzhalter: {name} = Name des Kindes, {wichtel} = Name der Figur") },
+                minLines = 3,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (settings.cast != 0) OutlinedTextField(
+                value = settings.elfinCustomLines,
+                onValueChange = { onChange(settings.copy(elfinCustomLines = it)) },
+                label = { Text("Eigene Sätze der Elfin (einer pro Zeile)") },
+                supportingText = { Text("Die Elfin spricht nur ihre eigenen Texte, nichts vom Wichtel.") },
                 minLines = 3,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -227,48 +237,41 @@ private fun Section(title: String) {
     Text(title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp))
 }
 
-/** Kleidung: Vorschau des Wichtels und Farbwahl für Mütze, Mantel, Hose und Schuhe. */
+/** Darstellung der Figuren: 2D gezeichnet oder 3D (dreht sich). */
 @Composable
-private fun ClothingEditor(settings: Settings, onChange: (Settings) -> Unit) {
-    val sprites = rememberElfFigure(settings)
-    val pose = remember { Pose().apply { armR = 12f; armL = 6f } }
-    Canvas(Modifier.fillMaxWidth().height(200.dp)) {
-        val eh = size.height * 0.93f
-        val partner = (sprites as? CastFigure)?.partner
-        if (partner != null) {
-            (sprites as CastFigure).main.draw(this, pose, Offset(size.width * 0.35f, size.height * 0.97f), eh, 1)
-            partner.draw(this, pose, Offset(size.width * 0.65f, size.height * 0.97f), eh, 1)
-        } else {
-            sprites.draw(this, pose, Offset(size.width / 2f, size.height * 0.97f), eh, 1)
-        }
-    }
+private fun FigureStyle(settings: Settings, onChange: (Settings) -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    if (settings.elfin || settings.both) Text("Die Elfin hat Mütze, Kleid, Strumpfhose und Stiefel zum Umfärben (Mantel = Kleid, Hose = Strumpfhose); die Farben gelten für beide Figuren.", fontSize = 12.sp, color = Color.Gray)
     val has3d = if (settings.both) Elf3D.available(ctx) || Elf3D.available(ctx, "elfin3d") else Elf3D.available(ctx, if (settings.elfin) "elfin3d" else "elf3d")
-    if (has3d) {
-        Text("Darstellung", fontWeight = FontWeight.Medium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            androidx.compose.material3.FilterChip(
-                selected = !settings.figure3d,
-                onClick = { onChange(settings.copy(figure3d = false)) },
-                label = { Text("2D (gezeichnet)") },
-            )
-            androidx.compose.material3.FilterChip(
-                selected = settings.figure3d,
-                onClick = { onChange(settings.copy(figure3d = true)) },
-                label = { Text("3D (dreht sich)") },
-            )
-        }
-        if (settings.figure3d) Text("3D: Mützen- und Mantel- bzw. Kleidfarbe lassen sich ändern; Hose und Schuhe des Wichtels bleiben wie sie sind.", fontSize = 12.sp, color = Color.Gray)
+    if (!has3d) return
+    Text("Darstellung", fontWeight = FontWeight.Medium)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        androidx.compose.material3.FilterChip(selected = !settings.figure3d, onClick = { onChange(settings.copy(figure3d = false)) }, label = { Text("2D (gezeichnet)") })
+        androidx.compose.material3.FilterChip(selected = settings.figure3d, onClick = { onChange(settings.copy(figure3d = true)) }, label = { Text("3D (dreht sich)") })
     }
-    Text("Kleidung", fontWeight = FontWeight.Medium)
-    ColorRow("Mütze", ElfPalette.clothes, settings.hatColor) { onChange(settings.copy(hatColor = it)) }
-    ColorRow("Mantel", ElfPalette.clothes, settings.jacketColor) { onChange(settings.copy(jacketColor = it)) }
-    ColorRow("Hose", ElfPalette.clothes, settings.legColor) { onChange(settings.copy(legColor = it)) }
-    ColorRow("Schuhe", ElfPalette.boots, settings.bootColor) { onChange(settings.copy(bootColor = it)) }
-    TextButton(onClick = { onChange(settings.copy(hatColor = 0, jacketColor = 0, legColor = 0, bootColor = 0)) }) {
-        Text("Original-Farben")
+    if (settings.figure3d) Text("3D: Mützen- und Mantel- bzw. Kleidfarbe lassen sich ändern; Hose und Schuhe des Wichtels bleiben wie sie sind.", fontSize = 12.sp, color = Color.Gray)
+}
+
+/** Kleidung einer Figur ([actor]: 0 = Wichtel, 1 = Elfin): Vorschau und Farbwahl; die Elfin hat ihre eigenen Farben. */
+@Composable
+private fun ClothingEditor(settings: Settings, onChange: (Settings) -> Unit, actor: Int, showTitle: Boolean) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val sprites = remember(settings.colorsFor(actor), settings.figure3d, actor) { ElfFigures.load(ctx, settings, actor) }
+    val pose = remember { Pose().apply { armR = 12f; armL = 6f } }
+    if (showTitle) Text(if (actor == 1) "🧝‍♀️ Kleidung der Elfin" else "🧙 Kleidung des Wichtels", fontWeight = FontWeight.SemiBold)
+    Canvas(Modifier.fillMaxWidth().height(180.dp)) {
+        sprites.draw(this, pose, Offset(size.width / 2f, size.height * 0.97f), size.height * 0.93f, 1)
     }
+    val e = actor == 1
+    fun setColors(hat: Int, jacket: Int, legs: Int, boots: Int) = onChange(
+        if (e) settings.copy(elfinHatColor = hat, elfinJacketColor = jacket, elfinLegColor = legs, elfinBootColor = boots)
+        else settings.copy(hatColor = hat, jacketColor = jacket, legColor = legs, bootColor = boots),
+    )
+    val c = settings.colorsFor(actor)
+    ColorRow("Mütze", ElfPalette.clothes, c.hat) { setColors(it, c.jacket, c.legs, c.boots) }
+    ColorRow(if (e) "Kleid" else "Mantel", ElfPalette.clothes, c.jacket) { setColors(c.hat, it, c.legs, c.boots) }
+    ColorRow(if (e) "Strumpfhose" else "Hose", ElfPalette.clothes, c.legs) { setColors(c.hat, c.jacket, it, c.boots) }
+    ColorRow("Schuhe", ElfPalette.boots, c.boots) { setColors(c.hat, c.jacket, c.legs, it) }
+    TextButton(onClick = { setColors(0, 0, 0, 0) }) { Text("Original-Farben") }
 }
 
 @Composable
@@ -305,7 +308,14 @@ private fun SceneryStyles(settings: Settings, onChange: (Settings) -> Unit) {
         onChange(settings.copy(sceneryStyles = m))
     }
     Text("Jeder Gegenstand lässt sich einzeln umfärben, mit oder ohne Licht und mit eigener Lichtfarbe zeigen.", fontSize = 12.sp, color = Color.Gray)
-    for (t in SceneryType.values()) {
+    var group by remember { androidx.compose.runtime.mutableStateOf<SceneryGroup?>(null) }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        androidx.compose.material3.FilterChip(selected = group == null, onClick = { group = null }, label = { Text("Alle (${SceneryType.values().size})") })
+        for (g in SceneryGroup.values()) androidx.compose.material3.FilterChip(
+            selected = group == g, onClick = { group = g }, label = { Text("${g.label} (${SceneryType.values().count { it.group == g }})") },
+        )
+    }
+    for (t in SceneryType.values().filter { group == null || it.group == group }) {
         val st = settings.sceneryStyles[t.id] ?: SceneryStyle()
         androidx.compose.material3.Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {

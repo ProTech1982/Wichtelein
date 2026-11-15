@@ -49,13 +49,24 @@ enum class ElfAction(val label: String, val emoji: String, val needsDoor: Boolea
 
 /** Ein Aktionspunkt im Bild: [action] wird an der Stelle [at] ausgeführt (bei Türaktionen ohne Stelle). */
 /** [bubble] = eigene Sprechblase für diese Aktion (null = die Standardeinstellung). */
-/** [who] = welche Figur die Aktion macht, wenn beide auftreten (0 = Wichtel, 1 = Elfin); bei nur einer Figur egal. */
+/** [who] = welche Figur die Aktion macht, wenn beide auftreten (0 = Wichtel, 1 = Elfin, 2 = beide zusammen); bei nur einer Figur egal. */
 data class ScriptStep(val action: ElfAction, val at: Pt? = null, val bubble: BubbleSpec? = null, val who: Int = 0)
 
 /** Liefert der Engine den Takt. Beim Aufnehmen ist das eine virtuelle Uhr, kein echter Bildschirm-Takt. */
 interface Ticker {
     /** Wartet auf das nächste Bild und liefert dessen Zeit in Nanosekunden. */
     suspend fun nextFrame(): Long
+}
+
+/** Treffpunkt für gemeinsame Aktionen: jede Figur meldet sich, die erste wartet auf die zweite. */
+class StepSync {
+    private val arrived = HashMap<Int, MutableSet<Int>>()
+
+    fun arrive(step: Int, actor: Int) {
+        arrived.getOrPut(step) { HashSet() }.add(actor)
+    }
+
+    fun both(step: Int): Boolean = (arrived[step]?.size ?: 0) >= 2
 }
 
 class ManualTicker : Ticker {
@@ -164,13 +175,15 @@ class PerfRequest(
     val confineToPoints: Boolean = true,
     /** Es schneit von Anfang an */
     val snowFromStart: Boolean = false,
+    /** Startpunkt der Elfin, wenn beide auftreten (null = neben dem Wichtel) */
+    val start2: Pt? = null,
     /** Die Figur steht nur da (zweite Figur, wenn die erste ein Drehbuch spielt und diese keine Aktionen hat) */
     val idleOnly: Boolean = false,
 ) {
     /** Dieselbe Anfrage mit anderem Drehbuch, Startpunkt und Zufall (für die zweite Figur). */
     fun derive(script: List<ScriptStep>, start: Pt, seed: Long, autoBuild: Boolean, sceneId: String?, idleOnly: Boolean = false) = PerfRequest(
         start, path, sizeScale, category, sceneId, seed, durationMs, enabledScenes, settings, fps, door, doorScale, doorHingeLeft, doorRound, doorRot,
-        script, stopAfterScript, aspect, scenery, autoBuild, confineToPoints, snowFromStart, idleOnly,
+        script, stopAfterScript, aspect, scenery, autoBuild, confineToPoints, snowFromStart, start2, idleOnly,
     )
 }
 
@@ -217,12 +230,18 @@ object Recorder {
         if (both) {
             val scripted = req.script.isNotEmpty()
             val stepsA = req.script.filter { it.who != 1 }
-            val stepsB = req.script.filter { it.who == 1 }
+            // gemeinsame Aktionen macht die Elfin ein Stück neben dem Wichtel
+            val stepsB = req.script.filter { it.who != 0 }.map { st ->
+                if (st.who == 2 && st.at != null) st.copy(at = Pt((st.at.x + 0.09f).coerceAtMost(0.96f), st.at.y)) else st
+            }
             val reqA = req.derive(stepsA, req.start, req.seed, req.autoBuild, req.sceneId, idleOnly = scripted && stepsA.isEmpty())
-            val startB = Pt((req.start.x + 0.13f).coerceAtMost(0.95f).let { if (it - req.start.x < 0.05f) (req.start.x - 0.13f).coerceAtLeast(0.05f) else it }, req.start.y)
+            val startB = req.start2 ?: Pt((req.start.x + 0.13f).coerceAtMost(0.95f).let { if (it - req.start.x < 0.05f) (req.start.x - 0.13f).coerceAtLeast(0.05f) else it }, req.start.y)
             val reqB = req.derive(stepsB, startB, req.seed + 101L, false, null, idleOnly = scripted && stepsB.isEmpty())
             a = build(reqA, 0, req.seed)
             b = build(reqB, 1, req.seed + 101L)
+            val sync = StepSync()
+            a.engine.sync = sync
+            b.engine.sync = sync
         } else {
             a = build(req, first, req.seed)
             b = null

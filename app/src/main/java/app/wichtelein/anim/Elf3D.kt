@@ -85,7 +85,7 @@ class Elf3DLayout(val cellW: Int, val cellH: Int, val feet: Offset, val height: 
         }
 
         /** Ordner der Bilder in den Assets: der Wichtel liegt in `elf3d`, die Elfin in `elfin3d` */
-        fun fileName(c: FrameChoice, dir: String = "elf3d") = "$dir/%s_%02d_%02d.png".format(c.clip, c.heading, c.frame)
+        fun fileName(c: FrameChoice, dir: String = "elf3d") = "$dir/%s_%02d_%02d.webp".format(c.clip, c.heading, c.frame)
     }
 }
 
@@ -185,7 +185,10 @@ object ElfFigures {
         if (settings.figure3d && Elf3D.available(context)) Elf3D(context, settings.colors()) else ElfSprites.load(context, settings.colors())
 
     private fun elfin(context: Context, settings: Settings): ElfFigure =
-        if (settings.figure3d && Elf3D.available(context, "elfin3d")) Elf3D(context, settings.colors(), "elfin3d") else ElfinFigure(settings.colors())
+        if (settings.figure3d && Elf3D.available(context, "elfin3d")) Elf3D(context, settings.colorsFor(1), "elfin3d") else ElfinFigure(settings.colorsFor(1))
+
+    /** Eine einzelne Figur (für die Vorschau in den Einstellungen): 0 = Wichtel, 1 = Elfin. */
+    fun load(context: Context, settings: Settings, actor: Int): ElfFigure = if (actor == 1) elfin(context, settings) else wichtel(context, settings)
 
     fun load(context: Context, settings: Settings): ElfFigure = when {
         settings.both -> CastFigure(wichtel(context, settings), elfin(context, settings))
@@ -197,5 +200,5 @@ object ElfFigures {
 @Composable
 fun rememberElfFigure(settings: Settings): ElfFigure {
     val context = LocalContext.current
-    return remember(settings.colors(), settings.figure3d, settings.cast) { ElfFigures.load(context, settings) }
+    return remember(settings.colors(), settings.colorsFor(1), settings.figure3d, settings.cast) { ElfFigures.load(context, settings) }
 }

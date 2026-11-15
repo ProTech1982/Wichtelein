@@ -247,6 +247,7 @@ fun EditorScreen(
     LaunchedEffect(settings, perfKey, category, sceneId, seed, duration) {
         val req = PerfRequest(
             start = st.start ?: Pt(0.5f, 0.78f),
+            start2 = st.start2,
             path = st.path,
             door = st.door,
             doorScale = st.doorScale,
@@ -342,7 +343,7 @@ fun EditorScreen(
     }
 
     fun hitAt(px: Float, py: Float, w: Float, h: Float): Sel? =
-        EditOps.hit(st, px, py, hitPx / w, hitPx / h, ::itemBox, doorBox(), kindsFor(tool))
+        EditOps.hit(st, px, py, hitPx / w, hitPx / h, ::itemBox, doorBox(), kindsFor(tool), info.aspect)
 
     /** Tippen: vorhandenes auswählen, sonst je nach Werkzeug etwas Neues setzen. */
     fun tapAt(px: Float, py: Float, w: Float, h: Float) {
@@ -354,8 +355,13 @@ fun EditorScreen(
         val p = EditOps.clamp(Pt(px, py))
         when (tool) {
             Tool.START -> {
-                commit(st.copy(start = p))
-                sel = Sel.Start
+                if (settings.both && who == 1) {
+                    commit(st.copy(start2 = p))
+                    sel = Sel.Start2
+                } else {
+                    commit(st.copy(start = p))
+                    sel = Sel.Start
+                }
             }
             Tool.PATH -> {
                 val n = EditOps.addPath(st, p)
@@ -576,7 +582,18 @@ fun EditorScreen(
             }
 
             when (tool) {
-                Tool.START -> Text("Tippe ins Bild: Dort erscheint der Wichtel. Den Punkt kannst du mit dem Finger verschieben.", color = Hint, fontSize = 12.sp)
+                Tool.START -> {
+                    if (settings.both) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("Startpunkt für", color = Color.White, fontSize = 13.sp)
+                            FilterChip(selected = who != 1, onClick = { who = 0 }, label = { Text("🧙 ${settings.elfName.ifBlank { "Wichtel" }}") })
+                            FilterChip(selected = who == 1, onClick = { who = 1 }, label = { Text("🧝‍♀️ ${settings.elfinName.ifBlank { "Elfin" }}") })
+                        }
+                        Text("Tippe ins Bild: Dort erscheint die gewählte Figur. Ohne eigenen Punkt steht die Elfin neben dem Wichtel. Die Punkte lassen sich verschieben.", color = Hint, fontSize = 12.sp)
+                    } else {
+                        Text("Tippe ins Bild: Dort erscheint die Figur. Den Punkt kannst du mit dem Finger verschieben.", color = Hint, fontSize = 12.sp)
+                    }
+                }
                 Tool.PATH -> {
                     Text(
                         "Tippe nacheinander Stellen, die der Wichtel ablaufen soll (höchstens ${EditOps.MAX_WAYPOINTS}). Punkte lassen sich verschieben, " +
@@ -604,6 +621,7 @@ fun EditorScreen(
                             Text("Wer macht es?", color = Color.White, fontSize = 13.sp)
                             FilterChip(selected = who == 0, onClick = { who = 0 }, label = { Text("🧙 ${settings.elfName.ifBlank { "Wichtel" }}") })
                             FilterChip(selected = who == 1, onClick = { who = 1 }, label = { Text("🧝‍♀️ ${settings.elfinName.ifBlank { "Elfin" }}") })
+                            FilterChip(selected = who == 2, onClick = { who = 2 }, label = { Text("🧙🧝‍♀️ beide") })
                         }
                     }
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -648,7 +666,7 @@ fun EditorScreen(
                                 FilterChip(
                                     selected = sel == Sel.Step(i),
                                     onClick = { sel = if (step.at != null) Sel.Step(i) else null; if (step.at == null) commit(EditOps.remove(st, Sel.Step(i))) },
-                                    label = { Text("${i + 1}. ${if (settings.both) (if (step.who == 1) "🧝‍♀️ " else "🧙 ") else ""}${step.action.emoji} ${step.action.label}") },
+                                    label = { Text("${i + 1}. ${if (settings.both) (when (step.who) { 1 -> "🧝‍♀️ "; 2 -> "🧙🧝‍♀️ "; else -> "🧙 " }) else ""}${step.action.emoji} ${step.action.label}") },
                                 )
                             }
                             TextButton(onClick = { commit(st.copy(script = emptyList())); fixSelection() }) { Text("Alle löschen") }
@@ -904,6 +922,11 @@ private fun EditMarkers(
         st.start?.let {
             drawCircle(Color(0xFF43A047), 18f, at(it))
             drawCircle(if (sel == Sel.Start) SelColor else Color.White, 18f, at(it), style = Stroke(if (sel == Sel.Start) 6f else 3f))
+        }
+        if (settings.both) st.start2?.let {
+            drawCircle(Color(0xFFE91E8C), 18f, at(it))
+            drawCircle(if (sel == Sel.Start2) SelColor else Color.White, 18f, at(it), style = Stroke(if (sel == Sel.Start2) 6f else 3f))
+            drawText(measurer, "🧝‍♀️", safe(at(it) - Offset(11f, 13f)), style = TextStyle(fontSize = 15.sp))
         }
         st.path.forEachIndexed { i, p ->
             val c = at(p)

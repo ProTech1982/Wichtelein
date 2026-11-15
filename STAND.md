@@ -11,6 +11,10 @@ Entwicklungszweige per `gh workflow run ci.yml --ref <zweig>` testen (ci.yml hat
   `drawWichtelFrame` sortiert sie mit den Gegenständen nach Tiefe.
 - Stimmen nach Geschlecht: `VoiceInfo.female`, `VoiceCatalog.forActor`, `Settings.voiceFor/forActor/nameFor`, `SpeechEvent.actor`, `SpeechRender.renderAll` (wechselt die Stimme je Figur).
   Die Geschlechter von Dii (weiblich) und Miro (vermutlich männlich) sind aus Recherche bzw. Annahme, bitte beim Anhören prüfen.
+- Elfin komplett mit eigenen Texten: `scene/ElfinTexts.kt` (`LineBook`, `ElfinLines`), `ElfEngine.lines` wählt je Figur; eigene Sätze je Figur (`Settings.customListFor`), eigene Kleiderfarben (`Settings.colorsFor(1)`).
+- Eigener Startpunkt der Elfin (`EditState.start2`, `Sel.Start2`, `PerfRequest.start2`); gemeinsame Aktionen (`ScriptStep.who == 2`, `StepSync` stimmt beide ab, Elfin steht 9 % daneben).
+- Treffer bei gedrehten Gegenständen/Türen (`EditOps.toLocal`, `hit(..., aspect)`); Gegenstands-Filter Klassisch/Neon in den Einstellungen.
+- 3D-Bilder als WebP (`elf3d/`, `elfin3d/`, `*.webp`); `blender/pack3d.py` schreibt WebP.
 - Tür drehbar: `EditState.doorRot` → `PerfRequest.doorRot` → `FrameState.doorRot`; gezeichnet gedreht um den Fußpunkt.
 
 ## Version 0.9.2

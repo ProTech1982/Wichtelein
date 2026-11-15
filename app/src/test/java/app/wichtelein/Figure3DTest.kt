@@ -195,7 +195,7 @@ class Figure3DTest {
     }
 
     @Test fun fileNamesMatchWhatTheRendererWrites() {
-        assertEquals("elf3d/walk_03_05.png", Elf3DLayout.fileName(FrameChoice("walk", 3, 5)))
-        assertEquals("elf3d/idle_15_00.png", Elf3DLayout.fileName(FrameChoice("idle", 15, 0)))
+        assertEquals("elf3d/walk_03_05.webp", Elf3DLayout.fileName(FrameChoice("walk", 3, 5)))
+        assertEquals("elf3d/idle_15_00.webp", Elf3DLayout.fileName(FrameChoice("idle", 15, 0)))
     }
 }

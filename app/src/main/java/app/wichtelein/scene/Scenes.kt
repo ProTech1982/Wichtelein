@@ -34,7 +34,7 @@ object Scenes {
         SceneDef("brav_fegen", "Zimmer fegen", Category.BRAV, "Der Wichtel fegt den Boden und ist stolz darauf.") { s ->
             walkTo(s.next())
             doSweep()
-            sayFrom(Lines.tidyDone)
+            sayFrom(lines.tidyDone)
         },
         SceneDef("brav_spielzeug", "Spielzeug einsammeln", Category.BRAV, "Verstreutes Spielzeug wird aufgesammelt und der Boden gefegt.") { _ ->
             spawnMess(4)
@@ -79,7 +79,7 @@ object Scenes {
         // ---- Frecher Wichtel
         SceneDef("frech_tuer", "Tür-Streich", Category.FRECH, "Klopf, klopf – er reißt die Tür auf, späht hinein, knallt sie zu und lacht.", needsDoor = true) { _ ->
             doEnterHouse(fast = true)
-            sayFrom(Lines.chaos)
+            sayFrom(lines.chaos)
         },
         SceneDef("frech_chaos", "Chaos-Wichtel", Category.FRECH, "Er wirft Spielzeug durch das Zimmer.") { s ->
             walkTo(s.next())

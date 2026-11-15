@@ -8,6 +8,8 @@ import app.wichtelein.anim.ScriptStep
 /** Alles, was man im Editor platzieren kann (ohne die Auswahl der Szene): Start, Weg, Aktionspunkte, Tür, Gegenstände. */
 data class EditState(
     val start: Pt? = null,
+    /** Startpunkt der Elfin, wenn beide auftreten */
+    val start2: Pt? = null,
     val path: List<Pt> = emptyList(),
     val script: List<ScriptStep> = emptyList(),
     val door: Pt? = null,
@@ -25,6 +27,7 @@ data class EditState(
 /** Was gerade ausgewählt ist (zum Verschieben, Löschen, Größe ändern). */
 sealed interface Sel {
     object Start : Sel
+    object Start2 : Sel
     data class Path(val index: Int) : Sel
     data class Step(val index: Int) : Sel
     object Door : Sel
@@ -36,6 +39,7 @@ enum class SelKind { START, PATH, STEP, DOOR, ITEM }
 
 fun Sel.kind(): SelKind = when (this) {
     Sel.Start -> SelKind.START
+    Sel.Start2 -> SelKind.START
     is Sel.Path -> SelKind.PATH
     is Sel.Step -> SelKind.STEP
     Sel.Door -> SelKind.DOOR
@@ -53,6 +57,7 @@ object EditOps {
 
     fun contains(s: EditState, sel: Sel): Boolean = when (sel) {
         Sel.Start -> s.start != null
+        Sel.Start2 -> s.start2 != null
         is Sel.Path -> sel.index in s.path.indices
         is Sel.Step -> sel.index in s.script.indices && s.script[sel.index].at != null
         Sel.Door -> s.door != null
@@ -64,6 +69,7 @@ object EditOps {
         val q = clamp(p)
         return when (sel) {
             Sel.Start -> s.copy(start = q)
+            Sel.Start2 -> s.copy(start2 = q)
             is Sel.Path -> if (sel.index in s.path.indices) s.copy(path = s.path.toMutableList().also { it[sel.index] = q }) else s
             is Sel.Step -> if (contains(s, sel)) s.copy(script = s.script.toMutableList().also { it[sel.index] = it[sel.index].copy(at = q) }) else s
             Sel.Door -> if (s.door != null) s.copy(door = q) else s
@@ -74,6 +80,7 @@ object EditOps {
     /** Entfernt den ausgewählten Punkt oder Gegenstand. */
     fun remove(s: EditState, sel: Sel): EditState = when (sel) {
         Sel.Start -> s.copy(start = null)
+        Sel.Start2 -> s.copy(start2 = null)
         is Sel.Path -> if (sel.index in s.path.indices) s.copy(path = s.path.filterIndexed { i, _ -> i != sel.index }) else s
         is Sel.Step -> if (sel.index in s.script.indices) s.copy(script = s.script.filterIndexed { i, _ -> i != sel.index }) else s
         Sel.Door -> s.copy(door = null)
@@ -89,6 +96,7 @@ object EditOps {
     /** Aktuelle Stelle des Ausgewählten. */
     fun position(s: EditState, sel: Sel): Pt? = when (sel) {
         Sel.Start -> s.start
+        Sel.Start2 -> s.start2
         is Sel.Path -> s.path.getOrNull(sel.index)
         is Sel.Step -> s.script.getOrNull(sel.index)?.at
         Sel.Door -> s.door
@@ -120,6 +128,20 @@ object EditOps {
         return d
     }
 
+    /**
+     * Rechnet die Tippstelle ([x], [y]) in das Bild eines um [rot] Grad (im Uhrzeigersinn) gedrehten Gegenstands mit Fußpunkt [base]
+     * zurück: Abstand zum Fußpunkt im ungedrehten Gegenstand, in Bildbreiten und -höhen. [aspect] = Breite / Höhe des Bildes.
+     */
+    fun toLocal(x: Float, y: Float, base: Pt, rot: Float, aspect: Float): Pair<Float, Float> {
+        if (rot == 0f) return Pair(x - base.x, y - base.y)
+        val th = Math.toRadians(rot.toDouble())
+        val c = Math.cos(th).toFloat()
+        val s = Math.sin(th).toFloat()
+        val px = (x - base.x) * aspect
+        val py = y - base.y
+        return Pair((px * c + py * s) / aspect, -px * s + py * c)
+    }
+
     /** Dreht einen Gegenstand um den Fußpunkt auf [deg] Grad (−180..180). */
     fun rotateItem(s: EditState, id: Int, deg: Float): EditState =
         s.copy(scenery = s.scenery.map { if (it.id == id) it.copy(rot = wrapDeg(deg)) else it })
@@ -142,6 +164,8 @@ object EditOps {
         doorBox: Pair<Float, Float>?,
         /** nur diese Arten werden getroffen (das aktive Werkzeug fasst nur seine eigenen Dinge an) */
         kinds: Set<SelKind> = SelKind.values().toSet(),
+        /** Breite / Höhe des Bildes (für gedrehte Gegenstände und Türen) */
+        aspect: Float = 1f,
     ): Sel? {
         fun near(p: Pt): Boolean {
             val dx = (p.x - x) / rx
@@ -151,22 +175,26 @@ object EditOps {
         if (SelKind.STEP in kinds) for (i in s.script.indices.reversed()) if (s.script[i].at?.let { near(it) } == true) return Sel.Step(i)
         if (SelKind.PATH in kinds) for (i in s.path.indices.reversed()) if (near(s.path[i])) return Sel.Path(i)
         if (SelKind.START in kinds) s.start?.let { if (near(it)) return Sel.Start }
+        if (SelKind.START in kinds) s.start2?.let { if (near(it)) return Sel.Start2 }
         if (SelKind.ITEM in kinds) for (item in s.scenery.reversed()) {
             val (w, h) = itemBox(item)
-            if (x >= item.at.x - w / 2 && x <= item.at.x + w / 2 && y >= item.at.y - h && y <= item.at.y + 0.02f) return Sel.Item(item.id)
+            val (lx, ly) = toLocal(x, y, item.at, item.rot, aspect)
+            if (lx >= -w / 2 && lx <= w / 2 && ly >= -h && ly <= 0.02f) return Sel.Item(item.id)
         }
         val d = s.door
         if (SelKind.DOOR in kinds && d != null && doorBox != null) {
             val (w, h) = doorBox
-            if (x >= d.x - w / 2 && x <= d.x + w / 2 && y >= d.y - h && y <= d.y + 0.02f) return Sel.Door
+            val (lx, ly) = toLocal(x, y, d, s.doorRot, aspect)
+            if (lx >= -w / 2 && lx <= w / 2 && ly >= -h && ly <= 0.02f) return Sel.Door
         }
         return null
     }
 
     fun label(s: EditState, sel: Sel): String = when (sel) {
         Sel.Start -> "Startpunkt"
+        Sel.Start2 -> "Startpunkt der Elfin"
         is Sel.Path -> "Wegpunkt ${sel.index + 1}"
-        is Sel.Step -> "Aktion ${sel.index + 1}: " + (if (s.script.getOrNull(sel.index)?.who == 1) "🧝‍♀️ " else "") + (s.script.getOrNull(sel.index)?.action?.label ?: "")
+        is Sel.Step -> "Aktion ${sel.index + 1}: " + (when (s.script.getOrNull(sel.index)?.who) { 1 -> "🧝‍♀️ "; 2 -> "🧙🧝‍♀️ "; else -> "" }) + (s.script.getOrNull(sel.index)?.action?.label ?: "")
         Sel.Door -> "Tür"
         is Sel.Item -> s.scenery.firstOrNull { it.id == sel.id }?.type?.label ?: "Gegenstand"
     }

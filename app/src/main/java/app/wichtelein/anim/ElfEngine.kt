@@ -123,6 +123,12 @@ class ElfEngine(
     /** Welche Figur: 0 = Wichtel, 1 = Elfin (Name und Stimme) */
     private val actor: Int = 0,
 ) {
+    /** Die Sätze dieser Figur (Wichtel oder Elfin, jede mit eigenen Texten) */
+    val lines: app.wichtelein.scene.LineBook get() = if (actor == 1) app.wichtelein.scene.ElfinLines else app.wichtelein.scene.Lines
+
+    /** Abstimmung mit der anderen Figur bei gemeinsamen Aktionen (nur wenn beide auftreten) */
+    var sync: StepSync? = null
+
     var x = 0.5f
     var y = 0.8f
     var facing = 1
@@ -232,7 +238,7 @@ class ElfEngine(
     suspend fun doSnowOn() {
         if (isSnowing) return
         faceFront()
-        say(Lines.snowOn.random(rng), Mood.AMUSED)
+        say(lines.snowOn.random(rng), Mood.AMUSED)
         sfx(Fx.SPARKLE, 0.8f)
         snowOnAt = clock
         anim(2600) {
@@ -241,7 +247,7 @@ class ElfEngine(
             pose.hatTilt = 0.05f * sin(clock * 3f)
         }
         pose.relax()
-        sayWait(Lines.snowLike.random(rng), Mood.AMUSED)
+        sayWait(lines.snowLike.random(rng), Mood.AMUSED)
     }
 
     /** Der Schneefall hört auf. */
@@ -249,7 +255,7 @@ class ElfEngine(
         if (!isSnowing) return
         faceFront()
         snowOffAt = clock
-        say(Lines.snowOff.random(rng))
+        say(lines.snowOff.random(rng))
         anim(1800) { pose.armR = 120f + 15f * sin(clock * 6f) }
         pose.relax()
     }
@@ -350,8 +356,8 @@ class ElfEngine(
 
     /** Eigene Sätze (falls vorhanden) oder die allgemeinen Wichtelsprüche. */
     private fun chatLine(): String {
-        val own = settings().customList()
-        return if (own.isNotEmpty() && rng.nextFloat() < 0.6f) own.random(rng) else (Lines.general + Lines.chat).random(rng)
+        val own = settings().customListFor(actor)
+        return if (own.isNotEmpty() && rng.nextFloat() < 0.6f) own.random(rng) else (lines.general + lines.chat).random(rng)
     }
 
     // ---------------------------------------------------------------- Effekte
@@ -403,7 +409,7 @@ class ElfEngine(
         val toRight = item.at.x > x
         facing = if (toRight) 1 else -1
         turnTo(if (toRight) 90f else 270f)
-        say("Jetzt stelle ich ${item.type.spoken} auf!")
+        say(lines.build.random(rng).replace("{item}", item.type.spoken))
         sfx(Fx.WHOOSH, 0.6f)
         var hit = -1
         val hw = halfWidth(item)
@@ -426,13 +432,13 @@ class ElfEngine(
         sfx(Fx.SPARKLE)
         sfx(Fx.JINGLE, 0.7f)
         burst(item.at.x, item.at.y - item.scale * 0.5f, 10, PK.POOF, 0.15f, 0.8f, 1.2f)
-        sayWait("Fertig! Sieht toll aus!")
+        sayWait(lines.buildDone.random(rng))
     }
 
     /** Geht zum Bett, legt sich hinein, schnarcht und steht danach wieder auf. */
     suspend fun doBed(bed: SceneryItem?) {
         if (bed == null) {
-            say("Hier ist gar kein Bett …")
+            say(lines.noBed.random(rng))
             idle(1500)
             return
         }
@@ -441,7 +447,7 @@ class ElfEngine(
         val toRight = bed.at.x > x
         facing = if (toRight) 1 else -1
         turnTo(if (toRight) 90f else 270f)
-        sayWait("Gute Nacht! Ab ins Bett.")
+        sayWait(lines.bedNight.random(rng))
         // Liegepunkt: Mitte der Matratze; der Körper dreht sich um seine Mitte
         val sign = if (bed.flip) 1f else -1f
         val lieSpin = sign * 90f + bed.rot
@@ -482,7 +488,7 @@ class ElfEngine(
         }
         pose.eyesClosed = false
         pose.squash = 0f
-        sayWait("Hm? Schon Morgen?")
+        sayWait(lines.bedMorning.random(rng))
         anim(1000) { t ->
             x = lie.x + (stand.x - lie.x) * t
             y = lie.y + (stand.y - lie.y) * t - 0.06f * sin(t * PIf)
@@ -645,7 +651,7 @@ class ElfEngine(
 
     suspend fun greet() {
         faceFront()
-        val ms = say(Lines.greet.random(rng))
+        val ms = say(lines.greet.random(rng))
         sfx(Fx.JINGLE, 0.6f)
         anim(ms) { pose.armR = 150f + 25f * sin(clock * 10f) }
         pose.relax()
@@ -653,7 +659,7 @@ class ElfEngine(
 
     suspend fun doWave() {
         faceFront()
-        val ms = say(Lines.wave.random(rng))
+        val ms = say(lines.wave.random(rng))
         sfx(Fx.JINGLE, 0.5f)
         anim(ms) { pose.armR = 150f + 25f * sin(clock * 10f) }
         pose.relax()
@@ -713,16 +719,16 @@ class ElfEngine(
     }
 
     suspend fun doTidy() {
-        say(Lines.tidy.random(rng))
+        say(lines.tidy.random(rng))
         doCollect()
         walkTo(randomPoint())
         doSweep()
-        sayWait(Lines.tidyDone.random(rng))
+        sayWait(lines.tidyDone.random(rng))
     }
 
     suspend fun doChaos(walk: Boolean = true) {
         if (walk) walkTo(randomPoint())
-        say(Lines.chaos.random(rng))
+        say(lines.chaos.random(rng))
         repeat(rng.nextInt(3, 6)) {
             val kind = rng.nextInt(4)
             val tp = if (roam.isEmpty()) Pt(rnd(0.1f, 0.9f), rnd(0.58f, 0.92f)) else randomPoint()
@@ -758,7 +764,7 @@ class ElfEngine(
 
     suspend fun doDance(withConfetti: Boolean = false) {
         faceFront()
-        val ms = say(Lines.dance.random(rng))
+        val ms = say(lines.dance.random(rng))
         sfx(Fx.TUNE, 0.8f)
         if (withConfetti) {
             confetti(x, y - hNorm * 0.8f)
@@ -794,7 +800,7 @@ class ElfEngine(
 
     suspend fun doTumble() {
         faceFront()
-        say(Lines.tumble.random(rng), Mood.SURPRISED)
+        say(lines.tumble.random(rng), Mood.SURPRISED)
         sfx(Fx.WHOOSH)
         anim(1000) { t ->
             pose.spin = 360f * t
@@ -804,7 +810,7 @@ class ElfEngine(
         }
         pose.relax()
         sfx(Fx.THUD, 0.5f)
-        say(Lines.dizzy.random(rng), Mood.SLEEPY)
+        say(lines.dizzy.random(rng), Mood.SLEEPY)
         anim(1800) {
             pose.lean = 9f * sin(clock * 12f)
             pose.hatTilt = 0.06f * sin(clock * 9f)
@@ -820,7 +826,7 @@ class ElfEngine(
             pose.armL = 110f * t
             pose.armR = 110f * t
         }
-        say(Lines.trip.random(rng), Mood.SURPRISED)
+        say(lines.trip.random(rng), Mood.SURPRISED)
         sfx(Fx.THUD)
         anim(420) { t ->
             pose.lean = 22f + 0f * t
@@ -837,7 +843,7 @@ class ElfEngine(
             pose.lean = 22f * (1f - t)
         }
         pose.relax()
-        sayWait(Lines.tripEmbarrassed.random(rng))
+        sayWait(lines.tripEmbarrassed.random(rng))
     }
 
     /** Hinsetzen (Hocke), [holdMs] lang, dann wieder aufstehen. */
@@ -851,7 +857,7 @@ class ElfEngine(
             pose.armR = 15f * t
         }
         sfx(Fx.THUD, 0.4f)
-        say(Lines.sit.random(rng))
+        say(lines.sit.random(rng))
         idle(holdMs)
         anim(350) { t ->
             pose.squash = 0.22f * (1f - t)
@@ -865,7 +871,7 @@ class ElfEngine(
 
     suspend fun doSleep() {
         faceFront()
-        say(Lines.sleep.random(rng), Mood.SLEEPY)
+        say(lines.sleep.random(rng), Mood.SLEEPY)
         anim(700) { t ->
             pose.spin = 90f * t
             pose.bob = -0.32f * t
@@ -885,12 +891,12 @@ class ElfEngine(
             pose.bob = -0.32f * (1f - t)
         }
         pose.relax()
-        sayWait(Lines.wake.random(rng), Mood.SURPRISED)
+        sayWait(lines.wake.random(rng), Mood.SURPRISED)
     }
 
     suspend fun doSnack(sneaky: Boolean = false) {
         faceFront()
-        say(if (sneaky) Lines.sneaky.random(rng) else Lines.snack.random(rng), if (sneaky) Mood.WHISPER else null)
+        say(if (sneaky) lines.sneaky.random(rng) else lines.snack.random(rng), if (sneaky) Mood.WHISPER else null)
         pose.prop = Prop.COOKIE
         var crumbTimer = 0f
         anim(3600) {
@@ -909,7 +915,7 @@ class ElfEngine(
     }
 
     suspend fun doHide(reappear: Pt? = null) {
-        say(Lines.hide.random(rng), Mood.WHISPER)
+        say(lines.hide.random(rng), Mood.WHISPER)
         anim(300) { t -> pose.scale = 1f - t }
         burst(x, y - hNorm * 0.4f, 10, PK.POOF, 0.16f, 0.7f, 1.2f)
         sfx(Fx.POOF)
@@ -922,7 +928,7 @@ class ElfEngine(
         sfx(Fx.TINKLE, 0.6f)
         anim(450) { t -> pose.scale = easeOutBack(t).coerceAtLeast(0f) }
         pose.scale = 1f
-        sayWait(Lines.hideFound.random(rng), Mood.SURPRISED)
+        sayWait(lines.hideFound.random(rng), Mood.SURPRISED)
     }
 
     suspend fun doChat() {
@@ -938,7 +944,7 @@ class ElfEngine(
     /** Verbeugung nach einer Vorführung. */
     suspend fun doBow() {
         faceFront()
-        say(Lines.bow.random(rng), Mood.AMUSED)
+        say(lines.bow.random(rng), Mood.AMUSED)
         anim(500) { t ->
             pose.lean = 25f * t
             pose.squash = 0.06f * t
@@ -954,7 +960,7 @@ class ElfEngine(
     /** Trägt ein Geschenk zu [target] und stellt es dort ab. */
     suspend fun doGiftCarry(target: Pt) {
         pose.prop = Prop.GIFT
-        say(Lines.gift.random(rng))
+        say(lines.gift.random(rng))
         walkTo(target)
         anim(450) { t ->
             val s = sin(t * PIf)
@@ -967,7 +973,7 @@ class ElfEngine(
         sfx(Fx.GIFT)
         burst(x + 0.05f * facing, y - 0.03f, 6, PK.SPARK, 0.1f, 0.7f)
         pose.relax()
-        sayWait(Lines.giftPlaced.random(rng))
+        sayWait(lines.giftPlaced.random(rng))
     }
 
     /** Ein Geschenk erscheint per Zauber neben dem Wichtel. */
@@ -981,7 +987,7 @@ class ElfEngine(
         sfx(Fx.POOF)
         sfx(Fx.GIFT)
         confetti(gx, y - 0.05f, 50)
-        say(Lines.giftPop.random(rng), Mood.SURPRISED)
+        say(lines.giftPop.random(rng), Mood.SURPRISED)
         idle(1800)
         pose.relax()
     }
@@ -989,7 +995,7 @@ class ElfEngine(
     /** Zauberspruch: Funken fliegen, Spielzeug erscheint aus dem Nichts. */
     suspend fun doMagic() {
         faceFront()
-        say(Lines.magic.random(rng), Mood.AMUSED)
+        say(lines.magic.random(rng), Mood.AMUSED)
         sfx(Fx.SPARKLE)
         anim(1500) {
             pose.armR = 150f + 20f * sin(clock * 12f)
@@ -1000,7 +1006,7 @@ class ElfEngine(
         spawnMess(3)
         sfx(Fx.JINGLE, 0.7f)
         confetti(x, y - hNorm * 0.8f, 25)
-        sayWait(Lines.surprised.random(rng), Mood.SURPRISED)
+        sayWait(lines.surprised.random(rng), Mood.SURPRISED)
     }
 
     // ---------------------------------------------------------------- Wichtelhaus mit Tür
@@ -1039,7 +1045,7 @@ class ElfEngine(
     /** Klopft an die Tür. */
     suspend fun doKnock(times: Int = 3) {
         turnTo(180f)
-        say(Lines.doorKnock.random(rng))
+        say(lines.doorKnock.random(rng))
         repeat(times) {
             anim(150) { t -> pose.armR = 120f * t }
             sfx(Fx.KNOCK)
@@ -1082,7 +1088,7 @@ class ElfEngine(
      */
     suspend fun doEnterHouse(fast: Boolean = false) {
         val toDoor = approachDoor()
-        say(Lines.doorHome.random(rng))
+        say(lines.doorHome.random(rng))
         anim(if (fast) 250L else 500L) { t ->
             pose.armR = 70f * t
             pose.lean = 3f * t
@@ -1111,7 +1117,7 @@ class ElfEngine(
             sfx(Fx.GIFT)
         }
         pose.relax()
-        say(Lines.doorExit.random(rng), Mood.AMUSED)
+        say(lines.doorExit.random(rng), Mood.AMUSED)
         turnAndClose(toDoor, fast)
     }
 
@@ -1123,7 +1129,7 @@ class ElfEngine(
         val front = Pt(door.x, (door.y + 0.02f).coerceAtMost(0.95f))
         walkRoute(front)
         turnTo(180f) // mit dem Rücken zum Betrachter zur Tür
-        say(Lines.doorHome.random(rng))
+        say(lines.doorHome.random(rng))
         openDoor(900)
         val sx = x
         val sy = y
@@ -1174,7 +1180,7 @@ class ElfEngine(
         }
         pose.relax()
         pose.scale = 1f
-        say(Lines.doorExit.random(rng), Mood.AMUSED)
+        say(lines.doorExit.random(rng), Mood.AMUSED)
         turnTo(180f) // zur Tür umdrehen und zumachen
         pose.armR = 55f
         closeDoor(700)
@@ -1186,7 +1192,7 @@ class ElfEngine(
         walkTo(Pt((door.x - 0.1f).coerceAtLeast(0.08f), frontOfDoor().y))
         doSweep(2200)
         openDoor()
-        say(Lines.doorWelcome.random(rng))
+        say(lines.doorWelcome.random(rng))
         anim(1800) { pose.armR = 150f + 22f * sin(clock * 10f) }
         pose.relax()
         closeDoor()
@@ -1214,7 +1220,7 @@ class ElfEngine(
             ElfAction.WALK -> Unit
             ElfAction.SWEEP -> {
                 doSweep()
-                sayFrom(Lines.tidyDone)
+                sayFrom(lines.tidyDone)
             }
             ElfAction.WAVE -> doWave()
             ElfAction.DANCE -> doDance(withConfetti = true)
@@ -1258,7 +1264,15 @@ class ElfEngine(
         if (req.autoBuild) for (item in items) doBuild(item)
         if (req.script.isNotEmpty()) {
             // Drehbuch: die Aktionspunkte der Reihe nach abarbeiten, danach verbeugen und stehen bleiben
+            var joint = 0
             for (st in req.script) {
+                if (st.who == 2 && sync != null) {
+                    // gemeinsame Aktion: erst auf die andere Figur warten (höchstens eine Minute)
+                    val n = joint++
+                    sync?.arrive(n, actor)
+                    var waited = 0
+                    while (sync?.both(n) == false && waited++ < 600) idle(100)
+                }
                 played.add(st.action.label)
                 runStep(st)
                 idle(rng.nextLong(300, 700))
