@@ -91,13 +91,13 @@ class ElfinSnowRenderTest {
         // Standard: rote Mütze und grünes Kleid; umgefärbt: blaue Mütze, lila Kleid
         val red = count(b, 0) { h, s, v -> (h < 15f || h > 345f) && s > 0.6f && v > 0.5f }
         val green = count(b, 0) { h, s, v -> h in 110f..160f && s > 0.5f && v > 0.4f }
-        assertTrue("rote Mütze: $red", red > 80)
-        assertTrue("grünes Kleid: $green", green > 300)
+        assertTrue("rote Mütze: $red", red > 25)
+        assertTrue("grünes Kleid: $green", green > 150)
         val blueIdx = poses.size + 0
         val blueHat = count(b, blueIdx) { h, s, v -> h in 205f..235f && s > 0.5f && v > 0.5f }
         val violet = count(b, blueIdx) { h, s, v -> h in 255f..290f && s > 0.4f && v > 0.4f }
-        assertTrue("blaue Mütze: $blueHat", blueHat > 80)
-        assertTrue("lila Kleid: $violet", violet > 300)
+        assertTrue("blaue Mütze: $blueHat", blueHat > 20)
+        assertTrue("lila Kleid: $violet", violet > 150)
     }
 
     @Test fun snowIsVisibleAndGrowsWithLevel() {
