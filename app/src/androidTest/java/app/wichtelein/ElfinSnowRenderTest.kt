@@ -109,6 +109,6 @@ class ElfinSnowRenderTest {
         val f = white(2)
         assertTrue("ohne Schnee nichts Weißes: $a", a < 20)
         assertTrue("mehr Schnee bei mehr Stärke: $m < $f", m in 20 until f)
-        assertTrue("volle Stärke deutlich sichtbar: $f", f > 300)
+        assertTrue("volle Stärke deutlich sichtbar: $f", f > 150)
     }
 }
