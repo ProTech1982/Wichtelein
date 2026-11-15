@@ -229,10 +229,13 @@ fun EditorScreen(
     var export by remember { mutableStateOf<ExportUi?>(null) }
     val videoRef = remember { arrayOfNulls<VideoView>(1) }
     val scriptMode = st.script.isNotEmpty()
+    // Der Wichtel stellt Gegenstände zuerst auf (ca. 6 s je Gegenstand), das verlängert den Film; mit Aktionspunkten endet er
+    // automatisch kurz nach der letzten Aktion (bis zu 4 Minuten), und ein kurzes Video wird dabei wiederholt.
+    val buildExtra = 6_000L * st.scenery.size
     val duration = when {
-        isPhoto && scriptMode -> 60_000L // endet automatisch kurz nach dem letzten Aktionspunkt
-        isPhoto -> (photoSeconds * 1000f).toLong()
-        else -> min(info.durationMs, 90_000L).coerceAtLeast(3_000L)
+        scriptMode -> 240_000L
+        isPhoto -> (photoSeconds * 1000f).toLong() + buildExtra
+        else -> min(info.durationMs, 90_000L).coerceAtLeast(3_000L) + buildExtra
     }
     // die Gegenstände ändern die Aufführung nicht: ohne sie neu aufnehmen
     val perfKey = st.copy(nextId = 0)
@@ -248,7 +251,7 @@ fun EditorScreen(
             doorRound = st.doorRound,
             script = st.script,
             scenery = st.scenery,
-            stopAfterScript = isPhoto && st.script.isNotEmpty(),
+            stopAfterScript = st.script.isNotEmpty(),
             aspect = info.aspect,
             sizeScale = settings.sizeScale,
             category = category,
@@ -291,12 +294,9 @@ fun EditorScreen(
         while (true) {
             val now = withFrameNanos { it }
             if (t0 < 0) t0 = now
-            val pos = if (isPhoto) {
-                val d = (perf?.durationMs ?: 1000L).coerceAtLeast(1000L)
-                ((now - t0) / 1_000_000L) % d
-            } else {
-                videoRef[0]?.currentPosition?.toLong() ?: 0L
-            }
+            // eigene Uhr für die Aufführung (sie kann länger sein als das Video, das sich dann wiederholt)
+            val d = maxOf(perf?.durationMs ?: 1000L, if (isPhoto) 0L else info.durationMs).coerceAtLeast(1000L)
+            val pos = ((now - t0) / 1_000_000L) % d
             posMs = pos
             val p = perf ?: continue
             if (pos < last - 400) last = -1L
@@ -712,7 +712,7 @@ fun EditorScreen(
                     if (isPhoto) {
                         if (scriptMode) {
                             Text(
-                                "Länge: automatisch, etwa ${(perf?.durationMs ?: 0L) / 1000L} s (endet kurz nach der letzten Aktion)",
+                                "Länge: automatisch, etwa ${(perf?.durationMs ?: 0L) / 1000L} s (endet kurz nach der letzten Aktion; ein kürzeres Video wiederholt sich)",
                                 color = Hint,
                                 fontSize = 12.sp,
                             )

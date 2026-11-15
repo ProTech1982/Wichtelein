@@ -219,4 +219,31 @@ class PhotoFilmTest {
         app.wichtelein.sound.MusicLoader.customFile(ctx).delete()
         assertTrue(app.wichtelein.sound.MusicLoader.load(ctx, settings.copy(music = app.wichtelein.sound.MusicChoice.CUSTOM), 20_000L) == null)
     }
+
+    /** Viele Aktionen: die Aufführung ist länger als das Video – das Video wiederholt sich, nichts wird abgeschnitten. */
+    @Test fun manyActionsExtendAShortVideoInsteadOfCuttingIt() {
+        val video = File(ctx.cacheDir, "kurz_room.mp4")
+        InstrumentationRegistry.getInstrumentation().context.assets.open("test_room.mp4").use { i -> video.outputStream().use { i.copyTo(it) } }
+        ExportManager.exportsDir(ctx).listFiles()?.forEach { it.delete() }
+        val vinfo = readVideoInfo(video)
+        val settings = Settings(elfName = "Pippo", onboarded = true, speak = false, soundFx = false).withProfile("Max")
+        val steps = List(3) { ScriptStep(ElfAction.SWEEP, Pt(0.3f + 0.1f * it, 0.8f)) } + ScriptStep(ElfAction.DANCE, Pt(0.5f, 0.8f))
+        val perf = Recorder.record(
+            PerfRequest(
+                start = Pt(0.5f, 0.8f), sizeScale = 0.4f, seed = 3L, durationMs = 240_000L, settings = settings,
+                script = steps, stopAfterScript = true,
+            ),
+        )
+        assertTrue("Aufführung (${perf.durationMs}) länger als das Video (${vinfo.durationMs})", perf.durationMs > vinfo.durationMs + 8_000L)
+        val result = runBlocking { ExportManager.export(ctx, video, vinfo, perf, settings, onProgress = {}) }
+        val outInfo = readVideoInfo(result.file)
+        assertTrue("Länge ${outInfo.durationMs} statt ${perf.durationMs}", abs(outInfo.durationMs - perf.durationMs) < 2_000L)
+        // der Wichtel ist auch ganz am Ende noch im Bild (nichts abgeschnitten)
+        val r = MediaMetadataRetriever()
+        r.setDataSource(result.file.absolutePath)
+        val late = r.getFrameAtTime((perf.durationMs - 3_000L) * 1000L, MediaMetadataRetriever.OPTION_CLOSEST)
+        val early = r.getFrameAtTime(1_000_000L, MediaMetadataRetriever.OPTION_CLOSEST)
+        r.release()
+        assertTrue(late != null && early != null)
+    }
 }

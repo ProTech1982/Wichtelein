@@ -91,6 +91,10 @@ object ExportManager {
         val out = File(exportsDir(app), "Wichtelein-$stamp.mp4")
         val sprites = ElfFigures.load(app, settings)
 
+        // Gesamtlänge: bei vielen Aktionen/Gegenständen dauert die Aufführung länger als das Video; dann läuft das Video in einer Schleife weiter
+        val total = if (isPhoto) info.durationMs else maxOf(info.durationMs, perf.durationMs)
+        val needLoop = !isPhoto && perf.durationMs > info.durationMs + 400L
+
         // 1) Sprache (nur mit der Wichtelstimme als Rohdaten möglich)
         var wav: File? = null
         var hasSpeech = false
@@ -101,10 +105,11 @@ object ExportManager {
             // Systemstimme (oder Wichtelstimme nicht verfügbar): Sprache über synthesizeToFile erzeugen
             else -> withContext(Dispatchers.Default) { SystemTtsRender.renderAll(app, settings, perf.speech) }
         }
-        val fxSounds = perf.sounds.filter { it.timeMs < info.durationMs && settings.allowsFx(it.fx) }
-        val musicPcm = if (settings.music != 0) withContext(Dispatchers.Default) { MusicLoader.load(app, settings, info.durationMs) } else null
-        if (clips.any { it != null } || fxSounds.isNotEmpty() || musicPcm != null) {
-            val pcm = SpeechMixer.mix(perf.speech, clips, info.durationMs, fxSounds, musicPcm, settings.musicVolume)
+        val fxSounds = perf.sounds.filter { it.timeMs < total && settings.allowsFx(it.fx) }
+        val musicPcm = if (settings.music != 0) withContext(Dispatchers.Default) { MusicLoader.load(app, settings, total) } else null
+        // bei verlängertem Video immer eine Tonspur (auch stumm): sie bestimmt die Länge, das Video wiederholt sich
+        if (clips.any { it != null } || fxSounds.isNotEmpty() || musicPcm != null || needLoop) {
+            val pcm = SpeechMixer.mix(perf.speech, clips, total, fxSounds, musicPcm, settings.musicVolume)
             wav = File(app.cacheDir, "wichtel-sprache.wav").also { it.writeBytes(SpeechMixer.toWav(pcm)) }
             hasSpeech = clips.any { it != null }
         }
@@ -138,7 +143,7 @@ object ExportManager {
                 .build()
         }
         val sequences = ArrayList<EditedMediaItemSequence>()
-        sequences.add(EditedMediaItemSequence(videoItem))
+        sequences.add(if (needLoop) EditedMediaItemSequence(listOf(videoItem), true) else EditedMediaItemSequence(videoItem))
         wav?.let {
             val audioItem = EditedMediaItem.Builder(MediaItem.fromUri(Uri.fromFile(it))).setRemoveVideo(true).build()
             sequences.add(EditedMediaItemSequence(audioItem))
