@@ -1,6 +1,6 @@
 # Wichtelein 🧝
 
-Eine Android-App für Kinder: Man filmt sein echtes Zimmer, und danach kommt ein kleiner Wichtel ins Video. Er läuft herum,
+Eine Android-App für Kinder: Man filmt sein echtes Zimmer (oder fotografiert z. B. das Wichtelhaus), und danach kommt ein kleiner Wichtel ins Bild. Er läuft herum,
 räumt auf, macht Chaos, tanzt, purzelt, stolpert, nascht Kekse, versteckt sich und spricht dabei – auch mit dem Namen des Kindes.
 Am Ende gibt es ein fertiges MP4-Video mit Bild und Ton zum Speichern und Teilen.
 
@@ -8,9 +8,14 @@ Namen, Sprüche, Stimme, Farbe und die erlaubten Szenen sind frei einstellbar, d
 
 ## So funktioniert es
 
-0. **Kleidung:** In den Einstellungen lassen sich Mütze, Jacke, Strumpfhose und Schuhe einzeln umfärben (11 Farben, Vorschau).
+0. **Kleidung:** In den Einstellungen lassen sich Mütze (und Fäustlinge), Mantel, Hose und Schuhe einzeln umfärben (11 Farben, Vorschau).
 1. **Erster Start:** Ein Erwachsener gibt den Namen des Kindes ein (weitere Kinder später in den Einstellungen).
-2. **Video aufnehmen** (Hoch- oder Querformat, bis 30 s, ohne Ton) oder **Video auswählen**.
+2. **Foto-Film (neu in 0.3.0):** Auf der Startseite „Foto-Film“ – Foto machen (oder ein Foto aus der Galerie wählen), zum Beispiel vom Wichtelhaus.
+   Im Editor den Chip **🎯 Aktionen** öffnen, eine Aktion wählen (Fegen, Winken, Tanzen, Hinsetzen, Schlafen, Keks, Geschenk, Zaubern, Purzelbaum,
+   Stolpern, Chaos, Verstecken, Verbeugen; mit markierter Tür auch Anklopfen, Ins Haus gehen, Aus dem Haus kommen, Vor der Tür fegen) und ins Bild
+   tippen, wo sie stattfinden soll. Der Wichtel läuft die Aktionspunkte der Reihe nach ab; die Länge des Films ergibt sich automatisch.
+   Ohne Aktionspunkte spielt er zufällige Szenen in einer einstellbaren Länge (6–40 s). Die Aktionspunkte gibt es auch beim Video.
+   **Video aufnehmen** (Hoch- oder Querformat, bis 30 s, ohne Ton) oder **Video auswählen** geht wie bisher.
 3. **Editor:** Startpunkt antippen, Größe einstellen, optional einen Weg aus bis zu 8 Punkten antippen, bei einem **Wichtelhaus** die Tür markieren (Position und Größe), Kategorie
    (*Braver Wichtel*, *Frecher Wichtel*, *Überraschung* oder Zufall) und gewünschte Szene wählen oder **neu würfeln**.
    Die Vorschau läuft sofort über dem Video, die Sprache wird passend zum Zeitpunkt abgespielt.
@@ -22,11 +27,16 @@ Namen, Sprüche, Stimme, Farbe und die erlaubten Szenen sind frei einstellbar, d
 
 ## Was fertig ist, was nur Prototyp ist, was fehlt
 
-**Umgesetzt und im Android-Emulator der CI geprüft** (14 Emulator-Tests und Unit-Tests, siehe unten):
+**Umgesetzt und im Android-Emulator der CI geprüft** (16 Emulator-Tests und Unit-Tests, siehe unten):
 - Startseite mit den fünf Bereichen, Namensabfrage beim ersten Start, Kinderprofile, Einstellungen, Wichtelaktionen,
   Meine Wichtelvideos (Darstellung), Editor mit Startpunkt, Größe, Weg, Szene und Würfeln.
-- **Zwei Figuren:** „Foto-Wichtel“ (Teile aus dem Referenzbild) und „3D-Wichtel“ (in Blender modelliert und gerendert, `blender/`), wählbar in den Einstellungen;
-  beide haben dieselbe Gelenk-Animation, dieselben Kleidungsfarben und denselben Mund/Blinzeln.
+- **Der Wichtel** (seit 0.3.0): ein Wichtel mit roter Zipfelmütze, weißem Bart und grünem Mantel, aus dem Bild `Wichtel_bild1` (vom Nutzer mit ChatGPT erzeugt,
+  die Rechte liegen beim Nutzer) in Kopf, Rumpf, Arme und Beine geschnitten (`tools/asset/`). Der frühere Foto-Elf und der selbst modellierte 3D-Wichtel
+  sind entfernt. Gelenk-Animation, Kleidungsfarben, Kopfnicken beim Sprechen; Mund und Augen verdeckt der Bart.
+- **Besen** aus dem Besenfoto (`wichtel-besen-1`), freigestellt und in der Hand des Wichtels; beim Fegen schwingt er mit dem Arm.
+- **Weihnachtsgeräusche** (seit 0.3.0, abschaltbar in den Einstellungen): Glöckchen beim Auftreten, Grüßen und Tanzen, leises Mützenglöckchen beim Laufen,
+  Schritte, Besenstriche, Tür quietscht auf/fällt zu, Klopfen, Puff, Funkeln beim Zaubern, Plumps, Knuspern, Geschenkpapier. Alle Klänge werden von der App selbst
+  erzeugt (`sound/SoundFx.kt`, keine fremden Klangdateien), laufen in der Vorschau live und sind im exportierten Video in der Tonspur gemischt.
 - Aktionen: Laufen, Stehen, Winken, Fegen, Tanzen, Stolpern, Hinsetzen, Verstecken, Purzelbaum, Schlafen, Naschen, Chaos
   (Spielzeug werfen), Aufräumen, Zauber; Gegenstände: Besen, Geschenk, Keks, Spielzeug, Konfetti.
 - **Tür-Optionen:** Anschlag **links oder rechts** (Türblatt schwingt zur gewählten Seite) und die Form von **eckig bis Rundbogen** per Regler.
@@ -49,11 +59,11 @@ Namen, Sprüche, Stimme, Farbe und die erlaubten Szenen sind frei einstellbar, d
 - Einschränkung: Aus dem AR-Modus gibt es noch keinen Videoexport (nur Live-Ansicht); Türszenen sind im AR-Modus abgeschaltet.
 
 **Prototypisch / mit Einschränkung:**
-- Beide Wichtel sind **2D-Puppen aus Einzelteilen** (der 3D-Wichtel besteht aus in Blender gerenderten Teilen, kein Echtzeit-3D-Modell). Der Foto-Wichtel ist aus ausgeschnittenen Teilen eines Referenzbildes (Frontansicht, wird gespiegelt), keine 3D-Figur:
-  Beine, Arme, Körper und Kopf drehen sich um ihre Gelenke (Farben frei wählbar), dazu Blinzeln, Kopfnicken beim Sprechen, Mund, Schatten.
-  Das ist bewusst gewählt, weil es deutlich besser aussieht als ein selbst modelliertes einfaches 3D-Modell.
-  Die Bilder sind in `app/src/main/res/drawable-nodpi/`. **Herkunft und Nutzungsrechte des Referenzbildes sind vor einer
-  Veröffentlichung der Figur zu klären.**
+- Der Wichtel ist eine **2D-Puppe aus Einzelteilen** (Frontansicht, wird gespiegelt), kein 3D-Modell: Beine, Arme, Körper und Kopf drehen sich um ihre Gelenke
+  (Farben frei wählbar), dazu Kopfnicken beim Sprechen, Schatten. Das ist bewusst gewählt, weil es deutlich besser aussieht als ein selbst modelliertes einfaches
+  3D-Modell. Die Bilder sind in `app/src/main/res/drawable-nodpi/`. Ein Blender-Versuch (Teile mit Textur gewölbt und gerendert, `blender/`) wirkte flacher in
+  Farbe und Kontrast und wird deshalb nicht benutzt.
+- Die Geräusche sind **synthetisch** (Klang aus Sinus und Rauschen) und klingen entsprechend einfach; wie gut sie wirken, kann nur der Nutzer beurteilen.
 - Es gibt kein Tracking: Der Wichtel liegt als Overlay über einem Video, die Kamera sollte also ruhig stehen. Keine räumliche Erkennung.
 - Im Export ist die Sprache der **Wichtelstimme** (offline) enthalten, geprüft im Emulator. Wird die **Systemstimme** gewählt, erzeugt die App
   die Sprache über `synthesizeToFile`; das ist umgesetzt und per Unit-Test des WAV-Einlesens abgesichert, konnte aber im Emulator
@@ -62,9 +72,9 @@ Namen, Sprüche, Stimme, Farbe und die erlaubten Szenen sind frei einstellbar, d
   (der Emulator hat keine brauchbare Kamera). Ebenso ist die **Klangqualität der Stimmen nur vom Nutzer beurteilbar**.
 
 **Fehlt:**
-- Vorgerenderte Blender-Animationsclips: Die 3D-Figur wird in Teilen gerendert und in der App animiert; es gibt keine einzelnen Blender-Animationsclips.
-  Die Figur ist über die Schnittstelle `ElfFigure` austauschbar (z. B. gegen ein Echtzeit-3D-Modell).
-- Der 3D-Wichtel hat nur die Vorderansicht (wird gespiegelt) und ist stilisiert („Spielzeug-Look“), nicht so detailliert wie das Referenzbild.
+- Vorgerenderte Blender-Animationsclips und echte 3D-Ansichten (Seite, Rücken): Der Wichtel hat nur die Vorderansicht. Die Figur ist über die Schnittstelle
+  `ElfFigure` austauschbar (z. B. gegen ein Echtzeit-3D-Modell).
+- Videoexport aus dem AR-Modus.
 - Anpassbare Bewegungsabläufe pro Szene über die Wegpunkte hinaus; Mehrfach-Videos in einem Projekt.
 - Weitere Kleidungsstücke (z. B. andere Mützen oder Schals) – bisher nur die Farben.
 - Die Wichtelhaus-Tür ist ein gezeichnetes Türblatt über der echten Tür im Video; Aussehen und Farbe lassen sich noch nicht einstellen.
@@ -84,9 +94,10 @@ Kotlin, Jetpack Compose, CameraX, AndroidX Media3 Transformer, sherpa-onnx. Eine
 
 | Bereich (Paket unter `app.wichtelein`) | Inhalt |
 |---|---|
-| `camera` | `CameraScreen.kt` (Aufnahme, Drehung), `VideoInfo.kt` |
-| `anim` | `ElfEngine.kt` (Aktionen, Takt), `ElfDrawing.kt` (Figur `ElfFigure`/2D-Puppe), `Performance.kt` (Aufnahme der Zeitleiste), `ElfOverlay.kt` (eine Zeichenfunktion für Vorschau und Export) |
-| `scene` | `Scenes.kt` (15 Szenen, Zufallsauswahl), `Texts.kt` (Sprüche, Platzhalter) |
+| `camera` | `CameraScreen.kt` (Aufnahme, Drehung), `PhotoScreen.kt` (Foto machen, Foto aufbereiten), `VideoInfo.kt` |
+| `sound` | `SoundFx.kt` (selbst erzeugte Geräusche, Abspielen, Mischen für den Export) |
+| `anim` | `ElfEngine.kt` (Aktionen, Takt), `ElfDrawing.kt` (Figur `ElfFigure`/2D-Puppe), `Performance.kt` (Aufnahme der Zeitleiste, Aktionspunkte `ScriptStep`/`ElfAction`), `ElfOverlay.kt` (eine Zeichenfunktion für Vorschau und Export) |
+| `scene` | `Scenes.kt` (19 Szenen, Zufallsauswahl), `Texts.kt` (Sprüche, Platzhalter) |
 | `speech` | `ElfVoice.kt`, `VoiceCatalog.kt`, `VoiceEffect.kt`, `Speaker.kt`, `SpeechRender.kt`, `VoiceUi.kt` |
 | `videoexport` | `Export.kt` (Media3 Transformer, Galerie, Teilen) |
 | `settings` | `Settings.kt` (Einstellungen, Profile), `Updater.kt` |
@@ -94,7 +105,8 @@ Kotlin, Jetpack Compose, CameraX, AndroidX Media3 Transformer, sherpa-onnx. Eine
 | Wurzel | `MainActivity.kt` (Navigation) |
 
 Ablauf: Der Editor lässt die Engine mit einer virtuellen Uhr und festem Zufallsstartwert eine komplette Aufführung **aufnehmen**
-(Bilder mit 30 fps + Sprach-Ereignisse). Vorschau und Export spielen dieselbe Zeitleiste ab.
+(Bilder mit 30 fps + Sprach- und Geräusch-Ereignisse). Vorschau und Export spielen dieselbe Zeitleiste ab. Beim Foto-Film wird das Foto
+(auf Full HD verkleinert, gedreht, gerade Seiten) als Standbild der Länge der Zeitleiste in den Media3 Transformer gegeben.
 
 ## Bauen
 

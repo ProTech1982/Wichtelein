@@ -1,25 +1,22 @@
 # Stand (Arbeitsmerker für Agenten, aktueller Zustand wird ersetzt)
 
-Auftrag: Wichtelein fertig bauen wie in `Prompt.txt` (Downloads) + Stimme verbessern.
+Auftrag: Wichtelein fertig bauen wie in `Prompt.txt` (Downloads, gehört zu einem anderen Projekt) + Stimme verbessern.
 Gebaut wird nur in GitHub Actions (kein Android-SDK lokal). Release = Push auf main (android.yml, Tag build-N).
-Emulator-Job flackert gelegentlich (Boot-Timeout -> Job neu starten).
+Entwicklungszweige per `gh workflow run ci.yml --ref <zweig>` testen (ci.yml hat workflow_dispatch). Emulator-Job flackert gelegentlich (Boot-Timeout -> neu starten).
 
-## Version 0.2.0 (Release): AR (ARCore, ungeprüft auf Gerät), 3D-Wichtel aus Blender (Teile, Stil wählbar), Tür links/rechts + Rundung, Kleidungsfarben, Tür-Szenen.
-
-## Erledigt
-- Stimme: natürlicher Standard, Effekt dosierbar, 7 Stimmen (Download), Anhören-Knopf. Klangqualität kann nur der Nutzer beurteilen.
-- Engine deterministisch (virtuelle Uhr), `Performance`-Zeitleiste, 15 Szenen/3 Kategorien, 36 Sprüche, Aktionen inkl. Hinsetzen/Stolpern/Geschenk.
-- UI: Start (5 Bereiche), Erststart, Profile, Editor (Start/Größe/Weg/Szene/Würfeln/Vorschau), Wichtelaktionen, Meine Wichtelvideos, Einstellungen.
-- Export MP4 mit Ton (Media3 Transformer, Overlay + WAV-Sequenz), Galerie, Teilen. Emulator-Test prüft Video+Ton+Wichtel im Bild.
-- Tests: JVM (Szenen, Zeitleiste, Einstellungen, Stimmen-Katalog, Pitch, WAV) + 11 Emulator-Tests (u. a. gedrehtes Video, Umfärbung).
-- Kleidungsfarben je Kleidungsstück (Laufzeit-Umfärbung), Wichtelhaus-Tür (Editor-Modus, 4 Türszenen, gezeichnetes Türblatt), 19 Szenen.
-- Code in Pakete gegliedert; `ElfFigure` macht die Figur austauschbar; Systemstimme im Export (ungetestet im Emulator).
+## Version 0.3.0
+- Neuer Wichtel aus `Wichtel_bild1` (Downloads, ChatGPT-Bild, Rechte beim Nutzer): `tools/asset/cutout.py` (Freistellen vom Schachbrett) und `make_parts.py` (Kopf, Rumpf, Arme, Beine + `elf_layout.json` + Besen aus `wichtel-besen-1`). Alter Foto-Elf und 3D-Wichtel entfernt.
+- Blender-Versuch (`blender/render_textured.py`): gewölbte Textur-Teile, wirkte flacher als die Ausschnitte -> nicht benutzt, Skripte bleiben.
+- Weihnachtsgeräusche (`sound/SoundFx.kt`, selbst erzeugt), Engine meldet Geräusche, Vorschau/AR spielen live, Export mischt sie in die Tonspur. Schalter in den Einstellungen.
+- Foto-Film: Foto machen/wählen (`PhotoScreen.kt`), Editor mit Aktionspunkten (`ScriptStep`/`ElfAction`), Export Standbild -> MP4.
+- Tests: JVM `SoundAndScriptTest`, `LayoutTest`; Emulator `PhotoFilmTest`, `ColorTest`, `RenderTest` u. a. (CI prüft "OK (N tests)").
 
 ## Offen / ungeprüft
-- AR (ARCore) nicht auf Gerät geprüft; kein Videoexport aus AR. 3D-Wichtel = gerenderte Teile (Blender, `blender/`), nur Vorderansicht. Foto-Wichtel: Rechte des Referenzbildes klären.
-- Blender nur mit `--factory-startup` im Hintergrund rendern (Add-ons/GPU blockieren sonst); Mütze nie per subdivide_edges auf Kegel bauen (hängt).
-- Kamera im Querformat, Ansehen/Teilen, echte Klangqualität: nicht auf echtem Gerät geprüft.
-- Systemstimme im Export: umgesetzt, im Emulator nicht ausführbar.
+- AR läuft laut Nutzer; kein Videoexport aus AR.
+- Nur Vorderansicht des Wichtels; Mund/Augen unter dem Bart (Sprechen = Kopfnicken/Stauchen).
+- Kamera (Foto/Video) auf echtem Gerät, Foto-Film-Bedienung per Touch, Klangqualität (Stimme + synthetische Geräusche): nur der Nutzer kann das beurteilen.
+- Systemstimme im Export: im Emulator nicht ausführbar.
+- Blender nur mit `--factory-startup` im Hintergrund rendern (Pfad siehe `blender/README.md`).
 
 ## Regeln
 Kein Kindername im Repo/Code. Commits mit Noreply-Mail (62508861+ProTech1982@users.noreply.github.com), nie die private Mail.
