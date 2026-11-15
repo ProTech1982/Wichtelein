@@ -395,9 +395,10 @@ class ColorTest {
         val base = ElfSprites.load(ctx)
         val br = base.layout.bootRow
         val hat = { h: Float, s: Float, v: Float -> Recolor.isHatRed(h, s, v) }
-        val coat = { h: Float, s: Float, v: Float -> Recolor.isCoat(h, s, v) }
-        val trousers = { h: Float, s: Float, v: Float -> Recolor.isTrousers(h, s, v) }
-        val boots = { h: Float, s: Float, v: Float -> Recolor.isBoot(h, s, v) }
+        // nur kräftig genug beleuchtete Pixel zählen (die dunklen Schattenpixel fallen bei jeder Farbe heraus)
+        val coat = { h: Float, s: Float, v: Float -> Recolor.isCoat(h, s, v) && v > 0.25f }
+        val trousers = { h: Float, s: Float, v: Float -> Recolor.isTrousers(h, s, v) && v > 0.25f }
+        val boots = { h: Float, s: Float, v: Float -> Recolor.isBoot(h, s, v) && v > 0.25f }
         val blue = { h: Float, s: Float, v: Float -> h in 180f..260f && s > 0.2f && v > 0.2f }
         val reddish = { h: Float, s: Float, v: Float -> (h <= 25f || h >= 325f) && s > 0.3f && v > 0.2f }
         val face = { h: Float, s: Float, v: Float -> (h <= 30f || h >= 340f) && s in 0.15f..0.6f && v > 0.6f }
@@ -451,20 +452,29 @@ class ColorTest {
             Pose().apply { eyesClosed = true; spin = 90f; bob = -0.32f },
         )
         rule.setContent {
-            androidx.compose.foundation.Canvas(Modifier.size(700.dp, 300.dp).background(Color(0xFFE8DCC8))) {
-                poses.forEachIndexed { i, p ->
-                    base.draw(this, p, androidx.compose.ui.geometry.Offset(size.width * (i + 0.5f) / poses.size, size.height * 0.95f), size.height * 0.88f, 1)
+            androidx.compose.foundation.layout.Column(Modifier.size(300.dp, 300.dp).background(Color(0xFFE8DCC8))) {
+                for (row in 0..1) {
+                    androidx.compose.foundation.layout.Row {
+                        for (col in 0..2) {
+                            val i = row * 3 + col
+                            if (i < poses.size) {
+                                androidx.compose.foundation.Canvas(Modifier.size(100.dp, 150.dp)) {
+                                    base.draw(this, poses[i], androidx.compose.ui.geometry.Offset(size.width / 2f, size.height * 0.96f), size.height * 0.9f, 1)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
         rule.waitForIdle()
         val b = shot(rule.onAllNodes(isRoot()).onFirst(), "poses.png")
         assertTrue(b.width > 100)
-        // Der Besen (Stroh, gelbbraun) muss im vierten Bildviertel zu sehen sein
+        // Der Besen (Stroh, gelbbraun) muss in seinem Feld (unten links, Pose 4) zu sehen sein
         val straw = { h: Float, s: Float, v: Float -> h in 28f..50f && s > 0.45f && v > 0.55f }
-        val x0 = b.width * 3 / 5
-        val sub = Bitmap.createBitmap(b, x0, 0, b.width / 5, b.height)
-        assertTrue("Besen nicht sichtbar: ${count(sub, match = straw)}", count(sub, match = straw) > 150)
+        val cell = Bitmap.createBitmap(b, 0, b.height / 2, b.width / 3, b.height / 2)
+        val n = count(cell, match = straw)
+        assertTrue("Besen nicht sichtbar: $n", n > 100)
     }
 
     @Test fun rendersSeveralOutfits() {

@@ -464,6 +464,8 @@ private fun EditMarkers(start: Pt?, path: List<Pt>, door: Pt?, doorScale: Float,
     Canvas(modifier) {
         val w = size.width
         val h = size.height
+        // drawText braucht Platz unter und neben der Position (sonst Absturz): in die Fläche klemmen
+        fun safe(o: Offset) = Offset(o.x.coerceIn(0f, (w - 40f).coerceAtLeast(0f)), o.y.coerceIn(0f, (h - 40f).coerceAtLeast(0f)))
         door?.let {
             val dh = h * doorScale
             val dw = dh * 0.56f
@@ -485,7 +487,7 @@ private fun EditMarkers(start: Pt?, path: List<Pt>, door: Pt?, doorScale: Float,
         path.forEachIndexed { i, p ->
             val c = Offset(p.x * w, p.y * h)
             drawCircle(Color(0xFFFFC107), 16f, c)
-            drawText(measurer, "${i + 1}", c - Offset(6f, 12f), style = TextStyle(fontSize = 13.sp, color = Color.Black, fontWeight = FontWeight.Bold))
+            drawText(measurer, "${i + 1}", safe(c - Offset(6f, 12f)), style = TextStyle(fontSize = 13.sp, color = Color.Black, fontWeight = FontWeight.Bold))
         }
         // Aktionspunkte: blaue Pins, durch eine Linie in der Reihenfolge verbunden
         val stepPts = script.mapIndexedNotNull { i, st -> st.at?.let { Triple(i, st, Offset(it.x * w, it.y * h)) } }
@@ -495,8 +497,8 @@ private fun EditMarkers(start: Pt?, path: List<Pt>, door: Pt?, doorScale: Float,
         stepPts.forEach { (i, st, c) ->
             drawCircle(Color(0xFF1E88E5), 20f, c)
             drawCircle(Color.White, 20f, c, style = Stroke(2.5f))
-            drawText(measurer, "${i + 1}", c - Offset(6f, 12f), style = TextStyle(fontSize = 13.sp, color = Color.White, fontWeight = FontWeight.Bold))
-            drawText(measurer, st.action.emoji, c + Offset(-10f, 22f), style = TextStyle(fontSize = 16.sp))
+            drawText(measurer, "${i + 1}", safe(c - Offset(6f, 12f)), style = TextStyle(fontSize = 13.sp, color = Color.White, fontWeight = FontWeight.Bold))
+            drawText(measurer, st.action.emoji, safe(c + Offset(-10f, 22f)), style = TextStyle(fontSize = 16.sp))
         }
     }
 }
