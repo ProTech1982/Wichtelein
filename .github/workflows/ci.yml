@@ -57,7 +57,7 @@ jobs:
             cat /tmp/instrument.txt
             adb exec-out run-as app.wichtelein tar cf - -C files/shots . > shots.tar || true
             mkdir -p shots && tar xf shots.tar -C shots || true
-            grep -q "OK (13 tests)" /tmp/instrument.txt || touch /tmp/etest_failed
+            grep -q "OK (14 tests)" /tmp/instrument.txt || touch /tmp/etest_failed
       - uses: actions/upload-artifact@v4
         if: always()
         with:

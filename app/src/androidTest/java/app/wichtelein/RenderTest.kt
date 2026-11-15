@@ -416,11 +416,45 @@ class ColorTest {
         assertEquals("Strumpfhose darf sich nicht ändern", baseLegGreen, count(bmp(bootsBlue, "legl"), green))
     }
 
-    @Test fun threeDStyleFallsBackWhenImagesAreMissing() {
+    @Test fun threeDStyleLoadsWithLayout() {
         val ctx = InstrumentationRegistry.getInstrumentation().targetContext
         val s = ElfSprites.load(ctx, ElfColors(), ElfSprites.STYLE_3D)
         assertTrue(s.layout.height > 100f)
         assertTrue(ElfSprites.hasStyle(ctx, ElfSprites.STYLE_PHOTO))
+    }
+
+    @Test fun threeDStyleRendersAndCanBeRecolored() {
+        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
+        assertTrue("3D-Bilder fehlen", ElfSprites.hasStyle(ctx, ElfSprites.STYLE_3D))
+        val base = ElfSprites.load(ctx, ElfColors(), ElfSprites.STYLE_3D)
+        assertEquals(1000f, base.layout.height, 0f)
+        val green = { h: Float, s: Float, v: Float -> Recolor.isGreen(h, s, v) }
+        val baseHat = count(bmp(base, "head"), green)
+        val baseJacket = count(bmp(base, "torso"), green)
+        assertTrue("Mütze zu wenig Grün: $baseHat", baseHat > 3000)
+        assertTrue("Jacke zu wenig Grün: $baseJacket", baseJacket > 3000)
+        val red = ElfSprites.load(ctx, ElfColors(hat = 1, jacket = 5), ElfSprites.STYLE_3D)
+        assertTrue("Mütze noch grün", count(bmp(red, "head"), green) < baseHat / 10)
+        assertTrue("Jacke noch grün", count(bmp(red, "torso"), green) < baseJacket / 10)
+
+        val poses = listOf(
+            Pose(),
+            Pose().apply { legL = 30f; legR = -30f; armL = -12f; armR = 32f; bob = 0.02f },
+            Pose().apply { armR = 150f; armL = 20f; hatTilt = 0.05f; talk = 1f },
+            Pose().apply { prop = Prop.BROOM; armR = 28f; lean = 6f },
+            Pose().apply { eyesClosed = true; spin = 90f; bob = -0.32f },
+        )
+        val outfits = listOf(base, ElfSprites.load(ctx, ElfColors(1, 1, 1, 1), ElfSprites.STYLE_3D), red)
+        rule.setContent {
+            androidx.compose.foundation.Canvas(Modifier.size(700.dp, 300.dp).background(Color(0xFFE8DCC8))) {
+                poses.forEachIndexed { i, p ->
+                    outfits[i % outfits.size].draw(this, p, androidx.compose.ui.geometry.Offset(size.width * (i + 0.5f) / poses.size, size.height * 0.95f), size.height * 0.88f, 1)
+                }
+            }
+        }
+        rule.waitForIdle()
+        val b = shot(rule.onAllNodes(isRoot()).onFirst(), "style3d.png")
+        assertTrue(b.width > 100)
     }
 
     @Test fun rendersSeveralOutfits() {

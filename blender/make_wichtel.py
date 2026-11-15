@@ -190,7 +190,7 @@ for side, sx in (("L", -1), ("R", 1)):
     sphere(f"iris{side}", "head", (sx * 0.047, -0.124, HEAD_Z - 0.012), (0.019, 0.007, 0.021), IRIS)
     sphere(f"pupil{side}", "head", (sx * 0.047, -0.1285, HEAD_Z - 0.012), (0.0095, 0.004, 0.011), BLACK)
     sphere(f"glint{side}", "head", (sx * 0.0425, -0.1315, HEAD_Z - 0.004), (0.0048, 0.002, 0.0048), EYE_W)
-    sphere(f"brow{side}", "head", (sx * 0.05, -0.108, HEAD_Z + 0.037), (0.034, 0.011, 0.0085), HAIR, rot=(0, math.radians(-sx * 14), 0))
+    sphere(f"brow{side}", "head", (sx * 0.05, -0.108, HEAD_Z + 0.037), (0.034, 0.011, 0.0085), HAIR, rot=(0, math.radians(sx * 14), 0))
 # Mund (geschlossenes Lächeln); beim Sprechen zeichnet die App einen offenen Mund darüber
 tube("smile", "head", [Vector((-0.036, -0.114, HEAD_Z - 0.085)), Vector((-0.012, -0.124, HEAD_Z - 0.101)),
                         Vector((0.012, -0.124, HEAD_Z - 0.101)), Vector((0.036, -0.114, HEAD_Z - 0.085))], 0.0042, 0.0042, MOUTH)
@@ -200,28 +200,32 @@ for side, sx in (("L", -1), ("R", 1)):
              rot=(0, math.radians(sx * 78), 0), scale=(1, 0.32, 1))
     cone(f"earIn{side}", "head", (sx * 0.178, -0.017, HEAD_Z + 0.022), 0.028, 0.0, 0.11, BLUSH,
          rot=(0, math.radians(sx * 78), 0), scale=(1, 0.2, 1))
-# Haar: Stirnfransen unter der Mütze und Koteletten
-for i, (hx, hz, sc) in enumerate([(-0.085, 0.0, 1.0), (-0.045, 0.012, 1.1), (0.0, 0.016, 1.15), (0.045, 0.012, 1.1), (0.085, 0.0, 1.0)]):
-    sphere(f"fringe{i}", "head", (hx, -0.098, HEAD_Z + 0.083 + hz), (0.045 * sc, 0.03, 0.026), HAIR, rot=(0, math.radians(hx * 220), 0))
+# Haar: Stirnfransen unter dem Mützenrand und Koteletten
+for i, (hx, hz, sc) in enumerate([(-0.082, 0.0, 1.0), (-0.042, 0.006, 1.1), (0.0, 0.01, 1.15), (0.042, 0.006, 1.1), (0.082, 0.0, 1.0)]):
+    sphere(f"fringe{i}", "head", (hx, -0.104, HEAD_Z + 0.047 + hz), (0.042 * sc, 0.026, 0.022), HAIR, rot=(0, math.radians(hx * 220), 0))
 for side, sx in (("L", -1), ("R", 1)):
-    sphere(f"burn{side}", "head", (sx * 0.118, -0.045, HEAD_Z + 0.02), (0.018, 0.03, 0.06), HAIR)
-# Mütze: Kegel mit geknicktem Zipfel
-bpy.ops.mesh.primitive_cone_add(vertices=64, radius1=0.142, radius2=0.0, depth=0.31, location=(0, 0, 0.855))
-hat = bpy.context.active_object
-hat.name = "hat"
+    sphere(f"burn{side}", "head", (sx * 0.118, -0.045, HEAD_Z + 0.015), (0.018, 0.03, 0.055), HAIR)
+# Mütze: aus Ringen gebaut (saubere Vierecke), Zipfel geknickt und hängend
+SEG, RINGS = 56, 30
+hat_mesh = bpy.data.meshes.new("hat")
+hat = bpy.data.objects.new("hat", hat_mesh)
+bpy.context.collection.objects.link(hat)
 bm = bmesh.new()
-bm.from_mesh(hat.data)
-bmesh.ops.subdivide_edges(bm, edges=bm.edges[:], cuts=8, use_grid_fill=True)
-for v in bm.verts:
-    t = max(0.0, (v.co.z - (0.855 - 0.155)) / 0.31)      # 0 unten .. 1 Spitze
-    v.co.x += 0.15 * t * t * 0.9 + 0.0
-    v.co.y += 0.035 * t * t
-    v.co.z -= 0.05 * t * t * t                            # Zipfel hängt leicht
-bm.to_mesh(hat.data)
+rings = []
+for i in range(RINGS + 1):
+    t = i / RINGS
+    r = 0.142 * (1 - t) + 0.0015
+    cx = 0.15 * t * t * 0.9
+    cy = 0.035 * t * t
+    z = 0.70 + 0.31 * t - 0.05 * t ** 3
+    rings.append([bm.verts.new((cx + r * math.cos(2 * math.pi * k / SEG), cy + r * math.sin(2 * math.pi * k / SEG), z)) for k in range(SEG)])
+for i in range(RINGS):
+    for k in range(SEG):
+        bm.faces.new((rings[i][k], rings[i][(k + 1) % SEG], rings[i + 1][(k + 1) % SEG], rings[i + 1][k]))
+bm.normal_update()
+bm.to_mesh(hat_mesh)
 bm.free()
-finish(hat, "head", GREEN, subsurf=1)
-bump = hat.modifiers.new("none", 'SUBSURF')
-hat.modifiers.remove(bump)
+finish(hat, "head", GREEN)
 # Mützenband (rot) und Falte, Bommel
 def hat_x(z):
     t = max(0.0, (z - 0.70) / 0.31)
@@ -235,7 +239,7 @@ for zb, rr, minor in ((0.745, 0.131, 0.011), (0.795, 0.108, 0.0085)):
     torus("band", "head", (hx, hy, zb), radius, minor, RED if zb > 0.76 else GREEN_DARK, scale=(1, 1, 1))
 hx, hy = hat_x(0.995)
 sphere("bell", "head", (hx, hy - 0.002, 0.968), (0.018, 0.018, 0.018), GOLD)
-torus("hatTrim", "head", (0, 0, 0.707), 0.141, 0.014, GREEN_DARK)
+torus("hatTrim", "head", (0, 0, 0.703), 0.1415, 0.0075, GREEN_DARK)
 
 # ---------------------------------------------------------------- Körper (torso)
 sphere("tunic", "torso", (0, 0, 0.385), (0.122, 0.092, 0.158), GREEN, subsurf=1)
@@ -261,16 +265,18 @@ box("prong", "torso", (0, -0.1055, 0.335), (0.006, 0.005, 0.03), GOLD, bevel=0.0
 torus("collarBase", "torso", (0, -0.005, 0.505), 0.088, 0.026, FUR, scale=(1.0, 0.82, 0.9))
 import random
 rnd = random.Random(7)
-N = 22
+N = 24
 for i in range(N):
     a = 2 * math.pi * i / N
-    cx, cy = 0.092 * math.cos(a), 0.078 * math.sin(a)
+    cx, cy = 0.094 * math.cos(a), 0.079 * math.sin(a)
     front = max(0.0, -math.sin(a))
-    ln = 0.055 + 0.04 * front + rnd.uniform(-0.008, 0.008)
-    z = 0.5 - 0.012 * front
-    c = cone(f"fur{i}", "torso", (cx, cy - 0.005, z), 0.021, 0.0, ln, FUR,
-             rot=(math.radians(180 - 18 * (math.sin(a))) , 0, 0), verts=14)
-    c.rotation_euler = (math.radians(180 + 12 * math.sin(a) * -1 + rnd.uniform(-8, 8)), math.radians(-14 * math.cos(a) + rnd.uniform(-6, 6)), 0)
+    ln = 0.034 + 0.02 * front + rnd.uniform(-0.004, 0.004)
+    z = 0.488 - 0.02 * front
+    t = sphere(f"fur{i}", "torso", (cx, cy - 0.004, z), (0.024, 0.02, ln), FUR, seg=20, rings=10)
+    t.rotation_euler = (math.radians(rnd.uniform(-10, 10) + 14 * math.sin(a)), math.radians(-18 * math.cos(a) + rnd.uniform(-8, 8)), 0)
+for i in range(14):
+    a = 2 * math.pi * (i + 0.5) / 14
+    sphere(f"furTop{i}", "torso", (0.085 * math.cos(a), 0.07 * math.sin(a), 0.515), (0.026, 0.022, 0.026), FUR, seg=20, rings=10)
 
 # ---------------------------------------------------------------- Arme
 for side, sx, part in (("L", -1, "arml"), ("R", 1, "armr")):
@@ -291,16 +297,23 @@ for side, sx, part in (("L", -1, "arml"), ("R", 1, "armr")):
 
 # ---------------------------------------------------------------- Beine
 for side, sx, part in (("L", -1, "legl"), ("R", 1, "legr")):
-    x = sx * 0.052
-    cyl(f"leg{side}", part, (x, 0, 0.16), 0.032, 0.17, LEGS, verts=40)
-    # Stiefelschaft und Fuß
-    cyl(f"shaft{side}", part, (x, 0, 0.082), 0.042, 0.078, BOOT, verts=40)
-    torus(f"bootCuff{side}", part, (x, 0, 0.122), 0.042, 0.007, BOOT)
-    sphere(f"foot{side}", part, (x, -0.04, 0.036), (0.046, 0.092, 0.036), BOOT, subsurf=1)
-    sphere(f"sole{side}", part, (x, -0.04, 0.012), (0.047, 0.095, 0.014), BROWN)
-    # eingerollte Schnabelspitze
-    tube(f"toe{side}", part, [Vector((x, -0.105, 0.04)), Vector((x - sx * 0.003, -0.145, 0.055)),
-                              Vector((x - sx * 0.008, -0.158, 0.092)), Vector((x - sx * 0.015, -0.14, 0.112))], 0.034, 0.012, BOOT)
+    x = sx * 0.055
+    cyl(f"leg{side}", part, (x, 0, 0.17), 0.031, 0.19, LEGS, verts=40)
+    cyl(f"shaft{side}", part, (x, 0, 0.082), 0.041, 0.072, BOOT, verts=40)
+    torus(f"bootCuff{side}", part, (x, 0, 0.12), 0.042, 0.0075, BOOT)
+    # Fuß in eigener Gruppe, nach außen gedreht, damit die gebogene Spitze von vorn zu sehen ist
+    emp = bpy.data.objects.new(f"foot{side}Grp", None)
+    bpy.context.collection.objects.link(emp)
+    emp.location = (x, 0, 0)
+    emp.rotation_euler = (0, 0, math.radians(sx * 24))
+    parts_here = [
+        sphere(f"foot{side}", part, (0, -0.045, 0.036), (0.046, 0.098, 0.036), BOOT, subsurf=1),
+        sphere(f"sole{side}", part, (0, -0.045, 0.012), (0.047, 0.101, 0.014), BROWN),
+        tube(f"toe{side}", part, [Vector((0, -0.115, 0.04)), Vector((0.0, -0.158, 0.05)),
+                                  Vector((0.0, -0.176, 0.085)), Vector((0.0, -0.158, 0.118)), Vector((0.0, -0.13, 0.128))], 0.034, 0.011, BOOT),
+    ]
+    for o in parts_here:
+        o.parent = emp
 
 # ---------------------------------------------------------------- Licht, Welt, Kamera
 sc = bpy.context.scene
@@ -323,7 +336,7 @@ except Exception:
 bg = w.node_tree.nodes.get("Background")
 if bg:
     bg.inputs["Color"].default_value = (0.9, 0.92, 0.96, 1)
-    bg.inputs["Strength"].default_value = 0.8
+    bg.inputs["Strength"].default_value = 0.35
 
 
 def area(name, loc, target, energy, size, color=(1, 1, 1)):
@@ -339,9 +352,9 @@ def area(name, loc, target, energy, size, color=(1, 1, 1)):
     return o
 
 
-area("key", (-1.4, -2.2, 1.9), (0, 0, 0.5), 520, 2.4, (1.0, 0.96, 0.9))
-area("fill", (2.0, -1.8, 0.9), (0, 0, 0.5), 180, 2.5, (0.9, 0.95, 1.0))
-area("rim", (0.3, 1.8, 1.6), (0, 0, 0.6), 260, 1.5)
+area("key", (-1.4, -2.2, 1.9), (0, 0, 0.5), 140, 2.4, (1.0, 0.96, 0.9))
+area("fill", (2.0, -1.8, 0.9), (0, 0, 0.5), 40, 2.5, (0.9, 0.95, 1.0))
+area("rim", (0.3, 1.8, 1.6), (0, 0, 0.6), 70, 1.5)
 
 cam_data = bpy.data.cameras.new("cam")
 cam_data.type = 'ORTHO'
