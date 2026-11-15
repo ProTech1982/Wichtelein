@@ -60,9 +60,9 @@ class ElfinSnowRenderTest {
         )
         rule.setContent {
             Row(Modifier.background(bg)) {
-                for (p in poses) Canvas(Modifier.size(100.dp, 200.dp)) { figure.draw(this, p, Offset(size.width / 2, size.height * 0.97f), size.height * 0.9f, 1) }
-                Canvas(Modifier.size(100.dp, 200.dp)) { blue.draw(this, poses[0], Offset(size.width / 2, size.height * 0.97f), size.height * 0.9f, 1) }
-                Canvas(Modifier.size(100.dp, 200.dp)) { figure.draw(this, poses[1], Offset(size.width / 2, size.height * 0.97f), size.height * 0.9f, -1) }
+                for (p in poses) Canvas(Modifier.size(50.dp, 100.dp)) { figure.draw(this, p, Offset(size.width / 2, size.height * 0.97f), size.height * 0.9f, 1) }
+                Canvas(Modifier.size(50.dp, 100.dp)) { blue.draw(this, poses[0], Offset(size.width / 2, size.height * 0.97f), size.height * 0.9f, 1) }
+                Canvas(Modifier.size(50.dp, 100.dp)) { figure.draw(this, poses[1], Offset(size.width / 2, size.height * 0.97f), size.height * 0.9f, -1) }
             }
         }
         rule.waitForIdle()
@@ -72,7 +72,7 @@ class ElfinSnowRenderTest {
         for (i in 0 until poses.size + 2) {
             var filled = 0
             for (y in 0 until b.height step 2) for (x in i * cw until (i + 1) * cw step 2) if (!isBackground(b.getPixel(x, y))) filled++
-            assertTrue("Elfin $i fast leer: $filled", filled > 600)
+            assertTrue("Elfin $i fast leer: $filled", filled > 400)
         }
         // Standard: rote Mütze und grünes Kleid; umgefärbt: blaue Mütze, lila Kleid
         val red = count(b, 0, cw) { h, s, v -> (h < 15f || h > 345f) && s > 0.6f && v > 0.5f }
