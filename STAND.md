@@ -9,7 +9,8 @@ Entwicklungszweige per `gh workflow run ci.yml --ref <zweig>` testen (ci.yml hat
 - Blender-Versuch (`blender/render_textured.py`): gewölbte Textur-Teile, wirkte flacher als die Ausschnitte -> nicht benutzt, Skripte bleiben.
 - Weihnachtsgeräusche (`sound/SoundFx.kt`, selbst erzeugt), Engine meldet Geräusche, Vorschau/AR spielen live, Export mischt sie in die Tonspur. Schalter in den Einstellungen.
 - Foto-Film: Foto machen/wählen (`PhotoScreen.kt`), Editor mit Aktionspunkten (`ScriptStep`/`ElfAction`), Export Standbild -> MP4.
-- Tests: JVM `SoundAndScriptTest`, `LayoutTest`; Emulator `PhotoFilmTest`, `ColorTest`, `RenderTest` u. a. (CI prüft "OK (N tests)").
+- Tests (CI Zweig v0.3.0-entwicklung, grün): JVM-Tests inkl. `SoundAndScriptTest`, `LayoutTest`; 17 Emulator-Tests inkl. `PhotoFilmTest` (Foto aufbereiten, Foto-Film-Export mit Ton, Bedienung des Foto-Editors), `ColorTest`, `RenderTest`.
+- Beim Testen gefundene und behobene Fehler: Absturz beim Zeichnen von Pin-Beschriftungen am Bildrand, Absturz bei sehr schmaler Sprechblase, Modus-Chips im Editor nicht scrollbar.
 
 ## Offen / ungeprüft
 - AR läuft laut Nutzer; kein Videoexport aus AR.
