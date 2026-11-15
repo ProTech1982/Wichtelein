@@ -15,6 +15,8 @@ import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.printToString
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -145,7 +147,11 @@ class PhotoFilmTest {
             while (!cond()) {
                 rule.mainClock.advanceTimeBy(100)
                 Thread.sleep(40)
-                if (System.currentTimeMillis() - t0 > timeoutMs) throw AssertionError("Zeitüberschreitung: $what")
+                if (System.currentTimeMillis() - t0 > timeoutMs) {
+                    val tree = runCatching { rule.onRoot().printToString(maxDepth = 12) }.getOrDefault("?")
+                    throw AssertionError("Zeitüberschreitung: $what | " + tree.replace("
+", " ").take(2500))
+                }
             }
         }
         val save = "💾 Als Video speichern"
