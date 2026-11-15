@@ -17,6 +17,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -154,12 +155,12 @@ class PhotoFilmTest {
 
         rule.onNodeWithText("🎯 Aktionen (0)").performClick()
         pump(10_000, "Aktionsliste") { exists("🧹 Fegen") }
-        rule.onNodeWithText("🧹 Fegen").performClick()
+        rule.onNodeWithText("🧹 Fegen").performScrollTo().performClick()
         rule.onNodeWithTag("bildflaeche").performTouchInput { click(Offset(width * 0.5f, height * 0.6f)) }
         pump(60_000, "Aktionspunkt gesetzt") { exists("1. 🧹 Fegen ✕") }
-        rule.onNodeWithText("👋 Winken").performClick()
+        rule.onNodeWithText("🚶 Hingehen").performScrollTo().performClick()
         rule.onNodeWithTag("bildflaeche").performTouchInput { click(Offset(width * 0.25f, height * 0.7f)) }
-        pump(60_000, "zweiter Aktionspunkt") { exists("2. 👋 Winken ✕") }
+        pump(60_000, "zweiter Aktionspunkt") { exists("2. 🚶 Hingehen ✕") }
         pump(120_000, "Film neu berechnet (automatische Länge)") {
             exists("🎯 Aktionen (2)") && exists(save) && runCatching { rule.onNodeWithText(save).assertIsEnabled() }.isSuccess &&
                 rule.onAllNodesWithText("Länge: automatisch", substring = true).fetchSemanticsNodes().isNotEmpty()
