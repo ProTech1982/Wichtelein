@@ -4,17 +4,18 @@ Auftrag: Wichtelein fertig bauen wie in `Prompt.txt` (Downloads, gehört zu eine
 Gebaut wird nur in GitHub Actions (kein Android-SDK lokal). Release = Push auf main (android.yml, Tag build-N).
 Entwicklungszweige per `gh workflow run ci.yml --ref <zweig>` testen (ci.yml hat workflow_dispatch). Emulator-Job flackert gelegentlich (Boot-Timeout -> neu starten).
 
-## Version 0.3.0
-- Neuer Wichtel aus `Wichtel_bild1` (Downloads, ChatGPT-Bild, Rechte beim Nutzer): `tools/asset/cutout.py` (Freistellen vom Schachbrett) und `make_parts.py` (Kopf, Rumpf, Arme, Beine + `elf_layout.json` + Besen aus `wichtel-besen-1`). Alter Foto-Elf und 3D-Wichtel entfernt.
-- Blender-Versuch (`blender/render_textured.py`): gewölbte Textur-Teile, wirkte flacher als die Ausschnitte -> nicht benutzt, Skripte bleiben.
-- Weihnachtsgeräusche (`sound/SoundFx.kt`, selbst erzeugt), Engine meldet Geräusche, Vorschau/AR spielen live, Export mischt sie in die Tonspur. Schalter in den Einstellungen.
-- Foto-Film: Foto machen/wählen (`PhotoScreen.kt`), Editor mit Aktionspunkten (`ScriptStep`/`ElfAction`), Export Standbild -> MP4.
-- Tests (CI Zweig v0.3.0-entwicklung, grün): JVM-Tests inkl. `SoundAndScriptTest`, `LayoutTest`; 17 Emulator-Tests inkl. `PhotoFilmTest` (Foto aufbereiten, Foto-Film-Export mit Ton, Bedienung des Foto-Editors), `ColorTest`, `RenderTest`.
-- Beim Testen gefundene und behobene Fehler: Absturz beim Zeichnen von Pin-Beschriftungen am Bildrand, Absturz bei sehr schmaler Sprechblase, Modus-Chips im Editor nicht scrollbar.
+## Version 0.4.0
+- Laufweg: Wichtel bleibt in der Nähe von Start/Weg/Aktionspunkten (`roam` in der Engine, `PerfRequest.confineToPoints`, AR ausgenommen); Wegpunkte als Rundgang (`Stops`).
+- 3D-Wichtel (`blender/wichtel3d.py` -> `pack3d.py` -> `app/src/main/assets/elf3d/`, 264 Bilder, 15 MB): Stehen/Laufen/Fegen/Winken aus 16 bzw. 8 Richtungen. `Elf3D.kt` wählt das Bild aus `Pose.heading`/`stepPhase`; Einstellung `figure3d` (Einstellungen -> Figur). 2D-Wichtel bleibt.
+- Engine: `Pose.heading`, `turnTo()` (nur bei 3D animiert), Fegen seitlich + Staubwolken, Haus: Drehung mit Rücken zum Betrachter.
+- Tests (CI, grün): JVM `Figure3DTest` (Richtung, Drehen, Laufweg, Staub, Bildauswahl) u. a.; 19 Emulator-Tests inkl. `Figure3DRenderTest`.
+
+## Version 0.3.0 (Kurzfassung)
+- Wichtel aus `Wichtel_bild1` (tools/asset), Besen aus Foto, Weihnachtsgeräusche (`sound/SoundFx.kt`), Foto-Film + Aktionspunkte.
 
 ## Offen / ungeprüft
 - AR läuft laut Nutzer; kein Videoexport aus AR.
-- Nur Vorderansicht des Wichtels; Mund/Augen unter dem Bart (Sprechen = Kopfnicken/Stauchen).
+- 2D-Wichtel nur Vorderansicht; 3D-Wichtel: Hose/Schuhe nicht umfärbbar, Hinsetzen/Purzeln/Schlafen nur aus dem Stehbild, Aussehen Geschmackssache (Toy-Look).
 - Kamera (Foto/Video) auf echtem Gerät, Foto-Film-Bedienung per Touch, Klangqualität (Stimme + synthetische Geräusche): nur der Nutzer kann das beurteilen.
 - Systemstimme im Export: im Emulator nicht ausführbar.
 - Blender nur mit `--factory-startup` im Hintergrund rendern (Pfad siehe `blender/README.md`).
