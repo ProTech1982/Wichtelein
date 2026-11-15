@@ -4,6 +4,13 @@ Auftrag: Wichtelein fertig bauen wie in `Prompt.txt` (Downloads, gehört zu eine
 Gebaut wird nur in GitHub Actions (kein Android-SDK lokal). Release = Push auf main (android.yml, Tag build-N).
 Entwicklungszweige per `gh workflow run ci.yml --ref <zweig>` testen (ci.yml hat workflow_dispatch). Emulator-Job flackert gelegentlich (Boot-Timeout -> neu starten).
 
+## Version 0.8.0
+- Sprechblase: `anim/Bubble.kt` (5 Formen), je Aktion (`ScriptStep.bubble`), Standard in `Settings.bubble`; UI `ui/BubbleControls.kt`.
+- Summen/Brummen: `Settings.hum`, `Fx.MUMBLE1-3`, `Fx.HUM_*`; Engine plant Geräusche (`scheduleFx`); `Settings.allowsFx` entscheidet, was gespielt/exportiert wird.
+- Musik: `sound/Music.kt` (4 Spieluhr-Melodien, `AudioDecoder` für MP3/AAC, `MusicPlayer`, `MusicLoader`), Editor-Werkzeug „🎵 Musik“, Export mischt Musik mit Ausblenden.
+- Vorschaubilder in `docs/vorschau/` (README-Abschnitt „Vorschau“). Tests: 26 Emulator-Tests grün.
+- Letzter Wunsch des Nutzers: die Hinweis-Meldung von GitHub „main ist nicht geschützt“ ist nur eine Empfehlung (Branch-Schutz gegen Force-Push/Löschen), keine Pflicht.
+
 ## Version 0.7.0 (enthält 0.6.1 und 0.6.2)
 - Tür: Wichtel bleibt draußen, öffnet die Tür, man sieht eine winzige Weihnachtsstube (Tannenbaum, Kamin, Lichterkette, Geschenke), er dreht sich um und schließt die Tür (`doEnterHouse`, `turnAndClose`); „Geschenk aus dem Haus holen“ (`doExitHouse`).
 - Einstellungen: Farbe (Farbton), Licht an/aus und Lichtfarbe je Gegenstand (`SceneryStyle`, `tintArt`).

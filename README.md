@@ -6,6 +6,34 @@ Am Ende gibt es ein fertiges MP4-Video mit Bild und Ton zum Speichern und Teilen
 
 Namen, Sprüche, Stimme, Farbe und die erlaubten Szenen sind frei einstellbar, die App ist nicht an ein bestimmtes Kind gebunden.
 
+## Vorschau
+
+Die Bilder sind echte Ergebnisse: die Wichtel und Gegenstände aus Blender, die Sprechblasen, Türen und der 2D-Wichtel aus den Emulator-Tests der CI.
+
+**3D-Wichtel** – ein gedrungener Zwerg, in Blender modelliert (Bart, Schnurrbart und Haar aus über 2000 einzelnen Strähnen, Mütze mit Faltenwurf). Er dreht sich in Laufrichtung,
+steht beim Fegen seitlich und winkt aus der jeweiligen Richtung (Stehen aus 16 Richtungen, Laufen, Fegen mit Besen, Winken).
+
+![3D-Wichtel aus allen Richtungen](docs/vorschau/wichtel-3d.png)
+
+**2D-Wichtel** – der Wichtel aus dem Referenzbild, in Kopf, Rumpf, Arme und Beine geschnitten und animiert; Mütze, Mantel, Hose und Schuhe sind umfärbbar.
+
+| Referenz in Teilen | Posen (Stehen, Laufen, Winken, Fegen mit Besen) | Umgefärbt |
+|---|---|---|
+| ![2D-Wichtel](docs/vorschau/wichtel-2d.png) | ![Posen](docs/vorschau/wichtel-2d-posen.png) | ![Farben](docs/vorschau/wichtel-farben.png) |
+
+**Gegenstände im Bild (Cyberpunk-Weihnacht)** – Tannenbaum mit LED-Kette, Laterne mit Kranz, Neonschild, Bett, Zaun und Lichterkette. Jeder lässt sich einzeln platzieren,
+verschieben, vergrößern, spiegeln, umfärben und mit oder ohne Licht zeigen; die Lichter blinken. Im Film stellt der Wichtel sie selbst auf.
+
+![Gegenstände](docs/vorschau/gegenstaende.png)
+
+| Im Bild (Neonlicht blinkt) | Tür mit winziger Weihnachtsstube |
+|---|---|
+| ![Gegenstände im Bild](docs/vorschau/gegenstaende-im-bild.png) | ![Tür](docs/vorschau/tuer-varianten.png) |
+
+**Sprechblasen** – pro Aktion an oder aus, in fünf Formen (Abgerundet, Rund, Viereck, Wolke, Zackig) und in der Größe einstellbar:
+
+![Sprechblasen](docs/vorschau/sprechblasen.png)
+
 ## So funktioniert es
 
 0. **Kleidung:** In den Einstellungen lassen sich Mütze (und Fäustlinge), Mantel, Hose und Schuhe einzeln umfärben (11 Farben, Vorschau).
@@ -27,7 +55,7 @@ Namen, Sprüche, Stimme, Farbe und die erlaubten Szenen sind frei einstellbar, d
 
 ## Was fertig ist, was nur Prototyp ist, was fehlt
 
-**Umgesetzt und im Android-Emulator der CI geprüft** (21 Emulator-Tests und Unit-Tests, siehe unten):
+**Umgesetzt und im Android-Emulator der CI geprüft** (26 Emulator-Tests und Unit-Tests, siehe unten):
 - Startseite mit den fünf Bereichen, Namensabfrage beim ersten Start, Kinderprofile, Einstellungen, Wichtelaktionen,
   Meine Wichtelvideos (Darstellung), Editor mit Startpunkt, Größe, Weg, Szene und Würfeln.
 - **Der Wichtel** (seit 0.3.0): ein Wichtel mit roter Zipfelmütze, weißem Bart und grünem Mantel, aus dem Bild `Wichtel_bild1` (vom Nutzer mit ChatGPT erzeugt,
@@ -37,6 +65,13 @@ Namen, Sprüche, Stimme, Farbe und die erlaubten Szenen sind frei einstellbar, d
   Richtungen gerendert. Er dreht sich beim Laufen in Laufrichtung (auf den Betrachter zu, seitlich, vom Betrachter weg), steht beim Fegen seitlich (mit Staubwolken
   am Ende jedes Besenstrichs) und dreht sich zum Haus um 360° mit dem Rücken zum Betrachter, bevor er die Tür öffnet und hineingeht. Winken, Fegen und Laufen
   sind echte Bilder aus der jeweiligen Richtung; Hinsetzen, Purzelbaum, Schlafen u. Ä. entstehen aus dem Stehbild. Farben: Mütze und Mantel.
+- **Sprechblase pro Aktion (0.8.0):** an oder aus (gesprochen wird trotzdem), Form (Abgerundet, Rund, Viereck, Wolke, Zackig) und Größe; Standard in den Einstellungen,
+  eigene Blase je Aktion im Editor (Werkzeug „🎯 Aktionen“, Aktion auswählen).
+- **Summen und Brummen (0.8.0, Einstellungen → Geräusche):** Ist die Stimme aus, brummt der Wichtel eine Silbe pro Wort. Ist sie an, summt er in den Pausen
+  kleine Weihnachtsmelodien (O Tannenbaum, Jingle Bells, Stille Nacht) dazu – kombinierbar mit Stimme, Effekt und Geräuschen. „Psst“, „Schhh“, „Brrr“, „Hmmm“ werden nicht
+  mehr buchstabiert („Psst“ ist ein leises Zischen).
+- **Hintergrundmusik (0.8.0, Editor → „🎵 Musik“):** vier selbst erzeugte Spieluhr-Melodien (Schneeflocke – eine eigene Melodie –, O Tannenbaum, Jingle Bells, Stille Nacht)
+  oder eine eigene Datei (z. B. MP3). Sie läuft in der Vorschau als Schleife, im Video mit einstellbarer Lautstärke, wiederholt sich und wird am Ende ausgeblendet.
 - **Editor (neu in 0.5.0):** Alles Gesetzte (Start, Wegpunkte, Aktionen, Tür, Gegenstände) lässt sich antippen (auswählen), mit dem Finger verschieben und einzeln löschen;
   „↶ Rückgängig / ↷“ nimmt jeden Schritt zurück. Werkzeuge als Karten: Start, Weg, Aktionen, Tür, Objekte, Szene.
 - **Gegenstände im Bild (Cyberpunk-Weihnacht, Neonlicht):** Tannenbaum mit LED-Kette, Kugeln und Stern, Bett, Zaun, Laterne mit Kranz, Lichterkette, Neonschild.
