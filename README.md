@@ -27,12 +27,18 @@ Namen, Sprüche, Stimme, Farbe und die erlaubten Szenen sind frei einstellbar, d
 
 ## Was fertig ist, was nur Prototyp ist, was fehlt
 
-**Umgesetzt und im Android-Emulator der CI geprüft** (17 Emulator-Tests und Unit-Tests, siehe unten):
+**Umgesetzt und im Android-Emulator der CI geprüft** (19 Emulator-Tests und Unit-Tests, siehe unten):
 - Startseite mit den fünf Bereichen, Namensabfrage beim ersten Start, Kinderprofile, Einstellungen, Wichtelaktionen,
   Meine Wichtelvideos (Darstellung), Editor mit Startpunkt, Größe, Weg, Szene und Würfeln.
 - **Der Wichtel** (seit 0.3.0): ein Wichtel mit roter Zipfelmütze, weißem Bart und grünem Mantel, aus dem Bild `Wichtel_bild1` (vom Nutzer mit ChatGPT erzeugt,
   die Rechte liegen beim Nutzer) in Kopf, Rumpf, Arme und Beine geschnitten (`tools/asset/`). Der frühere Foto-Elf und der selbst modellierte 3D-Wichtel
   sind entfernt. Gelenk-Animation, Kleidungsfarben, Kopfnicken beim Sprechen; Mund und Augen verdeckt der Bart.
+- **3D-Wichtel (seit 0.4.0, in den Einstellungen unter „Figur“ wählbar; die 2D-Figur bleibt):** komplett in Blender modelliert (`blender/wichtel3d.py`) und aus allen
+  Richtungen gerendert. Er dreht sich beim Laufen in Laufrichtung (auf den Betrachter zu, seitlich, vom Betrachter weg), steht beim Fegen seitlich (mit Staubwolken
+  am Ende jedes Besenstrichs) und dreht sich zum Haus um 360° mit dem Rücken zum Betrachter, bevor er die Tür öffnet und hineingeht. Winken, Fegen und Laufen
+  sind echte Bilder aus der jeweiligen Richtung; Hinsetzen, Purzelbaum, Schlafen u. Ä. entstehen aus dem Stehbild. Farben: Mütze und Mantel.
+- **Laufweg:** Der Wichtel bleibt in der Nähe der gesetzten Punkte (Start, Weg, Aktionspunkte) statt im ganzen Bild herumzuspringen; die Wegpunkte läuft er als
+  Rundgang ab.
 - **Besen** aus dem Besenfoto (`wichtel-besen-1`), freigestellt und in der Hand des Wichtels; beim Fegen schwingt er mit dem Arm.
 - **Weihnachtsgeräusche** (seit 0.3.0, abschaltbar in den Einstellungen): Glöckchen beim Auftreten, Grüßen und Tanzen, leises Mützenglöckchen beim Laufen,
   Schritte, Besenstriche, Tür quietscht auf/fällt zu, Klopfen, Puff, Funkeln beim Zaubern, Plumps, Knuspern, Geschenkpapier. Alle Klänge werden von der App selbst

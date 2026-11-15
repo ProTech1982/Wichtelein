@@ -68,11 +68,11 @@ fun HomeScreen(
                 (if (kid != null) " zu $kid" else "") + " und macht Unsinn oder räumt auf!",
         )
 
-        val sprites = rememberElfSprites(settings.colors())
+        val sprites = rememberElfFigure(settings)
         val pose = remember { Pose().apply { armR = 150f } }
         Canvas(Modifier.fillMaxWidth().height(170.dp)) {
             val eh = size.height * 0.92f
-            drawElf(pose, sprites, Offset(size.width / 2f, size.height * 0.97f), eh, 1)
+            sprites.draw(this, pose, Offset(size.width / 2f, size.height * 0.97f), eh, 1)
         }
 
         BigButton("📸", "Foto-Film", "Fotografiere z. B. sein Wichtelhaus – der Wichtel spielt darin eine Geschichte", onPhoto)

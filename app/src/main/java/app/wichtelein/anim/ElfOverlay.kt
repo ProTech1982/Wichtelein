@@ -146,7 +146,15 @@ private fun DrawScope.drawParticle(p: Particle, c: Offset, base: Float, h: Float
     val unit = base.coerceAtLeast(h * 0.006f) * p.size
     when (p.kind) {
         PK.POOF -> drawCircle(Color.White.copy(alpha = 0.8f * f), unit * (1.5f + (1f - f) * 2f), c)
-        PK.DUST -> drawCircle(Color(0xFFB9A98C).copy(alpha = 0.7f * f), unit * 0.9f, c)
+        PK.DUST -> {
+            // weiche Staubwolke: wächst, steigt auf und löst sich auf
+            val g = 1f - f
+            val a = 0.55f * f
+            val r = unit * (0.9f + 1.6f * g)
+            drawCircle(Color(0xFFCDBEA3).copy(alpha = a), r, c)
+            drawCircle(Color(0xFFE2D6BF).copy(alpha = a * 0.9f), r * 0.7f, c + Offset(-r * 0.35f, -r * 0.2f))
+            drawCircle(Color(0xFFBFAE90).copy(alpha = a * 0.8f), r * 0.6f, c + Offset(r * 0.4f, -r * 0.1f))
+        }
         PK.CRUMB -> drawCircle(Color(0xFF8A5A2B).copy(alpha = f), unit * 0.45f, c)
         PK.SPARK -> {
             val col = Color(0xFFF2C94C).copy(alpha = f)

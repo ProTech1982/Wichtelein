@@ -57,7 +57,7 @@ import app.wichtelein.anim.Performance
 import app.wichtelein.anim.Pt
 import app.wichtelein.anim.Recorder
 import app.wichtelein.anim.drawWichtelFrame
-import app.wichtelein.anim.rememberElfSprites
+import app.wichtelein.anim.rememberElfFigure
 import app.wichtelein.scene.Category
 import app.wichtelein.settings.Settings
 import app.wichtelein.speech.Speaker
@@ -149,7 +149,7 @@ private fun Message(text: String, onBack: () -> Unit, extra: @Composable () -> U
 private fun ArContent(activity: Activity, settings: Settings, onSettings: (Settings) -> Unit, onBack: () -> Unit) {
     val context = LocalContext.current
     val latest by rememberUpdatedState(settings)
-    val sprites = rememberElfSprites(settings.colors())
+    val sprites = rememberElfFigure(settings)
     val measurer = rememberTextMeasurer()
     val speaker = remember { Speaker(context) }
     val fxPlayer = remember { app.wichtelein.sound.SoundPlayer() }
@@ -220,6 +220,7 @@ private fun ArContent(activity: Activity, settings: Settings, onSettings: (Setti
             enabledScenes = settings.enabledScenes()?.filter { id -> app.wichtelein.scene.Scenes.find(id)?.needsDoor != true }?.toSet()
                 ?: app.wichtelein.scene.Scenes.all.filter { !it.needsDoor }.map { it.id }.toSet(),
             settings = settings,
+            confineToPoints = false,
         )
         perf = withContext(Dispatchers.Default) { Recorder.record(req) }
     }

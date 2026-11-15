@@ -146,11 +146,28 @@ private fun Section(title: String) {
 /** Kleidung: Vorschau des Wichtels und Farbwahl für Mütze, Mantel, Hose und Schuhe. */
 @Composable
 private fun ClothingEditor(settings: Settings, onChange: (Settings) -> Unit) {
-    val sprites = rememberElfSprites(settings.colors())
+    val sprites = rememberElfFigure(settings)
     val pose = remember { Pose().apply { armR = 12f; armL = 6f } }
     Canvas(Modifier.fillMaxWidth().height(200.dp)) {
         val eh = size.height * 0.93f
         sprites.draw(this, pose, Offset(size.width / 2f, size.height * 0.97f), eh, 1)
+    }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    if (Elf3D.available(ctx)) {
+        Text("Figur", fontWeight = FontWeight.Medium)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.material3.FilterChip(
+                selected = !settings.figure3d,
+                onClick = { onChange(settings.copy(figure3d = false)) },
+                label = { Text("Wichtel 2D (Bild)") },
+            )
+            androidx.compose.material3.FilterChip(
+                selected = settings.figure3d,
+                onClick = { onChange(settings.copy(figure3d = true)) },
+                label = { Text("Wichtel 3D (dreht sich)") },
+            )
+        }
+        if (settings.figure3d) Text("Der 3D-Wichtel hat Mützen- und Mantelfarbe; Hose und Schuhe bleiben wie sie sind.", fontSize = 12.sp, color = Color.Gray)
     }
     Text("Kleidung", fontWeight = FontWeight.Medium)
     ColorRow("Mütze", ElfPalette.clothes, settings.hatColor) { onChange(settings.copy(hatColor = it)) }

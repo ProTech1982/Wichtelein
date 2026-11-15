@@ -131,6 +131,10 @@ class PerfRequest(
     val script: List<ScriptStep> = emptyList(),
     /** Aufnahme endet kurz nach dem letzten Aktionspunkt (Foto-Film), sonst nach [durationMs] */
     val stopAfterScript: Boolean = false,
+    /** Seitenverhältnis des Bildes (Breite / Höhe) */
+    val aspect: Float = 1f,
+    /** Der Wichtel bleibt in der Nähe der gesetzten Punkte (Start, Weg, Aktionen); false = ganzes Bild (AR) */
+    val confineToPoints: Boolean = true,
 )
 
 /** Nachlauf nach dem letzten Aktionspunkt im Foto-Film */
@@ -152,6 +156,10 @@ object Recorder {
             fx = { f: Fx, gain: Float -> sounds.add(SoundEvent(engine.timeMs, f, gain)) },
         )
         engine.configureDoor(req.door, req.doorScale, req.doorHingeLeft, req.doorRound)
+        engine.configureRoam(
+            if (req.confineToPoints) listOf(req.start) + req.path + req.script.mapNotNull { it.at } else emptyList(),
+            req.aspect,
+        )
         val scope = CoroutineScope(Dispatchers.Unconfined)
         val job = scope.launch { engine.perform(req, played) }
         val frames = ArrayList<FrameState>()

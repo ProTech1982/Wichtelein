@@ -33,6 +33,8 @@ data class Settings(
     val elfVoice: Boolean = true,
     val rate: Float = 1.0f,
     val mood: Int = Mood.NEUTRAL,
+    /** 3D-Wichtel (in Blender gerendert, 360° drehbar) statt der 2D-Figur */
+    val figure3d: Boolean = false,
     /** Weihnachtsgeräusche (Glöckchen, Tür, Besen, …) */
     val soundFx: Boolean = true,
     /** Abgeschaltete Szenen (Wichtelaktionen). */
@@ -94,6 +96,7 @@ object SettingsStore {
             rate = p.getFloat("rate", d.rate),
             mood = p.getInt("moodV2", d.mood),
             soundFx = p.getBoolean("soundFx", d.soundFx),
+            figure3d = p.getBoolean("figure3d", d.figure3d),
             disabledScenes = (p.getStringSet("disabledScenes", emptySet()) ?: emptySet()).toSet(),
         )
     }
@@ -117,6 +120,7 @@ object SettingsStore {
             .putFloat("rate", s.rate)
             .putInt("moodV2", s.mood)
             .putBoolean("soundFx", s.soundFx)
+            .putBoolean("figure3d", s.figure3d)
             .putStringSet("disabledScenes", s.disabledScenes)
             .apply()
     }

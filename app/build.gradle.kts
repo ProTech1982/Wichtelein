@@ -14,7 +14,7 @@ android {
         targetSdk = 35
         // Build-Nummer aus GitHub Actions: nötig, damit Updates über die bestehende Installation passen.
         versionCode = (System.getenv("APP_VERSION_CODE") ?: "1").toInt()
-        versionName = "0.3.0"
+        versionName = "0.4.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Handys (arm64) und der Emulator der CI (x86_64)
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }

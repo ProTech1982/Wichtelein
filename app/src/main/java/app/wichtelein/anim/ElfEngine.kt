@@ -7,7 +7,9 @@ import app.wichtelein.videoexport.*
 import app.wichtelein.settings.*
 import app.wichtelein.ui.*
 
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.min
@@ -41,6 +43,12 @@ class Pose {
     var scale = 1f
     var prop = Prop.NONE
 
+    /** Blickrichtung in Grad für die 3D-Figur: 0 = zum Betrachter, 90 = nach rechts, 180 = vom Betrachter weg, 270 = nach links */
+    var heading = 0f
+
+    /** Schrittphase im Bogenmaß (3D-Figur: welches Laufbild) */
+    var stepPhase = 0f
+
     /** Alles zurück in die Ruhehaltung, außer Gegenstand und Größe. */
     fun relax() {
         armL = 0f; armR = 0f; legL = 0f; legR = 0f
@@ -52,6 +60,7 @@ class Pose {
         relax()
         scale = 1f
         prop = Prop.NONE
+        heading = 0f
     }
 
     fun copy(): Pose = Pose().also {
@@ -60,6 +69,7 @@ class Pose {
         it.mouth = mouth; it.talk = talk; it.eyesClosed = eyesClosed; it.hatTilt = hatTilt
         it.blink = blink; it.nod = nod
         it.scale = scale; it.prop = prop
+        it.heading = heading; it.stepPhase = stepPhase
     }
 }
 
@@ -138,6 +148,13 @@ class ElfEngine(
     /** Zeitpunkt, zu dem das Drehbuch (Aktionspunkte) abgespielt war, sonst -1 */
     var scriptDoneMs = -1L
         private set
+
+    /** Seitenverhältnis des Bildes (Breite / Höhe), damit Richtungen stimmen */
+    var aspect = 1f
+        private set
+
+    /** Orte, um die sich der Wichtel bewegt (Start, Weg, Aktionspunkte); leer = ganzes Bild */
+    private var roam: List<Pt> = emptyList()
 
     private var bubbleUntil = 0f
     private var lastAction = -1
@@ -258,7 +275,48 @@ class ElfEngine(
         return 1f + c3 * (t - 1f).pow(3) + c1 * (t - 1f).pow(2)
     }
 
-    fun randomPoint() = Pt(rnd(0.15f, 0.85f), rnd(0.62f, 0.9f))
+    fun configureRoam(points: List<Pt>, aspect: Float) {
+        roam = points
+        this.aspect = aspect.coerceIn(0.3f, 3f)
+    }
+
+    /** Zufälliger Ort: bleibt in der Nähe der gesetzten Punkte, ohne Punkte im ganzen Bild. */
+    fun randomPoint(): Pt {
+        if (roam.isEmpty()) return Pt(rnd(0.15f, 0.85f), rnd(0.62f, 0.9f))
+        val a = roam[rng.nextInt(roam.size)]
+        return Pt((a.x + rnd(-0.1f, 0.1f)).coerceIn(0.05f, 0.95f), (a.y + rnd(-0.05f, 0.05f)).coerceIn(0.5f, 0.95f))
+    }
+
+    // ---------------------------------------------------------------- Drehen (3D-Figur)
+
+    private val animateTurns: Boolean get() = settings().figure3d
+
+    private fun normAngle(a: Float) = ((a % 360f) + 360f) % 360f
+
+    /** Dreht den Wichtel auf der Stelle (bei der 2D-Figur sofort, bei der 3D-Figur mit Schrittchen) auf die Blickrichtung [target]. */
+    suspend fun turnTo(target: Float) {
+        val d = (((target - pose.heading) % 360f) + 540f) % 360f - 180f
+        if (abs(d) < 1f || !animateTurns) {
+            pose.heading = normAngle(target)
+            return
+        }
+        val start = pose.heading
+        anim((140f + abs(d) * 2.4f).toLong()) { t ->
+            pose.heading = normAngle(start + d * t)
+            val s = sin(clock * 14f)
+            pose.stepPhase = clock * 14f
+            pose.legL = 14f * s
+            pose.legR = -14f * s
+            pose.bob = abs(s) * 0.008f
+        }
+        pose.relax()
+        pose.heading = normAngle(target)
+    }
+
+    suspend fun faceFront() = turnTo(0f)
+
+    /** Blickrichtung in x (-1..1) auf dem Bild */
+    private fun lookX(): Float = if (animateTurns) sin(pose.heading * PIf / 180f) else facing.toFloat()
 
     /** Legt Spielzeug in die Szene (taucht mit kleinen Wölkchen auf). */
     fun spawnMess(n: Int) {
@@ -295,6 +353,7 @@ class ElfEngine(
         val dist = hypot(tx - sx, ty - sy)
         if (dist < 0.01f) return
         if (abs(tx - sx) > 0.01f) facing = if (tx > sx) 1 else -1
+        turnTo(normAngle(atan2((tx - sx) * aspect, ty - sy) * 180f / PIf))
         val dur = dist / speed
         var t = 0f
         var phase = 0f
@@ -305,6 +364,7 @@ class ElfEngine(
             x = sx + (tx - sx) * t
             y = sy + (ty - sy) * t
             phase += dt * 11f
+            pose.stepPhase = phase
             val stepNo = (phase / PIf).toInt()
             if (stepNo != lastStep) {
                 lastStep = stepNo
@@ -325,6 +385,7 @@ class ElfEngine(
     // ---------------------------------------------------------------- Aktionen
 
     suspend fun greet() {
+        faceFront()
         val ms = say(Lines.greet.random(rng))
         sfx(Fx.JINGLE, 0.6f)
         anim(ms) { pose.armR = 150f + 25f * sin(clock * 10f) }
@@ -332,6 +393,7 @@ class ElfEngine(
     }
 
     suspend fun doWave() {
+        faceFront()
         val ms = say(Lines.wave.random(rng))
         sfx(Fx.JINGLE, 0.5f)
         anim(ms) { pose.armR = 150f + 25f * sin(clock * 10f) }
@@ -357,9 +419,12 @@ class ElfEngine(
 
     /** Fegt etwa drei Sekunden mit dem Besen. */
     suspend fun doSweep(ms: Long = 2800) {
+        // beim Fegen steht der Wichtel seitlich, damit man den Besenstrich sieht
+        turnTo(if (lookX() >= 0f) 90f else 270f)
         pose.prop = Prop.BROOM
         var dustTimer = 0f
         var stroke = -1
+        var lastCloud = -1
         anim(ms) {
             val s = sin(clock * 7f)
             val strokeNo = (clock * 7f / PIf).toInt()
@@ -373,7 +438,15 @@ class ElfEngine(
             dustTimer += 0.033f
             if (dustTimer > 0.12f) {
                 dustTimer = 0f
-                burst(x + 0.04f * facing, y, 2, PK.DUST, 0.06f, 0.6f)
+                burst(x + 0.05f * lookX(), y, 2, PK.DUST, 0.06f, 0.6f)
+            }
+            // am Ende jedes Besenstrichs stäubt eine Wolke auf
+            if (strokeNo != lastCloud) {
+                lastCloud = strokeNo
+                val cx = x + 0.075f * lookX()
+                repeat(3) {
+                    particles.add(Particle(cx + rnd(-0.015f, 0.015f), y - 0.005f, lookX() * rnd(0.01f, 0.05f), rnd(-0.07f, -0.02f), 1.1f, 1.1f, PK.DUST, 2.6f))
+                }
             }
         }
         pose.prop = Prop.NONE
@@ -393,8 +466,9 @@ class ElfEngine(
         say(Lines.chaos.random(rng))
         repeat(rng.nextInt(3, 6)) {
             val kind = rng.nextInt(4)
-            val tx = rnd(0.1f, 0.9f)
-            val ty = rnd(0.58f, 0.92f)
+            val tp = if (roam.isEmpty()) Pt(rnd(0.1f, 0.9f), rnd(0.58f, 0.92f)) else randomPoint()
+            val tx = tp.x
+            val ty = tp.y
             val sx = x
             val sy = y - hNorm * 0.6f
             anim(260) { t ->
@@ -424,6 +498,7 @@ class ElfEngine(
     }
 
     suspend fun doDance(withConfetti: Boolean = false) {
+        faceFront()
         val ms = say(Lines.dance.random(rng))
         sfx(Fx.TUNE, 0.8f)
         if (withConfetti) {
@@ -440,6 +515,7 @@ class ElfEngine(
             pose.bob = abs(s) * 0.05f
             pose.lean = 8f * s
             pose.hatTilt = 0.05f * s
+            pose.stepPhase = clock * 10f
             confettiTimer += 0.033f
             if (withConfetti && confettiTimer > 1.0f) {
                 confettiTimer = 0f
@@ -458,6 +534,7 @@ class ElfEngine(
     }
 
     suspend fun doTumble() {
+        faceFront()
         say(Lines.tumble.random(rng), Mood.SURPRISED)
         sfx(Fx.WHOOSH)
         anim(1000) { t ->
@@ -478,6 +555,7 @@ class ElfEngine(
 
     /** Stolpert über etwas, fällt hin und steht verlegen wieder auf. */
     suspend fun doTrip() {
+        faceFront()
         anim(300) { t ->
             pose.lean = 22f * t
             pose.armL = 110f * t
@@ -505,6 +583,7 @@ class ElfEngine(
 
     /** Hinsetzen (Hocke), [holdMs] lang, dann wieder aufstehen. */
     suspend fun doSit(holdMs: Long = 2500) {
+        faceFront()
         anim(450) { t ->
             pose.squash = 0.22f * t
             pose.legL = 70f * t
@@ -526,6 +605,7 @@ class ElfEngine(
     }
 
     suspend fun doSleep() {
+        faceFront()
         say(Lines.sleep.random(rng), Mood.SLEEPY)
         anim(700) { t ->
             pose.spin = 90f * t
@@ -550,6 +630,7 @@ class ElfEngine(
     }
 
     suspend fun doSnack(sneaky: Boolean = false) {
+        faceFront()
         say(if (sneaky) Lines.sneaky.random(rng) else Lines.snack.random(rng), if (sneaky) Mood.WHISPER else null)
         pose.prop = Prop.COOKIE
         var crumbTimer = 0f
@@ -574,8 +655,9 @@ class ElfEngine(
         burst(x, y - hNorm * 0.4f, 10, PK.POOF, 0.16f, 0.7f, 1.2f)
         sfx(Fx.POOF)
         idle(1800)
-        x = reappear?.x ?: rnd(0.15f, 0.85f)
-        y = reappear?.y ?: rnd(0.6f, 0.9f)
+        val back = reappear ?: if (roam.isEmpty()) Pt(rnd(0.15f, 0.85f), rnd(0.6f, 0.9f)) else randomPoint()
+        x = back.x
+        y = back.y
         burst(x, y - hNorm * 0.4f, 10, PK.POOF, 0.16f, 0.7f, 1.2f)
         sfx(Fx.POOF)
         sfx(Fx.TINKLE, 0.6f)
@@ -585,6 +667,7 @@ class ElfEngine(
     }
 
     suspend fun doChat() {
+        faceFront()
         val ms = say(chatLine())
         anim(ms) {
             pose.armL = 25f + 18f * sin(clock * 5f)
@@ -595,6 +678,7 @@ class ElfEngine(
 
     /** Verbeugung nach einer Vorführung. */
     suspend fun doBow() {
+        faceFront()
         say(Lines.bow.random(rng), Mood.AMUSED)
         anim(500) { t ->
             pose.lean = 25f * t
@@ -629,6 +713,7 @@ class ElfEngine(
 
     /** Ein Geschenk erscheint per Zauber neben dem Wichtel. */
     suspend fun doGiftPop() {
+        faceFront()
         val gx = (x + 0.12f * facing).coerceIn(0.1f, 0.9f)
         anim(300) { t -> pose.armL = 140f * t; pose.armR = 140f * t }
         if (mess.size >= 14) mess.removeAt(0)
@@ -644,6 +729,7 @@ class ElfEngine(
 
     /** Zauberspruch: Funken fliegen, Spielzeug erscheint aus dem Nichts. */
     suspend fun doMagic() {
+        faceFront()
         say(Lines.magic.random(rng), Mood.AMUSED)
         sfx(Fx.SPARKLE)
         anim(1500) {
@@ -688,6 +774,7 @@ class ElfEngine(
 
     /** Klopft an die Tür. */
     suspend fun doKnock(times: Int = 3) {
+        turnTo(180f)
         say(Lines.doorKnock.random(rng))
         repeat(times) {
             anim(150) { t -> pose.armR = 120f * t }
@@ -700,6 +787,7 @@ class ElfEngine(
     /** Geht zur Tür, öffnet sie, tritt ein und schließt sie von innen. Danach ist der Wichtel im Haus (unsichtbar). */
     suspend fun doEnterHouse(fast: Boolean = false) {
         walkTo(frontOfDoor())
+        turnTo(180f) // mit dem Rücken zum Betrachter zur Tür
         say(Lines.doorHome.random(rng))
         openDoor(if (fast) 350 else 900)
         val sx = x
@@ -729,6 +817,7 @@ class ElfEngine(
         pose.scale = 0f
         visible = true
         inHouse = false
+        pose.heading = 0f
         pose.prop = if (carryGift) Prop.GIFT else Prop.NONE
         openDoor(if (fast) 300 else 900)
         val sy = y
@@ -833,5 +922,6 @@ class ElfEngine(
 class Stops(private val points: List<Pt>, private val engine: ElfEngine) {
     private var i = 0
 
-    fun next(): Pt = points.getOrNull(i++) ?: engine.randomPoint()
+    /** Die gesetzten Punkte der Reihe nach, danach wieder von vorn (Rundgang); ohne Punkte ein Ort in der Nähe */
+    fun next(): Pt = if (points.isEmpty()) engine.randomPoint() else points[i++ % points.size]
 }

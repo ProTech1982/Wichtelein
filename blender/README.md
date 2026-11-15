@@ -18,3 +18,19 @@ blender --factory-startup -b -P render_textured.py -- ../app/src/main/res/drawab
 Ergebnis des Vergleichs: Die Blender-Teile sind weicher, aber flacher in Farbe und Kontrast als die direkt geschnittenen Teile
 (grauerer Bart, weniger Leuchtkraft). Deshalb benutzt die App die geschnittenen Teile. Die Skripte bleiben als Ausgangspunkt für
 eine echte 3D-Figur (Seitenansichten brauchen zusätzliche Texturen).
+
+
+## Der 3D-Wichtel (seit 0.4.0)
+
+`wichtel3d.py` modelliert den Wichtel komplett in Blender (Mütze mit Nieten, Bart, Mantel, Arme, Beine, Besen – nur aus Python, ohne fremde Modelle)
+und rendert ihn mit den Bewegungen Stehen, Laufen (8 Bilder), Fegen (9) und Winken (6) aus 16 bzw. 8 Blickrichtungen.
+`pack3d.py` verkleinert die Bilder und legt sie nach `app/src/main/assets/elf3d/` (mit `elf3d.json`).
+
+```
+blender --factory-startup -b -P wichtel3d.py -- vorschau ordner 24      # Kontaktbogen zum Ansehen
+blender --factory-startup -b -P wichtel3d.py -- final ordner 32         # alle Bilder (etwa 15 Minuten)
+python pack3d.py ordner ../app/src/main/assets/elf3d 360
+```
+
+Die App wählt je Haltung das passende Bild (`Elf3D.kt`): Laufrichtung bestimmt die Blickrichtung, beim Fegen steht er seitlich, beim Betreten
+des Hauses dreht er sich mit dem Rücken zum Betrachter zur Tür. Andere Bewegungen entstehen aus dem Stehbild (Verschieben, Stauchen, Drehen).

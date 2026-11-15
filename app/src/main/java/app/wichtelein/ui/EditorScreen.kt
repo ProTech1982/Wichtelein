@@ -97,7 +97,7 @@ fun EditorScreen(
     val photo by produceState<ImageBitmap?>(null, file.path, file.lastModified(), isPhoto) {
         value = if (isPhoto) withContext(Dispatchers.IO) { BitmapFactory.decodeFile(file.path)?.asImageBitmap() } else null
     }
-    val sprites = rememberElfSprites(settings.colors())
+    val sprites = rememberElfFigure(settings)
     val speaker = remember { Speaker(context) }
     val fxPlayer = remember { SoundPlayer() }
     DisposableEffect(Unit) { onDispose { speaker.shutdown() } }
@@ -149,6 +149,7 @@ fun EditorScreen(
             doorRound = doorRound,
             script = script,
             stopAfterScript = isPhoto && script.isNotEmpty(),
+            aspect = info.aspect,
             sizeScale = settings.sizeScale,
             category = category,
             sceneId = sceneId,

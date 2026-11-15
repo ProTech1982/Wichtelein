@@ -86,7 +86,7 @@ object ExportManager {
         val app = context.applicationContext
         val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.GERMANY).format(Date())
         val out = File(exportsDir(app), "Wichtelein-$stamp.mp4")
-        val sprites = ElfSprites.load(app, settings.colors())
+        val sprites = ElfFigures.load(app, settings)
 
         // 1) Sprache (nur mit der Wichtelstimme als Rohdaten möglich)
         var wav: File? = null

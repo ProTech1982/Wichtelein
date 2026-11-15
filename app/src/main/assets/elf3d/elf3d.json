@@ -1,0 +1,29 @@
+{
+ "cell": [
+  360,
+  480
+ ],
+ "feet": [
+  180.0,
+  421.8
+ ],
+ "height": 363.6,
+ "clips": {
+  "idle": {
+   "headings": 16,
+   "frames": 1
+  },
+  "walk": {
+   "headings": 16,
+   "frames": 8
+  },
+  "sweep": {
+   "headings": 8,
+   "frames": 9
+  },
+  "wave": {
+   "headings": 8,
+   "frames": 6
+  }
+ }
+}
