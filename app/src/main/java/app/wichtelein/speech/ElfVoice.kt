@@ -72,12 +72,17 @@ object ElfVoice {
         val app = context.applicationContext
         exec.execute {
             try {
-                val old = tts
-                tts = null
-                old?.release()
+                // erst freigeben, wenn gerade kein Satz mit dem alten Modell erzeugt wird (sonst Absturz im nativen Code)
+                synchronized(this@ElfVoice) {
+                    val old = tts
+                    tts = null
+                    old?.release()
+                }
                 val loaded = load(app, voiceId)
-                tts = loaded
-                activeId = voiceId
+                synchronized(this@ElfVoice) {
+                    tts = loaded
+                    activeId = voiceId
+                }
                 error = null
                 if (requested == voiceId) state = State.READY
             } catch (t: Throwable) {
@@ -143,8 +148,10 @@ object ElfVoice {
      * (1 = normal). Blockiert, deshalb nicht auf dem UI-Thread aufrufen. Gibt null zurück, wenn keine Stimme geladen ist.
      */
     @Synchronized
-    fun synthesize(text: String, mood: Int, rate: Float, pitchFactor: Float): VoiceAudio? {
+    fun synthesize(text: String, mood: Int, rate: Float, pitchFactor: Float, voiceId: String? = null): VoiceAudio? {
         val engine = tts ?: return null
+        // geladen ist eine andere Stimme als gewünscht (z. B. gerade gewechselt): lieber nichts als die falsche Stimme
+        if (voiceId != null && activeId != voiceId) return null
         val sid = mood.coerceIn(0, maxOf(0, engine.numSpeakers() - 1))
         val audio = engine.generate(text, sid, rate.coerceIn(0.5f, 1.6f))
         if (audio.samples.isEmpty()) throw IllegalStateException("Sprachmodell lieferte keine Audiodaten")

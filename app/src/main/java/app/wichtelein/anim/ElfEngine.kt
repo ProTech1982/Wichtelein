@@ -122,6 +122,8 @@ class ElfEngine(
     private val fx: (Fx, Float) -> Unit = { _, _ -> },
     /** Welche Figur: 0 = Wichtel, 1 = Elfin (Name und Stimme) */
     private val actor: Int = 0,
+    /** Wetter, das beide Figuren teilen */
+    private val weather: Weather = Weather(),
 ) {
     /** Die Sätze dieser Figur (Wichtel oder Elfin, jede mit eigenen Texten) */
     val lines: app.wichtelein.scene.LineBook get() = if (actor == 1) app.wichtelein.scene.ElfinLines else app.wichtelein.scene.Lines
@@ -213,8 +215,12 @@ class ElfEngine(
     // ---------------------------------------------------------------- Schnee
 
     /** Zeitpunkt (Engine-Uhr), an dem es zu schneien beginnt bzw. aufhört; negativ = nie */
-    private var snowOnAt = NEVER
-    private var snowOffAt = NEVER
+    private var snowOnAt: Float
+        get() = weather.snowOnAt
+        set(v) { weather.snowOnAt = v }
+    private var snowOffAt: Float
+        get() = weather.snowOffAt
+        set(v) { weather.snowOffAt = v }
 
     private val isSnowing: Boolean get() = snowOnAt > NEVER && snowOffAt < snowOnAt
 
@@ -1255,14 +1261,10 @@ class ElfEngine(
      */
     suspend fun perform(req: PerfRequest, played: MutableList<String>) {
         appear(req.start)
-        if (req.idleOnly) {
-            // steht nur da (blinzelt, atmet), während die andere Figur ihr Drehbuch spielt
-            while (true) idle(800)
-        }
         greet()
         // die platzierten Gegenstände stellt der Wichtel nacheinander selbst auf
         if (req.autoBuild) for (item in items) doBuild(item)
-        if (req.script.isNotEmpty()) {
+        if (req.script.isNotEmpty() && !req.idleOnly) {
             // Drehbuch: die Aktionspunkte der Reihe nach abarbeiten, danach verbeugen und stehen bleiben
             var joint = 0
             for (st in req.script) {
@@ -1285,7 +1287,7 @@ class ElfEngine(
         var last: SceneDef? = null
         var first = req.sceneId?.let { Scenes.find(it) }
         while (true) {
-            val scene = first ?: Scenes.pick(req.category, req.enabledScenes, last, rng, req.door != null, findBed() != null)
+            val scene = first ?: Scenes.pick(req.category, req.enabledScenes, last, rng, req.door != null && !req.idleOnly, findBed() != null && !req.idleOnly)
             first = null
             last = scene
             played.add(scene.name)

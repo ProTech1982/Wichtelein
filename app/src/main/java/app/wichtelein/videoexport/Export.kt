@@ -118,7 +118,7 @@ object ExportManager {
         // 2) Overlay: pro Videobild die passende Szene der Aufführung
         val w = info.width
         val h = info.height
-        val layer = if (scenery.isEmpty()) null else SceneryLayer(scenery, SceneryAssets.load(app, settings.sceneryStyles))
+        val layer = if (scenery.isEmpty()) null else SceneryLayer(scenery, SceneryAssets.load(app, settings.sceneryStyles, only = scenery.map { it.type }.toSet()))
         val measurer = TextMeasurer(createFontFamilyResolver(app), Density(1f), LayoutDirection.Ltr)
         val overlay = object : BitmapOverlay() {
             override fun getBitmap(presentationTimeUs: Long): Bitmap {

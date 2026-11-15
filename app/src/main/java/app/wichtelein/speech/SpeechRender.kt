@@ -45,7 +45,7 @@ object SpeechRender {
         val k = key(ev.text, mood, s)
         cached(k)?.let { return it }
         val audio = try {
-            ElfVoice.synthesize(ev.text, mood, s.rate, 1f + 0.45f * s.effect)
+            ElfVoice.synthesize(ev.text, mood, s.rate, 1f + 0.45f * s.effect, s.voiceId)
         } catch (_: Throwable) {
             null
         } ?: return null
@@ -60,7 +60,13 @@ object SpeechRender {
      * Erzeugt die Clips aller Ereignisse; jede Figur mit ihrer eigenen Stimme (Wichtel männlich, Elfin weiblich). Spricht nur eine Figur,
      * wird nur ihre Stimme geladen; bei zwei Figuren wird die Stimme nacheinander gewechselt. Blockiert.
      */
-    fun renderAll(context: Context, s: Settings, events: List<SpeechEvent>, timeoutMs: Long = 120_000, onProgress: (Int) -> Unit = {}): Result {
+    fun renderAll(context: Context, s: Settings, events: List<SpeechEvent>, timeoutMs: Long = 120_000, onProgress: (Int) -> Unit = {}): Result =
+        // nur eine Erzeugung zugleich (Vorschau und Export dürfen sich nicht gegenseitig die Stimme wegnehmen)
+        synchronized(renderLock) { renderAllLocked(context, s, events, timeoutMs, onProgress) }
+
+    private val renderLock = Any()
+
+    private fun renderAllLocked(context: Context, s: Settings, events: List<SpeechEvent>, timeoutMs: Long, onProgress: (Int) -> Unit): Result {
         val out = arrayOfNulls<VoiceAudio>(events.size)
         var missing = false
         var done = 0

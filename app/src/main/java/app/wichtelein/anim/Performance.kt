@@ -58,6 +58,12 @@ interface Ticker {
     suspend fun nextFrame(): Long
 }
 
+/** Wetter, das beide Figuren teilen (Schnee): Zeitpunkte auf der gemeinsamen Uhr. */
+class Weather {
+    var snowOnAt = -1000f
+    var snowOffAt = -1000f
+}
+
 /** Treffpunkt für gemeinsame Aktionen: jede Figur meldet sich, die erste wartet auf die zweite. */
 class StepSync {
     private val arrived = HashMap<Int, MutableSet<Int>>()
@@ -193,6 +199,22 @@ class PerfRequest(
 const val TAIL_MS = 2500L
 
 object Recorder {
+    /** Fängt Fehler einer Figur ab: sie steht dann einfach da, statt die ganze App zum Absturz zu bringen. */
+    private suspend fun safely(engine: ElfEngine, body: suspend () -> Unit) {
+        try {
+            body()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            try {
+                while (true) engine.idle(800)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Throwable) {
+            }
+        }
+    }
+
     private class Actor(val engine: ElfEngine, val ticker: ManualTicker, val req: PerfRequest, val actor: Int) {
         lateinit var job: kotlinx.coroutines.Job
     }
@@ -203,6 +225,7 @@ object Recorder {
         val played = ArrayList<String>()
         val sounds = ArrayList<SoundEvent>()
         val both = req.settings.both
+        val weather = Weather()
         val first = if (both) 0 else if (req.settings.elfin) 1 else 0
 
         fun build(r: PerfRequest, actor: Int, seed: Long): Actor {
@@ -215,6 +238,7 @@ object Recorder {
                 ticker = ticker,
                 fx = { f: Fx, gain: Float -> sounds.add(SoundEvent(engine.timeMs, f, gain)) },
                 actor = actor,
+                weather = weather,
             )
             engine.configureDoor(r.door, r.doorScale, r.doorHingeLeft, r.doorRound, r.doorRot)
             engine.configureScenery(r.scenery)
@@ -250,8 +274,8 @@ object Recorder {
         }
 
         val scope = CoroutineScope(Dispatchers.Unconfined)
-        a.job = scope.launch { a.engine.perform(a.req, played) }
-        if (b != null) b.job = scope.launch { b.engine.perform(b.req, ArrayList()) }
+        a.job = scope.launch { safely(a.engine) { a.engine.perform(a.req, played) } }
+        if (b != null) b.job = scope.launch { safely(b.engine) { b.engine.perform(b.req, ArrayList()) } }
         val frames = ArrayList<FrameState>()
         fun snap(): FrameState = a.engine.snapshot().also { f -> f.partner = b?.engine?.snapshot() }
         frames.add(snap())

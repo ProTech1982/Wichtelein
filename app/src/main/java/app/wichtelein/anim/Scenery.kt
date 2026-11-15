@@ -174,10 +174,15 @@ class SceneryAssets(private val arts: Map<SceneryType, SceneryArt>) {
     companion object {
         val NONE = SceneryAssets(emptyMap())
 
-        fun load(context: Context, styles: Map<String, SceneryStyle> = emptyMap()): SceneryAssets {
+        /**
+         * Lädt die Bilder der Gegenstände. [only] = nur diese Arten (spart Speicher: der Editor braucht nur die benutzten),
+         * [sample] = Verkleinerung beim Laden (2 = halbe Breite und Höhe; für kleine Vorschauen).
+         */
+        fun load(context: Context, styles: Map<String, SceneryStyle> = emptyMap(), only: Set<SceneryType>? = null, sample: Int = 1): SceneryAssets {
             val map = HashMap<SceneryType, SceneryArt>()
-            val opts = BitmapFactory.Options().apply { inScaled = false }
+            val opts = BitmapFactory.Options().apply { inScaled = false; inSampleSize = sample.coerceAtLeast(1) }
             for (t in SceneryType.values()) {
+                if (only != null && t !in only) continue
                 try {
                     val json = context.assets.open("scenery/${t.id}.json").bufferedReader().use { it.readText() }
                     val bmp = context.assets.open("scenery/${t.id}.png").use { BitmapFactory.decodeStream(it, null, opts) } ?: continue

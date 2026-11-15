@@ -113,7 +113,6 @@ fun EditorScreen(
         value = if (isPhoto) withContext(Dispatchers.IO) { BitmapFactory.decodeFile(file.path)?.asImageBitmap() } else null
     }
     val sprites = rememberElfFigure(settings)
-    val sceneryAssets = remember(settings.sceneryStyles) { SceneryAssets.load(context, settings.sceneryStyles) }
     val speaker = remember { Speaker(context) }
     val fxPlayer = remember { SoundPlayer() }
     DisposableEffect(Unit) { onDispose { speaker.shutdown() } }
@@ -141,6 +140,9 @@ fun EditorScreen(
     var panelDp by remember { androidx.compose.runtime.mutableFloatStateOf(settings.editorPanelDp) }
     val whoNow = if (settings.both) who else 0
     var objType by remember { mutableStateOf(SceneryType.TREE_CLASSIC) }
+    // nur die Bilder laden, die vorkommen (der Editor hat sonst bis zu 17 große Bilder im Speicher)
+    val usedTypes = st.scenery.map { it.type }.toSet() + objType
+    val sceneryAssets = remember(settings.sceneryStyles, usedTypes) { SceneryAssets.load(context, settings.sceneryStyles, only = usedTypes) }
     var sliderBase by remember { mutableStateOf<EditState?>(null) }
     var fine by remember { mutableStateOf(false) }
 

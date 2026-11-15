@@ -122,7 +122,9 @@ fun DrawScope.drawWichtelFrame(
         val d = f.doorPos
         if (d == null || f.doorRot == 0f) block() else withTransform({ rotate(f.doorRot, Offset(d.x * w, d.y * h)) }) { block() }
     }
-    if (projection == null) withDoorRot { drawDoorBack(f, w, h) }
+    // die Tür ist offen, sobald eine der beiden Figuren sie öffnet
+    val doorOpen = maxOf(f.doorOpen, partner?.doorOpen ?: 0f)
+    if (projection == null) withDoorRot { drawDoorBack(f, w, h, doorOpen) }
 
     for (item in actors.flatMap { it.first.mess }.sortedBy { it.y }) {
         val o = pos(item.x, item.y) ?: continue
@@ -158,7 +160,7 @@ fun DrawScope.drawWichtelFrame(
         }
     }
 
-    if (projection == null) withDoorRot { drawDoorLeaf(f, w, h) }
+    if (projection == null) withDoorRot { drawDoorLeaf(f, w, h, doorOpen) }
 
     for ((frame, _) in actors) {
         for (p in frame.particles) {
@@ -167,7 +169,8 @@ fun DrawScope.drawWichtelFrame(
         }
     }
 
-    if (f.snow > 0.01f) drawSnow(f.snow, f.timeSec)
+    val snow = maxOf(f.snow, partner?.snow ?: 0f)
+    if (snow > 0.01f) drawSnow(snow, f.timeSec)
 
     for ((frame, _) in actors) {
         val text = frame.bubble
@@ -267,14 +270,14 @@ fun doorPath(cx: Float, by: Float, dw: Float, dh: Float, round: Float): Path {
 }
 
 /** Dunkler Innenraum mit warmem Licht; liegt hinter dem Wichtel, damit er hineingehen kann. */
-private fun DrawScope.drawDoorBack(f: FrameState, w: Float, h: Float) {
+private fun DrawScope.drawDoorBack(f: FrameState, w: Float, h: Float, open: Float = f.doorOpen) {
     val pos = f.doorPos ?: return
-    if (f.doorOpen < 0.004f) return
+    if (open < 0.004f) return
     val dh = h * f.doorScale
     val dw = dh * 0.56f
     val cx = pos.x * w
     val by = pos.y * h
-    val o = f.doorOpen.coerceIn(0f, 1f)
+    val o = open.coerceIn(0f, 1f)
     val opening = doorPath(cx, by, dw, dh, f.doorRound)
     drawPath(opening, Color(0xFF2B1A10))
     // winzige Weihnachtsstube: warme Wand, Holzboden, Tannenbaum mit blinkenden Lichtern, Geschenke, Kaminglut, Lichterkette
@@ -325,17 +328,17 @@ private fun DrawScope.drawDoorBack(f: FrameState, w: Float, h: Float) {
 }
 
 /** Das Türblatt: links angeschlagen, schwingt beim Öffnen zur Seite (schmaler werdend) und davor wieder zu. */
-private fun DrawScope.drawDoorLeaf(f: FrameState, w: Float, h: Float) {
+private fun DrawScope.drawDoorLeaf(f: FrameState, w: Float, h: Float, open: Float = f.doorOpen) {
     val pos = f.doorPos ?: return
-    if (f.doorOpen < 0.004f) return
+    if (open < 0.004f) return
     val dh = h * f.doorScale
     val dw = dh * 0.56f
     val cx = pos.x * w
     val by = pos.y * h
     val left = cx - dw / 2f
     val hingeX = if (f.doorHingeLeft) left else left + dw
-    val sx = kotlin.math.cos(f.doorOpen.coerceIn(0f, 1f) * 1.45f).coerceAtLeast(0.1f)
-    val shade = 1f - 0.25f * f.doorOpen
+    val sx = kotlin.math.cos(open.coerceIn(0f, 1f) * 1.45f).coerceAtLeast(0.1f)
+    val shade = 1f - 0.25f * open
     withTransform({ scale(sx, 1f, Offset(hingeX, by)) }) {
         val arch = doorPath(cx, by, dw, dh, f.doorRound)
         drawPath(arch, Color(0.72f * shade, 0.48f * shade, 0.27f * shade))

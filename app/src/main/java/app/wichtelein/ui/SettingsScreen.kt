@@ -202,6 +202,18 @@ fun SettingsScreen(
             Text("Build ${Updater.installedVersion(LocalContext.current)}", fontSize = 13.sp)
             OutlinedButton(onClick = onCheckUpdate, Modifier.fillMaxWidth()) { Text("Nach Update suchen") }
             if (updateText != null) Text(updateText)
+            // letzter Absturz (bleibt auf dem Gerät): ansehen, kopieren, löschen
+            val ctx = LocalContext.current
+            val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+            var crash by remember { androidx.compose.runtime.mutableStateOf(CrashLog.last(ctx)) }
+            crash?.let { report ->
+                Text("Letzter Absturz", fontWeight = FontWeight.Medium)
+                Text(report.take(700), fontSize = 11.sp, color = Color.Gray)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { clipboard.setText(androidx.compose.ui.text.AnnotatedString(report)) }) { Text("Bericht kopieren") }
+                    TextButton(onClick = { CrashLog.clear(ctx); crash = null }) { Text("Löschen") }
+                }
+            }
         }
     }
 }
@@ -303,7 +315,7 @@ private fun ColorRow(label: String, choices: List<ColorChoice>, selected: Int, o
 @Composable
 private fun SceneryStyles(settings: Settings, onChange: (Settings) -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    val assets = remember(settings.sceneryStyles) { SceneryAssets.load(ctx, settings.sceneryStyles) }
+    val assets = remember(settings.sceneryStyles) { SceneryAssets.load(ctx, settings.sceneryStyles, sample = 4) }
     fun set(t: SceneryType, st: SceneryStyle) {
         val m = settings.sceneryStyles.toMutableMap()
         if (st == SceneryStyle()) m.remove(t.id) else m[t.id] = st

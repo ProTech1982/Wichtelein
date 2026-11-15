@@ -4,7 +4,13 @@ Auftrag: Wichtelein fertig bauen wie in `Prompt.txt` (Downloads, gehört zu eine
 Gebaut wird nur in GitHub Actions (kein Android-SDK lokal). Release = Push auf main (android.yml, Tag build-N).
 Entwicklungszweige per `gh workflow run ci.yml --ref <zweig>` testen (ci.yml hat workflow_dispatch). Emulator-Job flackert gelegentlich (Boot-Timeout -> neu starten).
 
-## Version 0.9.4 (Release 1.0 erst, wenn der Nutzer „ok“ sagt)
+## Version 0.9.5 (Stabilität; Release 1.0 erst, wenn der Nutzer „ok“ sagt)
+- Absturzursachen behoben: `ElfVoice` gab das alte Sprachmodell frei, während ein Satz damit erzeugt wurde (nativer Absturz, vor allem beim Wechsel Wichtel-/Elfin-Stimme); jetzt unter Sperre, `synthesize(..., voiceId)` liefert nie die falsche Stimme,
+  `SpeechRender.renderAll` läuft nur einmal zugleich. Fehler in einer Figur-Coroutine (`Recorder.safely`) stürzen die App nicht mehr ab. Szenerie-Bilder werden nur für benutzte Arten geladen (`SceneryAssets.load(only, sample)`), `largeHeap`.
+- „Elfin wie tot“: gemeinsames Wetter (`Weather`), Tür offen, wenn eine der beiden Figuren sie öffnet, zweite Figur ohne eigene Aktionen macht zufällige Szenen (`PerfRequest.idleOnly`) statt dazustehen.
+- `CrashLog`: letzter Absturz in `absturz.txt`, in den Einstellungen unter „App und Updates“ sichtbar und kopierbar.
+
+## Version 0.9.4
 - Hörprobe der Stimmen: `Speaker.speakWithVoice(voice, text)` lädt die Stimme und wartet darauf (vorher spielte die Elfin-Probe nicht, weil die Stimme noch lud und die SideEffect die Stimme zurücksetzte).
 - Dii ist für Wichtel und Elfin wählbar (`VoiceInfo.both`).
 - Eigener Weg der Elfin: `EditState.path2`, `Sel.Path2`, `PerfRequest.path2` (die Elfin läuft `path2`, der Wichtel `path`); Weg-Werkzeug mit Wahl der Figur.

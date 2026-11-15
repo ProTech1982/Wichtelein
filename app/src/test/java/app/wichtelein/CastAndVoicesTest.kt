@@ -59,10 +59,15 @@ class CastAndVoicesTest {
         assertTrue("Elfin tanzt nicht weg, solange nur der Wichtel Aktionen hat", true)
     }
 
-    @Test fun actionsOfOneFigureOnlyLeaveTheOtherStandingAround() {
-        val p = record(base.copy(cast = 2), listOf(ScriptStep(ElfAction.WAVE, Pt(0.2f, 0.85f), who = 0)))
-        val partnerXs = p.frames.map { it.partner!!.x }
-        assertTrue("Partnerin bleibt in der Nähe ihres Startpunkts", (partnerXs.maxOrNull()!! - partnerXs.minOrNull()!!) < 0.06f)
+    @Test fun theOtherFigureStaysAliveWhenOnlyOneHasActions() {
+        // der Wichtel hat Aktionen, die Elfin keine: sie steht nicht tot herum, sondern macht ihr eigenes Ding
+        val steps = listOf(ScriptStep(ElfAction.WAVE, Pt(0.2f, 0.85f), who = 0), ScriptStep(ElfAction.DANCE, Pt(0.25f, 0.85f), who = 0), ScriptStep(ElfAction.SWEEP, Pt(0.3f, 0.85f), who = 0))
+        val p = record(base.copy(cast = 2), steps, ms = 120_000L)
+        val partner = p.frames.map { it.partner!! }
+        val moved = partner.maxOf { it.x } - partner.minOf { it.x }
+        val gestures = partner.count { it.pose.armR > 30f || kotlin.math.abs(it.pose.legL) > 5f || it.pose.heading != 0f }
+        assertTrue("Elfin bewegt sich: $moved / $gestures", moved > 0.02f || gestures > 20)
+        assertTrue("und sie spricht", p.speech.any { it.actor == 1 })
     }
 
     @Test fun onlyFemaleVoicesForTheElfinAndOnlyMaleForTheWichtel() {

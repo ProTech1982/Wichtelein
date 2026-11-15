@@ -70,6 +70,7 @@ enum class Screen { HOME, CAMERA, PHOTO_CAMERA, EDITOR, VIDEOS, ACTIONS, SETTING
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        CrashLog.install(this)
         AppTheme.mode = SettingsStore.load(this).themeMode
         enableEdgeToEdge()
         setContent {

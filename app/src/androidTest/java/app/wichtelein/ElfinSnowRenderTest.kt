@@ -189,6 +189,45 @@ class ElfinSnowRenderTest {
         assertTrue("Elfin rechts: $right", right > 150)
     }
 
+    @Test fun doorOpenedByThePartnerIsDrawnOpen() {
+        val figure = ElfFigures.load(ctx, Settings(cast = 2))
+        fun frame(open: Float) = frameAt(0.2f, 0f, door = true).also {
+            it.partner = FrameState(
+                x = 0.8f, y = 0.85f, facing = 1, visible = true, pose = Pose(), bubble = null, mess = emptyList(), flying = null, particles = emptyList(),
+                doorPos = Pt(0.5f, 0.86f), doorScale = 0.5f, doorOpen = open, doorHingeLeft = true, doorRound = 1f,
+            )
+        }
+        // Wichtel-Frame hat die Tür zu (doorOpen 0.65 im Helfer, deshalb hier überschrieben)
+        val closed = FrameState(
+            x = 0.2f, y = 0.85f, facing = 1, visible = true, pose = Pose(), bubble = null, mess = emptyList(), flying = null, particles = emptyList(),
+            doorPos = Pt(0.5f, 0.86f), doorScale = 0.5f, doorOpen = 0f, doorHingeLeft = true, doorRound = 1f,
+        )
+        val shut = closed.also { it.partner = frame(0f).partner }
+        val opened = FrameState(
+            x = 0.2f, y = 0.85f, facing = 1, visible = true, pose = Pose(), bubble = null, mess = emptyList(), flying = null, particles = emptyList(),
+            doorPos = Pt(0.5f, 0.86f), doorScale = 0.5f, doorOpen = 0f, doorHingeLeft = true, doorRound = 1f,
+        ).also { it.partner = frame(0.9f).partner }
+        rule.setContent {
+            Row(Modifier.background(bg)) {
+                for (f in listOf(shut, opened)) androidx.compose.foundation.layout.Box(Modifier.size(150.dp, 260.dp)) { ElfOverlay(f, figure, 0.3f, Modifier.size(150.dp, 260.dp)) }
+            }
+        }
+        rule.waitForIdle()
+        val b = rule.onAllNodes(isRoot()).onFirst().captureToImage().asAndroidBitmap()
+        val d = ctx.resources.displayMetrics.density
+        val w = (150 * d).toInt()
+        fun dark(cell: Int): Int {
+            var n = 0
+            for (y in 0 until (260 * d).toInt() step 2) for (x in cell * w until (cell + 1) * w step 2) {
+                val c = b.getPixel(x, y)
+                if (AColor.red(c) < 70 && AColor.green(c) < 50 && AColor.blue(c) < 40) n++
+            }
+            return n
+        }
+        // offene Tür zeigt die dunkle Öffnung der Stube
+        assertTrue("Öffnung sichtbar, wenn die Elfin die Tür öffnet: ${dark(0)} → ${dark(1)}", dark(1) > dark(0) + 150)
+    }
+
     @Test fun rotatedDoorMovesItsPixels() {
         val figure = ElfFigures.load(ctx, Settings())
         rule.setContent {
