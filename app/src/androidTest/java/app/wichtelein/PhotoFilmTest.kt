@@ -10,6 +10,7 @@ import android.media.MediaMetadataRetriever
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -19,7 +20,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.printToString
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -158,12 +159,12 @@ class PhotoFilmTest {
         assertTrue("Foto-Film-Titel", exists("Foto-Film"))
         assertTrue("Längenregler ohne Aktionspunkte", exists("Länge des Films: 12 s"))
 
-        rule.onNodeWithText("🎯 Aktionen (0)").performScrollTo().performClick()
+        rule.onNodeWithText("🎯 Aktionen (0)").performSemanticsAction(SemanticsActions.OnClick)
         pump(10_000, "Aktionsliste") { exists("🧹 Fegen") }
-        rule.onNodeWithText("🧹 Fegen").performScrollTo().performClick()
+        rule.onNodeWithText("🧹 Fegen").performSemanticsAction(SemanticsActions.OnClick)
         rule.onNodeWithTag("bildflaeche").performTouchInput { click(Offset(width * 0.5f, height * 0.6f)) }
         pump(60_000, "Aktionspunkt gesetzt") { exists("🎯 Aktionen (1)") }
-        rule.onNodeWithText("🚶 Hingehen").performScrollTo().performClick()
+        rule.onNodeWithText("🚶 Hingehen").performSemanticsAction(SemanticsActions.OnClick)
         rule.onNodeWithTag("bildflaeche").performTouchInput { click(Offset(width * 0.25f, height * 0.7f)) }
         pump(60_000, "zweiter Aktionspunkt") { exists("🎯 Aktionen (2)") }
         pump(120_000, "Film neu berechnet (automatische Länge)") {
