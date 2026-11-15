@@ -4,6 +4,11 @@ Auftrag: Wichtelein fertig bauen wie in `Prompt.txt` (Downloads, gehört zu eine
 Gebaut wird nur in GitHub Actions (kein Android-SDK lokal). Release = Push auf main (android.yml, Tag build-N).
 Entwicklungszweige per `gh workflow run ci.yml --ref <zweig>` testen (ci.yml hat workflow_dispatch). Emulator-Job flackert gelegentlich (Boot-Timeout -> neu starten).
 
+## Version 0.7.0 (enthält 0.6.1 und 0.6.2)
+- Tür: Wichtel bleibt draußen, öffnet die Tür, man sieht eine winzige Weihnachtsstube (Tannenbaum, Kamin, Lichterkette, Geschenke), er dreht sich um und schließt die Tür (`doEnterHouse`, `turnAndClose`); „Geschenk aus dem Haus holen“ (`doExitHouse`).
+- Einstellungen: Farbe (Farbton), Licht an/aus und Lichtfarbe je Gegenstand (`SceneryStyle`, `tintArt`).
+- 0.6.2: Wege zu Aufbau/Bett/Tür folgen dem gezeichneten Weg (`walkRoute`, Treppe). 0.6.1: Größe-Regler immer sichtbar, Werkzeuge umbrechen.
+
 ## Version 0.6.0
 - Gegenstände stellt der Wichtel selbst auf (`doBuild`, wächst von unten nach oben, im Editor blass als Geist); Bett: Aktion/Szene „Ins Bett & schnarchen“ (`doBed`, Fx.SNORE); „Psst/Schhh/Brrr/Hmmm“ werden nicht mehr buchstabiert (`scene/SpeechText.kt`), „Psst“ = leises Zischen (Fx.PSST). Enthält 0.5.1 (Wegpunkte im ganzen Bild, Feineinstellung, Perspektive).
 
