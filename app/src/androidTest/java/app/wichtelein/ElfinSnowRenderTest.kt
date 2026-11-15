@@ -33,10 +33,19 @@ class ElfinSnowRenderTest {
     private val ctx get() = InstrumentationRegistry.getInstrumentation().targetContext
     private val bg = Color(0xFF8FA6B8)
 
-    private fun count(b: Bitmap, x0: Int, x1: Int, match: (Float, Float, Float) -> Boolean): Int {
+    /** Zelle Nummer [i] des Bildes (4 Zellen je Zeile, je 50 x 100 dp) */
+    private fun cell(i: Int): android.graphics.Rect {
+        val d = ctx.resources.displayMetrics.density
+        val w = (50 * d).toInt()
+        val h = (100 * d).toInt()
+        return android.graphics.Rect((i % 4) * w, (i / 4) * h, (i % 4 + 1) * w, (i / 4 + 1) * h)
+    }
+
+    private fun count(b: Bitmap, i: Int, match: (Float, Float, Float) -> Boolean): Int {
         val hsv = FloatArray(3)
         var n = 0
-        for (y in 0 until b.height step 2) for (x in x0 until x1 step 2) {
+        val r = cell(i)
+        for (y in r.top until r.bottom step 2) for (x in r.left until r.right step 2) {
             val c = b.getPixel(x, y)
             AColor.colorToHSV(c, hsv)
             if (match(hsv[0], hsv[1], hsv[2])) n++
@@ -59,29 +68,34 @@ class ElfinSnowRenderTest {
             Pose().apply { prop = Prop.GIFT; armR = 80f },
         )
         rule.setContent {
-            Row(Modifier.background(bg)) {
-                for (p in poses) Canvas(Modifier.size(50.dp, 100.dp)) { figure.draw(this, p, Offset(size.width / 2, size.height * 0.97f), size.height * 0.9f, 1) }
-                Canvas(Modifier.size(50.dp, 100.dp)) { blue.draw(this, poses[0], Offset(size.width / 2, size.height * 0.97f), size.height * 0.9f, 1) }
-                Canvas(Modifier.size(50.dp, 100.dp)) { figure.draw(this, poses[1], Offset(size.width / 2, size.height * 0.97f), size.height * 0.9f, -1) }
+            androidx.compose.foundation.layout.Column(Modifier.background(bg)) {
+                Row {
+                    for (p in poses.take(4)) Canvas(Modifier.size(50.dp, 100.dp)) { figure.draw(this, p, Offset(size.width / 2, size.height * 0.97f), size.height * 0.9f, 1) }
+                }
+                Row {
+                    Canvas(Modifier.size(50.dp, 100.dp)) { figure.draw(this, poses[4], Offset(size.width / 2, size.height * 0.97f), size.height * 0.9f, 1) }
+                    Canvas(Modifier.size(50.dp, 100.dp)) { blue.draw(this, poses[0], Offset(size.width / 2, size.height * 0.97f), size.height * 0.9f, 1) }
+                    Canvas(Modifier.size(50.dp, 100.dp)) { figure.draw(this, poses[1], Offset(size.width / 2, size.height * 0.97f), size.height * 0.9f, -1) }
+                }
             }
         }
         rule.waitForIdle()
         val b = rule.onAllNodes(isRoot()).onFirst().captureToImage().asAndroidBitmap()
         File(File(ctx.filesDir, "shots").apply { mkdirs() }, "elfin.png").outputStream().use { b.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        val cw = (50 * ctx.resources.displayMetrics.density).toInt()
         for (i in 0 until poses.size + 2) {
             var filled = 0
-            for (y in 0 until b.height step 2) for (x in i * cw until (i + 1) * cw step 2) if (!isBackground(b.getPixel(x, y))) filled++
+            val r = cell(i)
+            for (y in r.top until r.bottom step 2) for (x in r.left until r.right step 2) if (!isBackground(b.getPixel(x, y))) filled++
             assertTrue("Elfin $i fast leer: $filled", filled > 400)
         }
         // Standard: rote Mütze und grünes Kleid; umgefärbt: blaue Mütze, lila Kleid
-        val red = count(b, 0, cw) { h, s, v -> (h < 15f || h > 345f) && s > 0.6f && v > 0.5f }
-        val green = count(b, 0, cw) { h, s, v -> h in 110f..160f && s > 0.5f && v > 0.4f }
+        val red = count(b, 0) { h, s, v -> (h < 15f || h > 345f) && s > 0.6f && v > 0.5f }
+        val green = count(b, 0) { h, s, v -> h in 110f..160f && s > 0.5f && v > 0.4f }
         assertTrue("rote Mütze: $red", red > 80)
         assertTrue("grünes Kleid: $green", green > 300)
-        val blueIdx = poses.size
-        val blueHat = count(b, blueIdx * cw, (blueIdx + 1) * cw) { h, s, v -> h in 205f..235f && s > 0.5f && v > 0.5f }
-        val violet = count(b, blueIdx * cw, (blueIdx + 1) * cw) { h, s, v -> h in 255f..290f && s > 0.4f && v > 0.4f }
+        val blueIdx = poses.size + 0
+        val blueHat = count(b, blueIdx) { h, s, v -> h in 205f..235f && s > 0.5f && v > 0.5f }
+        val violet = count(b, blueIdx) { h, s, v -> h in 255f..290f && s > 0.4f && v > 0.4f }
         assertTrue("blaue Mütze: $blueHat", blueHat > 80)
         assertTrue("lila Kleid: $violet", violet > 300)
     }
