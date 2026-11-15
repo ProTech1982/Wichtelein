@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
@@ -515,7 +516,7 @@ fun EditorScreen(
                 .background(Color(0xFF1C1C1C))
                 .testTag("griff")
                 .pointerInput(Unit) {
-                    androidx.compose.foundation.gestures.detectVerticalDragGestures(
+                    detectVerticalDragGestures(
                         onDragEnd = { onSettings(latestSettings.copy(editorPanelDp = panelDp)) },
                     ) { change, dy ->
                         change.consume()
