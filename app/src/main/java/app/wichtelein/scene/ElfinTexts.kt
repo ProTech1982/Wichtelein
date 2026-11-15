@@ -104,7 +104,7 @@ object ElfinLines : LineBook {
     )
     override val hideFound = listOf(
         "Kuckuck! Da bin ich!",
-        "Hast du mich gesehen, {kind}?",
+        "Na, {kind}, hast du mich entdeckt?",
     )
     override val doorHome = listOf(
         "Ich flitze kurz in mein Elfenhaus, {name}.",
@@ -166,13 +166,13 @@ object ElfinLines : LineBook {
         "Abrakadabra, Glitzer, komm herbei!",
     )
     override val surprised = listOf(
-        "Ups, das war ich!",
+        "Huch, das war wohl mein Zauber!",
         "Huch, der Zauber hat geklappt!",
         "Ich wusste gar nicht, dass ich so zaubern kann!",
     )
     override val bow = listOf(
         "Vielen Dank, ihr Lieben!",
-        "Applaus, Applaus, {name}!",
+        "Klatsch, klatsch, danke schön, {name}!",
     )
     override val sneaky = listOf(
         "Pssst, ich nasche ganz leise.",
@@ -186,21 +186,21 @@ object ElfinLines : LineBook {
         "Elfen müssen nie ins Bett, aber ich bin trotzdem müde.",
         "Weißt du, {name}, ich sehe jede gute Tat, so klein sie auch ist!",
         "Im Elfenwald schmecken Beeren nach Sonnenschein.",
-        "Ich habe heute Nacht im Zimmer aufgeräumt. Fast alles.",
-        "Hihi, {name}, kannst du mich noch sehen?",
+        "Heute Nacht habe ich im Zimmer Glitzer verteilt. Fast überall.",
+        "Kicher, {name}, siehst du mich noch zwischen den Glitzerpunkten?",
         "Mein Name ist {wichtel} und ich liebe Lebkuchen!",
         "Elfen können sich ganz klein machen. Wusstest du das, {name}?",
         "Heute war ich ein bisschen übermütig. Nur ein ganz kleines bisschen.",
-        "{name}, hast du schon deine Zähne geputzt? Ich habe nachgeschaut!",
+        "{name}, sind deine Zähne schon blitzblank? Ich habe vorhin geguckt!",
         "Eine Elfin hilft gern, aber manchmal verheddert sie sich in ihren Zöpfen.",
         "Ich habe einen Glitzerschatz im Zimmer versteckt. Rate mal, wo!",
         "Du bist mutig, {name}. Das gefällt mir.",
         "Brrr, der Boden ist kalt an meinen Elfenfüßen.",
         "Jeden Abend schaue ich, ob du schön träumst.",
         "Ich kann summen, drehen und flattern. Nur nicht gleichzeitig!",
-        "{name}, ich wollte die Sterne zählen, aber dann bin ich eingeschlafen.",
+        "{name}, ich wollte Sterne sammeln, aber dann bin ich eingenickt.",
         "Wenn du lachst, wird mein Elfenherz ganz warm.",
-        "Oh, ein Krümel! Der gehört mir.",
+        "Oh, ein Zuckerkrümel! Den nehme ich mit.",
         "Ich habe ein Geheimnis, {name}. Es ist ein Zuckerstern.",
         "Hast du heute etwas Nettes gemacht? Dann bekommt die Elfin einen Stern.",
         "Alle Elfen der Welt winken dir zu, {name}!",
@@ -209,8 +209,8 @@ object ElfinLines : LineBook {
         "Heute Nacht hat es im Elfenwald geschneit.",
         "Ich bin klein, aber ich habe große Träume!",
         "{name}, du darfst mir gern einen Wunsch verraten. Aber ganz leise!",
-        "Aufräumen macht mit Musik am meisten Spaß.",
-        "Ich glaube, die Socke da gehört nicht mir.",
+        "Fegen macht mit einem Liedchen am meisten Spaß.",
+        "Dieser Socken gehört bestimmt einem Riesen, nicht mir.",
         "Gute Nacht, {name}. Träum etwas Schönes!",
         "Der Besen und ich tanzen am liebsten zusammen.",
         "Ein bisschen Glitzer gehört zum Leben dazu.",
@@ -240,14 +240,14 @@ object ElfinLines : LineBook {
     )
     override val bedMorning = listOf(
         "Mmh? Ist schon Morgen?",
-        "Gähn, habe ich lange geschlafen?",
+        "Gähn, habe ich schön geträumt?",
     )
 
     override val chat = listOf(
         "Weißt du was, {kind}? Du bist wunderbar!",
-        "{wichtel} hat dich lieb.",
+        "{wichtel}, die Elfin, mag dich sehr.",
         "Wann gibt es Lebkuchen?",
-        "Hast du heute schon gelacht, {kind}?",
+        "Hast du heute schon gekichert, {kind}?",
         "Ich wette, ich tanze schöner als du.",
         "Im Elfenwald ist es heute sehr ruhig.",
     )
