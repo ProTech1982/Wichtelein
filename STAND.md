@@ -4,6 +4,10 @@ Auftrag: Wichtelein fertig bauen wie in `Prompt.txt` (Downloads, gehört zu eine
 Gebaut wird nur in GitHub Actions (kein Android-SDK lokal). Release = Push auf main (android.yml, Tag build-N).
 Entwicklungszweige per `gh workflow run ci.yml --ref <zweig>` testen (ci.yml hat workflow_dispatch). Emulator-Job flackert gelegentlich (Boot-Timeout -> neu starten).
 
+## Version 0.9.6 (Weg der Elfin, Leistung)
+- Szenen ohne eigenen Wegpunkt (`Stops.used`) gehen danach zum nächsten Wegpunkt; Drehbuch ohne Ortsangaben läuft zuerst den gezeichneten Weg ab (`ElfEngine.perform`).
+- Editor: Aufnahme 300 ms entprellt und abbrechbar (`Recorder.record(req, cancelled)`); `snapshot()` kopiert leere Listen nicht mehr.
+
 ## Version 0.9.5 (Stabilität; Release 1.0 erst, wenn der Nutzer „ok“ sagt)
 - Absturzursachen behoben: `ElfVoice` gab das alte Sprachmodell frei, während ein Satz damit erzeugt wurde (nativer Absturz, vor allem beim Wechsel Wichtel-/Elfin-Stimme); jetzt unter Sperre, `synthesize(..., voiceId)` liefert nie die falsche Stimme,
   `SpeechRender.renderAll` läuft nur einmal zugleich. Fehler in einer Figur-Coroutine (`Recorder.safely`) stürzen die App nicht mehr ab. Szenerie-Bilder werden nur für benutzte Arten geladen (`SceneryAssets.load(only, sample)`), `largeHeap`.
