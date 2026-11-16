@@ -89,7 +89,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Als GitHub Release bereitstellen
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: build-${{ github.run_number }}
           name: Wichtelein v0.9.8 (Build ${{ github.run_number }})
