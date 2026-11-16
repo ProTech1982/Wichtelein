@@ -4,6 +4,9 @@ Auftrag: Wichtelein fertig bauen wie in `Prompt.txt` (Downloads, gehört zu eine
 Gebaut wird nur in GitHub Actions (kein Android-SDK lokal). Release = Push auf main (android.yml, Tag build-N).
 Entwicklungszweige per `gh workflow run ci.yml --ref <zweig>` testen (ci.yml hat workflow_dispatch). Emulator-Job flackert gelegentlich (Boot-Timeout -> neu starten).
 
+## Version 0.9.7 (Weg genauer)
+- Szenen gehen mit `walkRoute` statt `walkTo` zu ihren Punkten (auch `doGiftCarry`), also entlang des gezeichneten Weges; `randomPoint` weicht mit Weg nur ±0.03/0.015 ab. Test `figureStaysOnDrawnPathInScenes`.
+
 ## Version 0.9.6 (Weg der Elfin, Leistung)
 - Szenen ohne eigenen Wegpunkt (`Stops.used`) gehen danach zum nächsten Wegpunkt; Drehbuch ohne Ortsangaben läuft zuerst den gezeichneten Weg ab (`ElfEngine.perform`).
 - Editor: Aufnahme 300 ms entprellt und abbrechbar (`Recorder.record(req, cancelled)`); `snapshot()` kopiert leere Listen nicht mehr.
