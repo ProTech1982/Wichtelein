@@ -92,10 +92,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: Wichtelein v0.9.7 (Build ${{ github.run_number }})
+          name: Wichtelein v0.9.8 (Build ${{ github.run_number }})
           body: |
             Build ${{ github.run_number }}.
-            Version 0.9.7, signiert mit dem gemeinsamen Release-Schlüssel.
+            Version 0.9.8, signiert mit dem gemeinsamen Release-Schlüssel.
 
             Aenderungen in diesem Build:
             ${{ steps.apk.outputs.changes }}

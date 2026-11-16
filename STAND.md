@@ -4,6 +4,11 @@ Auftrag: Wichtelein fertig bauen wie in `Prompt.txt` (Downloads, gehört zu eine
 Gebaut wird nur in GitHub Actions (kein Android-SDK lokal). Release = Push auf main (android.yml, Tag build-N).
 Entwicklungszweige per `gh workflow run ci.yml --ref <zweig>` testen (ci.yml hat workflow_dispatch). Emulator-Job flackert gelegentlich (Boot-Timeout -> neu starten).
 
+## Version 0.9.8 (wartende Figur steht nicht still)
+- `ElfEngine.patrolStep`: wartet eine Figur auf eine gemeinsame Aktion oder ist mit ihrem Drehbuch fertig (bei zwei Figuren), geht sie ihren Weg ab. `Performance.errors` zeigt Fehler, die eine Figur gestoppt haben.
+- Tests: `AllActionsTest` (jede Aktion einzeln/gemeinsam, Bett dann Haus, Objekte), `TogetherTest`; ci.yml lädt Testergebnisse immer hoch.
+- Offen: „Wichtel verschwand nach dem Bett hinter dem Baum statt in der Tür“ nicht nachgestellt (Tests laufen).
+
 ## Version 0.9.7 (Weg genauer)
 - Szenen gehen mit `walkRoute` statt `walkTo` zu ihren Punkten (auch `doGiftCarry`), also entlang des gezeichneten Weges; `randomPoint` weicht mit Weg nur ±0.03/0.015 ab. Test `figureStaysOnDrawnPathInScenes`.
 
