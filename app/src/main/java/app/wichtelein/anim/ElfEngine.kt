@@ -555,7 +555,10 @@ class ElfEngine(
     fun randomPoint(): Pt {
         if (roam.isEmpty()) return Pt(rnd(0.15f, 0.85f), rnd(0.62f, 0.9f))
         val a = roam[rng.nextInt(roam.size)]
-        return Pt((a.x + rnd(-0.1f, 0.1f)).coerceIn(0.05f, 0.95f), (a.y + rnd(-0.05f, 0.05f)).coerceIn(0.03f, 0.97f))
+        // mit gezeichnetem Weg nur wenig abweichen, damit die Figur auf ihrer Strecke bleibt
+        val jx = if (route.size >= 2) 0.03f else 0.1f
+        val jy = if (route.size >= 2) 0.015f else 0.05f
+        return Pt((a.x + rnd(-jx, jx)).coerceIn(0.05f, 0.95f), (a.y + rnd(-jy, jy)).coerceIn(0.03f, 0.97f))
     }
 
     // ---------------------------------------------------------------- Drehen (3D-Figur)
@@ -967,7 +970,7 @@ class ElfEngine(
     suspend fun doGiftCarry(target: Pt) {
         pose.prop = Prop.GIFT
         say(lines.gift.random(rng))
-        walkTo(target)
+        walkRoute(target)
         anim(450) { t ->
             val s = sin(t * PIf)
             pose.squash = 0.14f * s

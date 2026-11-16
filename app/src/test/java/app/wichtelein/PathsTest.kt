@@ -77,4 +77,24 @@ class PathsTest {
         assertTrue("linker Punkt nie erreicht", xs.minOrNull()!! < 0.25f)
         assertTrue("rechter Punkt nie erreicht", xs.maxOrNull()!! > 0.75f)
     }
+
+    @Test fun figureStaysOnDrawnPathInScenes() {
+        val pts = listOf(Pt(0.3f, 0.85f), Pt(0.5f, 0.7f), Pt(0.7f, 0.85f))
+        val scenes = setOf("brav_fegen", "frech_chaos", "ueb_tanzparty", "brav_schnee", "frech_verstecken", "frech_stolpern")
+        for (cast in listOf(0, 1)) {
+            val req = PerfRequest(Pt(0.2f, 0.85f), pts, 0.3f, null, null, 5L, 90_000L, scenes, base.copy(cast = cast), aspect = 0.56f)
+            val fs = Recorder.record(req).frames.filter { it.visible && it.pose.scale > 0.99f }
+            // Abstand jeder Position zum Linienzug Start-Weg
+            val line = listOf(Pt(0.2f, 0.85f)) + pts
+            fun d(f: FrameState): Float = (0 until line.size - 1).minOf { k ->
+                val a = line[k]; val b = line[k + 1]
+                val dx = b.x - a.x; val dy = b.y - a.y
+                val t = (((f.x - a.x) * dx + (f.y - a.y) * dy) / (dx * dx + dy * dy)).coerceIn(0f, 1f)
+                val px = a.x + t * dx; val py = a.y + t * dy
+                kotlin.math.hypot((f.x - px) * 0.56f, f.y - py)
+            }
+            val worst = fs.maxOf { d(it) }
+            assertTrue("cast=$cast weicht ${worst} vom Weg ab", worst < 0.06f)
+        }
+    }
 }

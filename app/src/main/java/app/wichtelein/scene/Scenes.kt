@@ -32,7 +32,7 @@ object Scenes {
     val all: List<SceneDef> = listOf(
         // ---- Braver Wichtel
         SceneDef("brav_fegen", "Zimmer fegen", Category.BRAV, "Der Wichtel fegt den Boden und ist stolz darauf.") { s ->
-            walkTo(s.next())
+            walkRoute(s.next())
             doSweep()
             sayFrom(lines.tidyDone)
         },
@@ -45,7 +45,7 @@ object Scenes {
             doWave()
         },
         SceneDef("brav_gutenacht", "Gute Nacht", Category.BRAV, "Der Wichtel setzt sich, winkt und schläft ein.") { s ->
-            walkTo(s.next())
+            walkRoute(s.next())
             doSit(1500)
             doWave()
             doSleep()
@@ -59,7 +59,7 @@ object Scenes {
             doBed(findBed())
         },
         SceneDef("brav_keks", "Keks-Pause", Category.BRAV, "Er setzt sich hin und genießt einen Keks.") { s ->
-            walkTo(s.next())
+            walkRoute(s.next())
             doSit(1200)
             doSnack()
         },
@@ -82,25 +82,25 @@ object Scenes {
             sayFrom(lines.chaos)
         },
         SceneDef("frech_chaos", "Chaos-Wichtel", Category.FRECH, "Er wirft Spielzeug durch das Zimmer.") { s ->
-            walkTo(s.next())
+            walkRoute(s.next())
             doChaos()
         },
         SceneDef("frech_stolpern", "Stolperfalle", Category.FRECH, "Er rennt los, stolpert und tut so, als wäre nichts.") { s ->
-            walkTo(s.next(), 0.5f)
+            walkRoute(s.next(), 0.5f)
             doTrip()
         },
         SceneDef("frech_keksdieb", "Keksdieb", Category.FRECH, "Heimlich nascht er und versteckt sich dann.") { s ->
-            walkTo(s.next())
+            walkRoute(s.next())
             doSnack(sneaky = true)
             doHide()
         },
         SceneDef("frech_verstecken", "Versteckspiel", Category.FRECH, "Puff – weg ist er, und er taucht woanders wieder auf.") { s ->
             doHide()
-            walkTo(s.next())
+            walkRoute(s.next())
             doHide()
         },
         SceneDef("frech_besen", "Fegen mit Folgen", Category.FRECH, "Erst wird gefegt, dann doch lieber alles durcheinandergebracht.") { s ->
-            walkTo(s.next())
+            walkRoute(s.next())
             doSweep(2000)
             doChaos()
         },
@@ -110,21 +110,21 @@ object Scenes {
             doGiftCarry(s.next())
         },
         SceneDef("ueb_geschenk", "Geschenk-Zauber", Category.UEBERRASCHUNG, "Plötzlich liegt ein Geschenk da – mit Konfetti.") { s ->
-            walkTo(s.next())
+            walkRoute(s.next())
             doGiftPop()
         },
         SceneDef("ueb_tanzparty", "Tanzparty", Category.UEBERRASCHUNG, "Der Wichtel tanzt und Konfetti regnet.") { s ->
-            walkTo(s.next())
+            walkRoute(s.next())
             doDance(withConfetti = true)
         },
         SceneDef("ueb_purzel", "Purzelbaum-Show", Category.UEBERRASCHUNG, "Zwei Purzelbäume und eine tiefe Verbeugung.") { s ->
-            walkTo(s.next())
+            walkRoute(s.next())
             doTumble()
             doTumble()
             doBow()
         },
         SceneDef("ueb_zauber", "Zauberspruch", Category.UEBERRASCHUNG, "Mit einem Zauberspruch erscheint Spielzeug aus dem Nichts.") { s ->
-            walkTo(s.next())
+            walkRoute(s.next())
             doMagic()
         },
         SceneDef("ueb_schlafwandler", "Schlafwandler", Category.UEBERRASCHUNG, "Er schläft ein, wacht erschrocken auf und tanzt los.") { _ ->
