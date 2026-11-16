@@ -138,6 +138,8 @@ class Performance(
     val sounds: List<SoundEvent> = emptyList(),
     /** Zeitpunkt, an dem alle Aktionspunkte abgespielt waren (-1 = kein Drehbuch oder noch nicht fertig) */
     val scriptEndMs: Long = -1L,
+    /** Fehler, die eine Figur während der Aufnahme gestoppt haben (sie steht danach nur noch da) */
+    val errors: List<String> = emptyList(),
 ) {
     val durationMs: Long get() = (frames.size - 1).coerceAtLeast(0) * 1000L / fps
 
@@ -200,12 +202,13 @@ const val TAIL_MS = 2500L
 
 object Recorder {
     /** Fängt Fehler einer Figur ab: sie steht dann einfach da, statt die ganze App zum Absturz zu bringen. */
-    private suspend fun safely(engine: ElfEngine, body: suspend () -> Unit) {
+    private suspend fun safely(engine: ElfEngine, errors: MutableList<String>, body: suspend () -> Unit) {
         try {
             body()
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (t: Throwable) {
+            errors.add("Figur ${engine.actor} bei ${engine.timeMs} ms: " + t.stackTraceToString().take(700))
             try {
                 while (true) engine.idle(800)
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -223,6 +226,7 @@ object Recorder {
     fun record(req: PerfRequest, cancelled: () -> Boolean = { false }): Performance {
         val speech = ArrayList<SpeechEvent>()
         val played = ArrayList<String>()
+        val errors = ArrayList<String>()
         val sounds = ArrayList<SoundEvent>()
         val both = req.settings.both
         val weather = Weather()
@@ -274,8 +278,8 @@ object Recorder {
         }
 
         val scope = CoroutineScope(Dispatchers.Unconfined)
-        a.job = scope.launch { safely(a.engine) { a.engine.perform(a.req, played) } }
-        if (b != null) b.job = scope.launch { safely(b.engine) { b.engine.perform(b.req, ArrayList()) } }
+        a.job = scope.launch { safely(a.engine, errors) { a.engine.perform(a.req, played) } }
+        if (b != null) b.job = scope.launch { safely(b.engine, errors) { b.engine.perform(b.req, ArrayList()) } }
         val frames = ArrayList<FrameState>()
         fun snap(): FrameState = a.engine.snapshot().also { f -> f.partner = b?.engine?.snapshot() }
         frames.add(snap())
@@ -301,6 +305,6 @@ object Recorder {
         // Sprache und Geräusche beider Figuren in zeitlicher Reihenfolge
         val speechSorted = speech.sortedBy { it.timeMs }
         val soundsSorted = sounds.sortedBy { it.timeMs }
-        return Performance(req.fps, frames, speechSorted, played, soundsSorted, scriptEnd)
+        return Performance(req.fps, frames, speechSorted, played, soundsSorted, scriptEnd, errors)
     }
 }

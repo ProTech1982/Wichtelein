@@ -121,7 +121,7 @@ class ElfEngine(
     /** Geräusch abspielen bzw. aufzeichnen (Art, Lautstärke 0..1) */
     private val fx: (Fx, Float) -> Unit = { _, _ -> },
     /** Welche Figur: 0 = Wichtel, 1 = Elfin (Name und Stimme) */
-    private val actor: Int = 0,
+    val actor: Int = 0,
     /** Wetter, das beide Figuren teilen */
     private val weather: Weather = Weather(),
 ) {
