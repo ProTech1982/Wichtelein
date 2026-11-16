@@ -207,7 +207,7 @@ class ElfEngine(
 
     fun snapshot() = FrameState(
         x, y, facing, visible, pose.copy(), bubble,
-        mess.map { it.copy() }, flying?.copy(), particles.map { it.copy() },
+        if (mess.isEmpty()) emptyList() else mess.map { it.copy() }, flying?.copy(), if (particles.isEmpty()) emptyList() else particles.map { it.copy() },
         doorPos, doorScale, doorOpen, doorHingeLeft, doorRound, clock,
         if (built.isEmpty()) emptyMap() else HashMap(built), bubbleSpec, onItem, snowLevel(), doorRot,
     )
@@ -1267,6 +1267,8 @@ class ElfEngine(
         if (req.script.isNotEmpty() && !req.idleOnly) {
             // Drehbuch: die Aktionspunkte der Reihe nach abarbeiten, danach verbeugen und stehen bleiben
             var joint = 0
+            // Hat keine Aktion einen eigenen Ort, würde der gezeichnete Weg nie begangen: dann zuerst den Weg abgehen
+            if (req.script.none { it.at != null }) for (p in req.path) walkTo(p)
             for (st in req.script) {
                 if (st.who == 2 && sync != null) {
                     // gemeinsame Aktion: erst auf die andere Figur warten (höchstens eine Minute)
@@ -1291,7 +1293,10 @@ class ElfEngine(
             first = null
             last = scene
             played.add(scene.name)
+            val before = stops.used
             scene.run(this, stops)
+            // Szenen ohne eigenen Wegpunkt (Schnee, Spielzeug …) würden den Weg überspringen: dann zum nächsten Punkt gehen
+            if (stops.used == before && stops.hasPoints && !inHouse) walkRoute(stops.next())
             if (rng.nextFloat() < 0.6f) doChat()
             idle(rng.nextLong(900, 1800))
         }
@@ -1301,6 +1306,10 @@ class ElfEngine(
 /** Die vom Nutzer gesetzten Wegpunkte; sind sie aufgebraucht, nimmt die Szene zufällige Stellen. */
 class Stops(private val points: List<Pt>, private val engine: ElfEngine) {
     private var i = 0
+
+    /** Wie viele Punkte schon vergeben wurden */
+    val used: Int get() = i
+    val hasPoints: Boolean get() = points.isNotEmpty()
 
     /** Die gesetzten Punkte der Reihe nach, danach wieder von vorn (Rundgang); ohne Punkte ein Ort in der Nähe */
     fun next(): Pt = if (points.isEmpty()) engine.randomPoint() else points[i++ % points.size]

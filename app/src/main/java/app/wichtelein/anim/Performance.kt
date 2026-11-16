@@ -220,7 +220,7 @@ object Recorder {
     }
 
     /** Nimmt die Aufführung deterministisch auf (gleiche Eingaben ergeben die gleiche Zeitleiste). Bei zwei Figuren laufen beide gleichzeitig. */
-    fun record(req: PerfRequest): Performance {
+    fun record(req: PerfRequest, cancelled: () -> Boolean = { false }): Performance {
         val speech = ArrayList<SpeechEvent>()
         val played = ArrayList<String>()
         val sounds = ArrayList<SoundEvent>()
@@ -283,6 +283,7 @@ object Recorder {
         val dt = 1_000_000_000L / req.fps
         var scriptEnd = -1L
         for (i in 0 until total) {
+            if (cancelled()) break
             a.ticker.tick(dt)
             b?.ticker?.tick(dt)
             frames.add(snap())

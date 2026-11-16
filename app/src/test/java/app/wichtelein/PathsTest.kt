@@ -55,4 +55,26 @@ class PathsTest {
         val p = Recorder.record(req)
         assertTrue(p.frames.map { it.partner!!.x }.average() > 0.55)
     }
+
+    @Test fun elfinWalksHerPathEvenWithoutScenePoints() {
+        // Drehbuch ohne Ortsangabe: der gezeichnete Weg muss trotzdem begangen werden
+        val req = PerfRequest(
+            Pt(0.15f, 0.85f), emptyList(), 0.3f, null, null, 7L, 60_000L, null, base, aspect = 0.56f,
+            script = listOf(ScriptStep(ElfAction.WAVE, null, who = 1)),
+            start2 = Pt(0.85f, 0.8f), path2 = listOf(Pt(0.6f, 0.8f), Pt(0.5f, 0.7f)), stopAfterScript = true,
+        )
+        val p = Recorder.record(req)
+        val b = p.frames.map { it.partner!!.x }
+        assertTrue("Elfin ging ihren Weg nicht: min=${b.minOrNull()}", b.minOrNull()!! < 0.55f)
+    }
+
+    @Test fun scenesWithoutPointsStillVisitAllPathPoints() {
+        val pts = listOf(Pt(0.2f, 0.85f), Pt(0.5f, 0.8f), Pt(0.8f, 0.85f))
+        val req = PerfRequest(
+            Pt(0.5f, 0.85f), pts, 0.3f, null, "brav_schnee", 3L, 60_000L, setOf("brav_schnee"), base.copy(cast = 1), aspect = 0.56f,
+        )
+        val xs = Recorder.record(req).frames.map { it.x }
+        assertTrue("linker Punkt nie erreicht", xs.minOrNull()!! < 0.25f)
+        assertTrue("rechter Punkt nie erreicht", xs.maxOrNull()!! > 0.75f)
+    }
 }

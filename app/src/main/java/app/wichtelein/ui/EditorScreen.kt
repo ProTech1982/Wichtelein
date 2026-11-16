@@ -252,6 +252,8 @@ fun EditorScreen(
 
     // 1) Aufführung aufnehmen, sobald sich etwas ändert
     LaunchedEffect(settings, perfKey, category, sceneId, seed, duration) {
+        // kurz warten: beim Ziehen eines Punktes wird sonst bei jeder Bewegung neu berechnet
+        kotlinx.coroutines.delay(300)
         val req = PerfRequest(
             start = st.start ?: Pt(0.5f, 0.78f),
             start2 = st.start2,
@@ -275,7 +277,8 @@ fun EditorScreen(
             enabledScenes = settings.enabledScenes(),
             settings = settings,
         )
-        perf = withContext(Dispatchers.Default) { Recorder.record(req) }
+        val job = kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
+        perf = withContext(Dispatchers.Default) { Recorder.record(req) { job?.isActive == false } }
     }
 
     // 2) Sprachclips für die Vorschau erzeugen
