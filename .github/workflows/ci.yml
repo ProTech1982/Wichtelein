@@ -21,6 +21,11 @@ jobs:
       - name: Unit-Tests und Debug-APK
         run: ./gradlew testDebugUnitTest assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-results
+          path: app/build/test-results/testDebugUnitTest/*.xml
+      - uses: actions/upload-artifact@v4
         with:
           name: Wichtelein-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
