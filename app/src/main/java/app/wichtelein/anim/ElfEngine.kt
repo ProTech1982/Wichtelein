@@ -546,6 +546,14 @@ class ElfEngine(
         walkTo(target, speed)
     }
 
+    private var patrolI = 0
+
+    /** Warten ohne Stillstand: mit gezeichnetem Weg geht die Figur ihn ab, sonst steht sie kurz da. Wer im Haus ist, bleibt drinnen. */
+    suspend fun patrolStep() {
+        if (!inHouse && route.size >= 2) walkRoute(route[patrolI++ % route.size], 0.2f)
+        idle(rng.nextLong(300, 800))
+    }
+
     fun configureRoam(points: List<Pt>, aspect: Float) {
         roam = points
         this.aspect = aspect.coerceIn(0.3f, 3f)
@@ -1277,8 +1285,8 @@ class ElfEngine(
                     // gemeinsame Aktion: erst auf die andere Figur warten (höchstens eine Minute)
                     val n = joint++
                     sync?.arrive(n, actor)
-                    var waited = 0
-                    while (sync?.both(n) == false && waited++ < 600) idle(100)
+                    val giveUp = clock + 60f
+                    while (sync?.both(n) == false && clock < giveUp) patrolStep()
                 }
                 played.add(st.action.label)
                 runStep(st)
@@ -1286,7 +1294,7 @@ class ElfEngine(
             }
             if (!inHouse) doBow()
             scriptDoneMs = timeMs
-            while (true) idle(800)
+            while (true) if (sync != null) patrolStep() else idle(800)
         }
         val stops = Stops(req.path, this)
         var last: SceneDef? = null

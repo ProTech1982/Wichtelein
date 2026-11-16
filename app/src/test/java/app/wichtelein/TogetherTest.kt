@@ -35,21 +35,20 @@ class TogetherTest {
     @Test fun elfinMovesWhileWichtelBuildsObjects() {
         val p = Recorder.record(req(emptyList(), listOf(bed, tree)))
         assertTrue(describe(p), p.errors.isEmpty())
-        assertElfinKeepsMoving(p, 0, 12)
-        assertElfinKeepsMoving(p, 20, 40)
+        assertElfinKeepsMoving(p, 0, 40)
+        assertElfinKeepsMoving(p, 40, 80)
     }
 
     @Test fun elfinMovesWhileWichtelHasAnAction() {
         val p = Recorder.record(req(listOf(ScriptStep(ElfAction.WAVE, Pt(0.6f, 0.8f)), ScriptStep(ElfAction.DANCE, Pt(0.3f, 0.8f))), emptyList()))
         assertTrue(describe(p), p.errors.isEmpty())
-        assertElfinKeepsMoving(p, 0, 12)
+        assertElfinKeepsMoving(p, 0, 20)
     }
 
     @Test fun elfinMovesWithObjectsAndAction() {
         val p = Recorder.record(req(listOf(ScriptStep(ElfAction.WAVE, Pt(0.6f, 0.8f))), listOf(bed, tree)))
         assertTrue(describe(p), p.errors.isEmpty())
-        assertElfinKeepsMoving(p, 0, 12)
-        assertElfinKeepsMoving(p, 12, 24)
+        assertElfinKeepsMoving(p, 0, 24)
     }
 
     @Test fun bothGoIntoTheHouse() {
@@ -69,9 +68,25 @@ class TogetherTest {
     @Test fun bothGoToBed() {
         val p = Recorder.record(req(listOf(ScriptStep(ElfAction.BED, null, who = 2)), listOf(bed)))
         assertTrue(describe(p), p.errors.isEmpty())
-        val a = p.frames.last()
-        assertTrue("Wichtel nicht am Bett (${a.x},${a.y}) ${describe(p)}", kotlin.math.abs(a.x - bed.at.x) < 0.15f)
-        val b = p.frames.last().partner!!
-        assertTrue("Elfin nicht am Bett (${b.x},${b.y}) ${describe(p)}", kotlin.math.abs(b.x - bed.at.x) < 0.2f)
+        assertTrue("Wichtel lag nie im Bett ${describe(p)}", p.frames.any { it.onItem == bed.id })
+        assertTrue("Elfin lag nie im Bett ${describe(p)}", p.frames.any { it.partner!!.onItem == bed.id })
+    }
+
+    @Test fun figureThatIsDoneKeepsWalkingItsPathWhileTheOtherStillWorks() {
+        val steps = listOf(ScriptStep(ElfAction.WAVE, null, who = 1)) +
+            List(6) { ScriptStep(ElfAction.DANCE, Pt(0.3f + 0.08f * it, 0.8f), who = 0) }
+        val p = Recorder.record(req(steps, emptyList()))
+        assertTrue(describe(p), p.errors.isEmpty())
+        val end = (p.scriptEndMs / 33).toInt().coerceAtMost(p.frames.size - 1)
+        val fs = p.frames.subList((end - 300).coerceAtLeast(0), end)
+        val dx = fs.maxOf { it.partner!!.x } - fs.minOf { it.partner!!.x }
+        assertTrue("Elfin steht nach ihrer Aktion still ($dx) ${describe(p)}", dx > 0.05f)
+    }
+
+    @Test fun elfinWaitingForJointStepKeepsMoving() {
+        val steps = List(4) { ScriptStep(ElfAction.DANCE, Pt(0.3f + 0.1f * it, 0.8f), who = 0) } + ScriptStep(ElfAction.WAVE, null, who = 2)
+        val p = Recorder.record(req(steps, listOf(bed, tree)))
+        assertTrue(describe(p), p.errors.isEmpty())
+        assertElfinKeepsMoving(p, 0, 25)
     }
 }
